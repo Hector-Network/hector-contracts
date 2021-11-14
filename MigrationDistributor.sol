@@ -349,8 +349,8 @@ contract MigrateDistributor is Policy {
     address public immutable oldStaking;
     address public immutable sHecOld;
     
-    address public immutable newStaking;
-    address public immutable sHecNew;
+    address public newStaking;
+    address public sHecNew;
     
     //mapping( uint => Adjust ) public adjustments;
     
@@ -511,13 +511,20 @@ contract MigrateDistributor is Policy {
         */
     }
     
-    function setRate( uint _rewardRate ) external onlyPolicy() {
-        rate=_rewardRate;
-    }
     
     
     
     /* ====== POLICY FUNCTIONS ====== */
+    function setRate( uint _rewardRate ) external onlyPolicy() {
+        rate=_rewardRate;
+    }
+    
+    function setNewStaking(address _newStaking, address _sHecNew) external onlyPolicy() {
+        require( _newStaking != address(0) );
+        newStaking = _newStaking;
+        require( _sHecNew != address(0) );
+        sHecNew = _sHecNew;
+    }
 
     /**
         @notice adds recipient for distributions
