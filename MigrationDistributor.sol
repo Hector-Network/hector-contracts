@@ -352,7 +352,7 @@ contract MigrateDistributor is Policy {
     address public immutable newStaking;
     address public immutable sHecNew;
     
-    mapping( uint => Adjust ) public adjustments;
+    //mapping( uint => Adjust ) public adjustments;
     
     
     /* ====== STRUCTS ====== */
