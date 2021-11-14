@@ -1021,7 +1021,7 @@ contract sHectorToken is ERC20Permit, Ownable {
     uint public INDEX;
 
     uint256 private constant MAX_UINT256 = ~uint256(0);
-    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 100000 * 10**9;
+    uint256 private constant INITIAL_FRAGMENTS_SUPPLY = 10000000 * 10**9;
 
     // TOTAL_GONS is a multiple of INITIAL_FRAGMENTS_SUPPLY so that _gonsPerFragment is an integer.
     // Use the highest value that fits in a uint256 for max granularity.
@@ -1055,7 +1055,7 @@ contract sHectorToken is ERC20Permit, Ownable {
     }
 
     function setIndex( uint _INDEX ) external onlyManager() returns ( bool ) {
-        require( INDEX == 0 );
+        //require( INDEX == 0 );
         INDEX = gonsForBalance( _INDEX );
         return true;
     }
