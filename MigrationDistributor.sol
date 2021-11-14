@@ -416,7 +416,7 @@ contract MigrateDistributor is Policy {
                     adjust( i ); // check for adjustment
                 }
             }*/
-            
+            if(rate==0)return false;
             uint reward = nextRewardAt(rate);
             uint oldReward= split(reward,ISHEC(sHecOld).circulatingSupply(),ISHEC(sHecNew).circulatingSupply());
             uint newReward=reward.sub(oldReward);
