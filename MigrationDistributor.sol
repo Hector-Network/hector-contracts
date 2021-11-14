@@ -420,8 +420,12 @@ contract MigrateDistributor is Policy {
             uint reward = nextRewardAt(rate);
             uint oldReward= split(reward,ISHEC(sHecOld).circulatingSupply(),ISHEC(sHecNew).circulatingSupply());
             uint newReward=reward.sub(oldReward);
-            ITreasury( treasury ).mintRewards(oldStaking,oldReward);
-            ITreasury( treasury ).mintRewards(newStaking,newReward);
+            if(oldReward>0){
+                ITreasury( treasury ).mintRewards(oldStaking,oldReward);
+            }
+            if(newReward>0){
+                ITreasury( treasury ).mintRewards(newStaking,newReward);
+            }
             adjust();
             return true;
         } else { 
