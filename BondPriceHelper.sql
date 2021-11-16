@@ -395,6 +395,8 @@ interface IBond{
         uint _initialDebt
     ) external;
     function totalDebt() external view returns(uint);
+    function isLiquidityBond() external view returns(bool);
+    function bondPrice() external view returns ( uint );
     function terms() external view returns(
         uint controlVariable, // scaling variable for price
         uint vestingTerm, // in blocks
@@ -459,6 +461,14 @@ contract BondPriceHelper is Ownable {
     function removeExecutor(address executor) external onlyManager{
         delete executors[executor];
     }
+    
+    function recal(address bond,uint percent) view internal returns(uint){
+        if(IBond(bond).isLiquidityBond()) return percent;
+        else{
+            uint price=IBond(bond).bondPrice();
+            return price.mul(percent).sub(1000000).div(price.sub(100));
+        }
+    }
 
     function adjustPrice(address bond,uint percent) internal{
         if(percent==0)return;
@@ -466,9 +476,9 @@ contract BondPriceHelper is Ownable {
         require(executors[msg.sender]==true,'access deny for price adjustment');
         (uint controlVariable, uint vestingTerm, uint minimumPrice,uint maxPayout, uint fee, uint maxDebt)=
         IBond(bond).terms();
-        if(minimumPrice==0)
+        if(minimumPrice==0){
             IBond(bond).initializeBondTerms(
-                controlVariable.mul(percent).div(10000),
+                controlVariable.mul(recal(bond,percent)).div(10000),
                 vestingTerm,
                 minimumPrice,
                 maxPayout,
@@ -476,7 +486,7 @@ contract BondPriceHelper is Ownable {
                 maxDebt,
                 IBond(bond).totalDebt()
             );
-        else
+        }else
             IBond(bond).initializeBondTerms(
                 controlVariable,
                 vestingTerm,
