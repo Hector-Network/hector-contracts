@@ -514,7 +514,7 @@ contract BondPriceHelper is Ownable {
 
     function adjustPrice(address bond,uint percent) internal{
         if(percent==0)return;
-        require(percent>8000&&percent<12000,"price adjustment can't be more than 20%");
+        require(percent>=8000&&percent<=12000,"price adjustment can't be more than 20%");
         require(executors[msg.sender]==true,'access deny for price adjustment');
         (uint controlVariable, uint vestingTerm, uint minimumPrice,uint maxPayout, uint fee, uint maxDebt)=
         IBond(bond).terms();
