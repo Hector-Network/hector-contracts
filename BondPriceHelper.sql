@@ -437,6 +437,26 @@ contract BondPriceHelper is Ownable {
         realOwner = _realOwner;
     }
     
+    function setDaiBond(address _daiBond) external onlyManager{
+        require( _daiBond != address(0) );
+        daiBond = _daiBond;
+    }
+    
+    function setUsdcBond(address _usdcBond) external onlyManager{
+        require( _usdcBond != address(0) );
+        usdcBond = _usdcBond;
+    }
+    
+    function setDaiLpBond(address _daiLpBond) external onlyManager{
+        require( _daiLpBond != address(0) );
+        daiLpBond = _daiLpBond;
+    }
+    
+    function setUsdcLpBond(address _usdcLpBond) external onlyManager{
+        require( _usdcLpBond != address(0) );
+        usdcLpBond = _usdcLpBond;
+    }
+    
     //percent 9876=98.76%
     function adjustDaiPriceTo(uint percent) external{
         adjustPrice(daiBond,percent);
@@ -468,6 +488,28 @@ contract BondPriceHelper is Ownable {
             uint price=IBond(bond).bondPrice();
             return price.mul(percent).sub(1000000).div(price.sub(100));
         }
+    }
+    
+    function viewPriceAdjust(address bond,uint percent) view external returns(uint _controlVar,uint _oldControlVar,uint _minPrice,uint _oldMinPrice,uint _price){
+        uint price=IBond(bond).bondPrice();
+        (uint controlVariable, , uint minimumPrice,, , )=
+        IBond(bond).terms();
+        if(minimumPrice==0){
+            return (
+                controlVariable.mul(recal(bond,percent)).div(10000),
+                controlVariable,
+                minimumPrice,
+                minimumPrice,
+                price
+            );
+        }else
+            return (
+                controlVariable,
+                controlVariable,
+                minimumPrice.mul(percent).div(10000),
+                minimumPrice,
+                price
+            );
     }
 
     function adjustPrice(address bond,uint percent) internal{
