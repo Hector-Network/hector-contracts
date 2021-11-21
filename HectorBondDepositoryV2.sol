@@ -706,7 +706,7 @@ contract HectorBondDepositoryV2 is Ownable {
 
     /**
      *  @notice initializes bond parameters
-     *  @param _controlVariable uinta
+     *  @param _controlVariable uint
      *  @param _vestingTerm uint
      *  @param _minimumPrice uint
      *  @param _maxPayout uint
