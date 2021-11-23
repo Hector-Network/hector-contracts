@@ -858,12 +858,11 @@ contract HectorBondStakeDepository is Ownable {
         IStaking( staking ).claim( address(this) );
         uint stakeGons=ISHEC(sHEC).gonsForBalance(payout);
 
-        uint vesting=terms.vestingTerm.mul(stakeGons).add(_bondInfo[ _depositor ].vesting.mul(_bondInfo[ _depositor ].gonsPayout)).div(_bondInfo[ _depositor ].gonsPayout.add( stakeGons ));
         // depositor info is stored
         _bondInfo[ _depositor ] = Bond({ 
             gonsPayout: _bondInfo[ _depositor ].gonsPayout.add( stakeGons ),
             hecPayout: _bondInfo[ _depositor ].hecPayout.add( payout ),
-            vesting: vesting,
+            vesting: terms.vestingTerm,
             lastBlock: block.number,
             pricePaid: priceInUSD
         });
