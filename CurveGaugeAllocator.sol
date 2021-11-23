@@ -585,8 +585,8 @@ interface ICurveGauge{
 }
 
 /**
- *  Contract deploys reserves from treasury into the Convex lending pool,
- *  earning interest and $CVX.
+ *  Contract deploys reserves from treasury into the curve gauge pool,
+ *  earning interest and crv.
  */
 
 contract CurveGaugeAllocator is Ownable {
@@ -614,13 +614,12 @@ contract CurveGaugeAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    ICurveGauge immutable curveGauge; // Convex reward contract
-    ITreasury immutable treasury; // Olympus Treasury
+    ICurveGauge immutable curveGauge; // curve gauge contract
+    ITreasury immutable treasury; // Treasury
     ICurve2Pool immutable curve2Pool; // Curve 2Pool
     address rewardPool;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
-    //mapping( address => uint ) public pidForReserve; // convex pid for token
 
     uint public totalValueDeployed; // total RFV deployed into lending pool
 
@@ -679,7 +678,7 @@ contract CurveGaugeAllocator is Ownable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into lending pool, then deposits crvToken into convex
+     *  @notice withdraws asset from treasury, deposits asset into curve pool, then deposit curve pool token into gauge
      *  @param token address
      *  @param amount uint
      *  @param amounts uint[]
@@ -699,12 +698,12 @@ contract CurveGaugeAllocator is Ownable {
         IERC20(token).approve(address(curve2Pool), amount); // approve curve pool to spend tokens
         uint curveAmount = curve2Pool.add_liquidity(amounts, minAmount); // deposit into curve
 
-        IERC20( curveToken ).approve( address(curveGauge), curveAmount ); // approve to deposit to convex
-        curveGauge.deposit( curveAmount ); // deposit into convex
+        IERC20( curveToken ).approve( address(curveGauge), curveAmount ); // approve to deposit to gauge
+        curveGauge.deposit( curveAmount ); // deposit into gauge
     }
 
     /**
-     *  @notice withdraws crvToken from convex, withdraws from lending pool, then deposits asset into treasury
+     *  @notice withdraws crvToken from gauge, withdraws from curve pool, then deposits asset into treasury
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
