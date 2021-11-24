@@ -646,7 +646,7 @@ contract HectorBondStakeDepository is Ownable {
     
     uint public totalPrinciple; // total principle bonded through this depository
 
-
+    string internal name_; //name of this bond
 
 
     /* ======== STRUCTS ======== */
@@ -685,6 +685,7 @@ contract HectorBondStakeDepository is Ownable {
     /* ======== INITIALIZATION ======== */
 
     constructor ( 
+        string memory _name,
         address _HEC,
         address _sHEC,
         address _principle,
@@ -705,6 +706,7 @@ contract HectorBondStakeDepository is Ownable {
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
+        name_ = _name;
     }
 
     /**
@@ -1081,6 +1083,14 @@ contract HectorBondStakeDepository is Ownable {
         } else {
             pendingPayout_ = 0;
         }
+    }
+    
+    /**
+     *  @notice show the name of current bond
+     *  @return _name string
+     */
+    function name() public view returns (string memory _name) {
+        return name_;
     }
 
 
