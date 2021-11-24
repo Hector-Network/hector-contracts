@@ -776,8 +776,6 @@ contract HectorBondDepositoryV2 is Ownable {
         uint _target,
         uint _buffer 
     ) external onlyPolicy() {
-        require( _increment <= terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
-
         adjustment = Adjust({
             add: _addition,
             rate: _increment,
