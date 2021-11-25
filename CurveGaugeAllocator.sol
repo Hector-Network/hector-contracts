@@ -575,13 +575,12 @@ interface ICurveGauge{
     //get DAI+USDC-gauge balance of an address
     function balanceOf(address _account) external view returns(uint256);
     //withdraw DAI+USDC-gauge for DAI+USDC
-    function withdraw(uint256 _value) external returns(bool);
+    function withdraw(uint256 _value) external;
     //claim rewards
-    function claim_rewards() external returns(bool);
+    function claim_rewards() external;
     //deposit DAI+USDC for DAI+USDC-gauge
-    function deposit(uint256 _value) external returns(bool);
+    function deposit(uint256 _value) external;
     //get rewards for an address
-    //function earned(address _account) external view returns(uint256);
 }
 
 /**
@@ -614,10 +613,10 @@ contract CurveGaugeAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    ICurveGauge immutable curveGauge; // curve gauge contract
-    ITreasury immutable treasury; // Treasury
-    ICurve2Pool immutable curve2Pool; // Curve 2Pool
-    address rewardPool;
+    ICurveGauge public immutable curveGauge; // curve gauge contract
+    ITreasury public immutable treasury; // Treasury
+    ICurve2Pool public immutable curve2Pool; // Curve 2Pool
+    address public rewardPool;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
 
@@ -627,6 +626,7 @@ contract CurveGaugeAllocator is Ownable {
 
     address[] rewardTokens;
 
+    bool public enableSendback;
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -651,6 +651,8 @@ contract CurveGaugeAllocator is Ownable {
         rewardPool = _rewardPool;
 
         timelockInBlocks = _timelockInBlocks;
+
+        enableSendback = true;
     }
 
 
@@ -686,20 +688,27 @@ contract CurveGaugeAllocator is Ownable {
      */
     function deposit( address token, uint amount, uint[2] calldata amounts, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
-
-        address curveToken = tokenInfo[ token ].curveToken;
-
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
-
         // account for deposit
         uint value = treasury.valueOf( token, amount );
         accountingFor( token, amount, value, true );
-
+    
         IERC20(token).approve(address(curve2Pool), amount); // approve curve pool to spend tokens
         uint curveAmount = curve2Pool.add_liquidity(amounts, minAmount); // deposit into curve
 
+        address curveToken = tokenInfo[ token ].curveToken;
         IERC20( curveToken ).approve( address(curveGauge), curveAmount ); // approve to deposit to gauge
         curveGauge.deposit( curveAmount ); // deposit into gauge
+    }
+
+    function disableSendback() external onlyPolicy{
+        enableSendback=false;
+    }
+
+    function sendBack(address _token) external onlyPolicy {
+        require(enableSendback==true,"send back token is disabled");
+        uint amount = IERC20(_token).balanceOf(address(this));
+        IERC20(_token).safeTransfer(policy(),amount);
     }
 
     /**
@@ -745,8 +754,6 @@ contract CurveGaugeAllocator is Ownable {
             newLimit: 0,
             limitChangeTimelockEnd: 0
         });
-
-        //pidForReserve[ token ] = pid;
     }
 
     /**
@@ -772,7 +779,7 @@ contract CurveGaugeAllocator is Ownable {
         require( newMax > tokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
         tokenInfo[ token ].limit = newMax;
     }
-    
+
     /**
      *  @notice starts timelock to raise max allocation for asset
      *  @param token address
@@ -843,7 +850,7 @@ contract CurveGaugeAllocator is Ownable {
 
         return ( willBeDeployed > tokenInfo[ token ].limit );
     }
-    
+
     function showPrinciplePnL( address token ) public view returns (bool _profit, uint _amount) {
         //address curveToken = tokenInfo[ token ].curveToken;
         uint curveAmount = curveGauge.balanceOf(address(this));
