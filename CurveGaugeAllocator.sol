@@ -627,6 +627,8 @@ contract CurveGaugeAllocator is Ownable {
 
     address[] rewardTokens;
 
+    mapping(address => uint) public totalRewards;
+
     bool public enableSendback;
     
 
@@ -668,8 +670,8 @@ contract CurveGaugeAllocator is Ownable {
 
         for( uint i = 0; i < rewardTokens.length; i++ ) {
             uint balance = IERC20( rewardTokens[i] ).balanceOf( address(this) );
-
             if ( balance > 0 ) {
+                totalRewards[rewardTokens[i]]=totalRewards[rewardTokens[i]].add(balance);
                 IERC20( rewardTokens[i] ).safeTransfer( rewardPool, balance );
             }
         }
