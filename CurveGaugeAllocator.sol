@@ -604,6 +604,7 @@ contract CurveGaugeAllocator is Ownable {
         address curveToken;
         int128 index;
         uint deployed;
+        uint curveBalance;
         uint limit;
         uint newLimit;
         uint limitChangeTimelockEnd;
@@ -689,9 +690,6 @@ contract CurveGaugeAllocator is Ownable {
     function deposit( address token, uint amount, uint[2] calldata amounts, uint minAmount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
-        // account for deposit
-        uint value = treasury.valueOf( token, amount );
-        accountingFor( token, amount, value, true );
     
         IERC20(token).approve(address(curve2Pool), amount); // approve curve pool to spend tokens
         uint curveAmount = curve2Pool.add_liquidity(amounts, minAmount); // deposit into curve
@@ -699,6 +697,9 @@ contract CurveGaugeAllocator is Ownable {
         address curveToken = tokenInfo[ token ].curveToken;
         IERC20( curveToken ).approve( address(curveGauge), curveAmount ); // approve to deposit to gauge
         curveGauge.deposit( curveAmount ); // deposit into gauge
+        // account for deposit
+        uint value = treasury.valueOf( token, amount );
+        accountingFor( token, amount, value, curveAmount, true );
     }
 
     function disableSendback() external onlyPolicy{
@@ -729,7 +730,7 @@ contract CurveGaugeAllocator is Ownable {
 
         // account for withdrawal
         uint value = treasury.valueOf( token, balance );
-        accountingFor( token, balance, value, false );
+        accountingFor( token, balance, value, amount, false );
 
         IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
         treasury.deposit( balance, token, value ); // deposit using value as profit so no OHM is minted
@@ -750,6 +751,7 @@ contract CurveGaugeAllocator is Ownable {
             curveToken: curveToken,
             index: index,
             deployed: 0,
+            curveBalance: 0,
             limit: max,
             newLimit: 0,
             limitChangeTimelockEnd: 0
@@ -814,11 +816,13 @@ contract CurveGaugeAllocator is Ownable {
      *  @param value uint
      *  @param add bool
      */
-    function accountingFor( address token, uint amount, uint value, bool add ) internal {
+    function accountingFor( address token, uint amount, uint value, uint curveAmount, bool add ) internal {
         if( add ) {
             tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
         
             totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
+
+            tokenInfo[token].curveBalance=tokenInfo[token].curveBalance.add(curveAmount);
             
         } else {
             // track amount allocated into pool
@@ -826,6 +830,12 @@ contract CurveGaugeAllocator is Ownable {
                 tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.sub( amount ); 
             } else {
                 tokenInfo[ token ].deployed = 0;
+            }
+
+            if(curveAmount < tokenInfo[token].curveBalance){
+                tokenInfo[token].curveBalance=tokenInfo[token].curveBalance.sub(curveAmount);
+            }else{
+                tokenInfo[token].curveBalance=0;
             }
             
             // track total value allocated into pools
@@ -853,7 +863,7 @@ contract CurveGaugeAllocator is Ownable {
 
     function showPrinciplePnL( address token ) public view returns (bool _profit, uint _amount) {
         //address curveToken = tokenInfo[ token ].curveToken;
-        uint curveAmount = curveGauge.balanceOf(address(this));
+        uint curveAmount = tokenInfo[token].curveBalance;
         uint underlyingAmount = curve2Pool.calc_withdraw_one_coin(curveAmount,tokenInfo[ token ].index);
         uint invested = tokenInfo[ token ].deployed;
         _profit = underlyingAmount>=invested;
