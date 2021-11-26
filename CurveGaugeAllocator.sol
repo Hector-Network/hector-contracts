@@ -684,13 +684,16 @@ contract CurveGaugeAllocator is Ownable {
      *  @notice withdraws asset from treasury, deposits asset into curve pool, then deposit curve pool token into gauge
      *  @param token address
      *  @param amount uint
-     *  @param amounts uint[]
      *  @param minAmount uint
      */
-    function deposit( address token, uint amount, uint[2] calldata amounts, uint minAmount ) public onlyPolicy() {
-        require( !exceedsLimit( token, amount ) ); // ensure deposit is within bounds
+    function deposit( address token, uint amount, uint minAmount ) public onlyPolicy() {
+        require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
-    
+
+        require(tokenInfo[token].index==0||tokenInfo[token].index==1,"incorrect index");
+        uint[2] memory amounts;
+        amounts[uint(tokenInfo[token].index)]=amount;
+        
         IERC20(token).approve(address(curve2Pool), amount); // approve curve pool to spend tokens
         uint curveAmount = curve2Pool.add_liquidity(amounts, minAmount); // deposit into curve
 
@@ -719,6 +722,7 @@ contract CurveGaugeAllocator is Ownable {
      *  @param minAmount uint
      */
     function withdraw( address token, uint amount, uint minAmount ) public onlyPolicy() {
+        //require(amount<=tokenInfo[token].curveBalance,"withdraw over invested amount of this token");
         curveGauge.withdraw( amount ); // withdraw to curve token
 
         address curveToken = tokenInfo[ token ].curveToken;
