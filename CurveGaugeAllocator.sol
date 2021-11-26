@@ -717,6 +717,11 @@ contract CurveGaugeAllocator is Ownable {
         IERC20(_token).safeTransfer(policy(),amount);
     }
 
+    function setRewardPool(address _rewardPool) external onlyPolicy {
+        require( _rewardPool != address(0) );
+        rewardPool = _rewardPool;
+    }
+
     /**
      *  @notice withdraws crvToken from gauge, withdraws from curve pool, then deposits asset into treasury
      *  @param token address
