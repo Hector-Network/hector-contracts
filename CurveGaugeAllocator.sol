@@ -569,6 +569,7 @@ interface ICurve2Pool {
     // remove liquidity (DAI+USDC) to recieve back dai or usdc
     function remove_liquidity_one_coin(uint256 _burn_amount, int128 i, uint256 _min_amount) external returns(uint256);
     function calc_withdraw_one_coin(uint256 _burn_amount, int128 i) external view returns(uint256);
+    function coins(uint256 index) external view returns(address);
 }
 
 interface ICurveGauge{
@@ -692,7 +693,6 @@ contract CurveGaugeAllocator is Ownable {
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
-        require(tokenInfo[token].index==0||tokenInfo[token].index==1,"incorrect index");
         uint[2] memory amounts;
         amounts[uint(tokenInfo[token].index)]=amount;
         
@@ -749,12 +749,15 @@ contract CurveGaugeAllocator is Ownable {
 
     /**
      *  @notice adds asset and corresponding crvToken to mapping
-     *  @param token address
-     *  @param curveToken address
+     *  @param index int128
+     *  @param principleToken address
+     *  @param max uint
      */
-    function addToken( address token, address curveToken, int128 index, uint max ) external onlyPolicy() {
-        require( token != address(0) );
-        require( curveToken != address(0) );
+    function addToken( int128 index, address principleToken, uint max ) external onlyPolicy() {
+        require(index==0||index==1,"invalid index");
+        address token=curve2Pool.coins(uint(index));
+        require( token != address(0) && principleToken==token,"principle token and index not matched");
+        address curveToken=address(curve2Pool);
         require( tokenInfo[ token ].deployed == 0 ); 
 
         tokenInfo[ token ] = tokenData({
@@ -791,6 +794,7 @@ contract CurveGaugeAllocator is Ownable {
         require( newMax < tokenInfo[ token ].limit );
         require( newMax > tokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
         tokenInfo[ token ].limit = newMax;
+        tokenInfo[ token ].newLimit = 0;
     }
 
     /**
