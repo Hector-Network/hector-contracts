@@ -795,6 +795,7 @@ contract CurveGaugeAllocator is Ownable {
         require( newMax > tokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
         tokenInfo[ token ].limit = newMax;
         tokenInfo[ token ].newLimit = 0;
+        tokenInfo[ token ].limitChangeTimelockEnd = 0;
     }
 
     /**
