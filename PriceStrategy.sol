@@ -410,6 +410,10 @@ interface IStaking{
     function epoch() external view returns (uint length, uint number, uint endBlock, uint distribute);
 }
 
+interface IBond{
+    function bondPriceInUSD() external view returns ( uint price_ );
+}
+
 contract PriceStrategy is Ownable{
 
     using SafeMath for uint;
@@ -435,6 +439,7 @@ contract PriceStrategy is Ownable{
     mapping( address => bool ) public executors;
 
     mapping(address=>TYPES) public bondTypes;
+    mapping(address=>uint) public usdPriceDecimals;
     address[] public bonds;
 
     constructor(
@@ -455,7 +460,7 @@ contract PriceStrategy is Ownable{
         sHEC = IsHEC(_sHEC);
         require( _staking != address(0) );
         staking = IStaking(_staking);
-        require( _adjustmentBlockGap>=600&&_adjustmentBlockGap<=28800);
+        require( _adjustmentBlockGap>=600&&_adjustmentBlockGap<=28800,"adjustment block gap must be between 600 and 28800");
         adjustmentBlockGap=_adjustmentBlockGap;
     }
 
@@ -499,13 +504,14 @@ contract PriceStrategy is Ownable{
 
     enum TYPES { ASSET11,ASSET44,LP11,LP44 }
 
-    function addBond(address bond, TYPES bondType) external onlyManager{
+    function addBond(address bond, TYPES bondType, uint usdPriceDecimal) external onlyManager{
         require(bondType==TYPES.ASSET11||bondType==TYPES.ASSET44||bondType==TYPES.LP11||bondType==TYPES.LP44,"incorrect bond type");
         for( uint i = 0; i < bonds.length; i++ ) {
             if(bonds[i]==bond)return;
         }
         bonds.push( bond );
         bondTypes[bond]=bondType;
+        usdPriceDecimals[bond]=usdPriceDecimal;
     }
 
     function removeBond(address bond) external onlyManager{
@@ -513,6 +519,7 @@ contract PriceStrategy is Ownable{
             if(bonds[i]==bond){
                 bonds[i]=address(0);
                 delete bondTypes[bond];
+                delete usdPriceDecimals[bond];
                 return;
             }
         }
@@ -522,26 +529,48 @@ contract PriceStrategy is Ownable{
     function runPriceStrategy() external{
         require(lastAdjustBlockNumber+adjustmentBlockGap>block.number,"cool down time not passed yet");
         uint hecPrice=getPrice();//$220 = 22000
-        uint roi5day=getRoi5Day();//2% = 200
+        uint roi5day=getRoiForDays(5);//2% = 20000
         for( uint i = 0; i < bonds.length; i++ ) {
             if(bonds[i]!=address(0)){
-                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice);
+                uint bondPriceUsd=IBond(bonds[i]).bondPriceInUSD();
+                uint bondPrice=bondPriceUsd.mul(100).div(usdPriceDecimals[bonds[i]]);
+                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,bondPrice,roi5day);
             }
         }
     }
 
-    function executeStrategy(address bond,TYPES bondType,uint hecPrice) internal{
+    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) public view returns (uint){
+        uint upper=bondPrice;
+        uint lower=bondPrice;
         if(bondType==TYPES.LP44||bondType==TYPES.ASSET44){
-
+            upper=hecPrice.mul(uint(10000).sub(min44Discount)).div(10000);
+            lower=hecPrice.mul(uint(10000).sub(max44Discount)).div(10000);
         }else if(bondType==TYPES.LP11){
-
+            
         }else if(bondType==TYPES.ASSET11){
 
         }
+        uint targetPrice=bondPrice;
+        if(bondPrice>upper)targetPrice=upper;
+        else if(bondPrice<lower)targetPrice=lower;
+        uint percentage=targetPrice.mul(10000).div(bondPrice);
+        return percentage;
     }
 
-    function getRoi5Day() public view returns (uint){
-        
+    function getRoiForDays(uint numberOfDays) public view returns (uint){
+        require(numberOfDays>0);
+        uint circulating=sHEC.circulatingSupply();
+        uint distribute=0;
+        (,,,distribute)=staking.epoch();
+        if(distribute==0)return 0;
+        uint precision=1e6;
+        uint epochBase=distribute.mul(precision).div(circulating).add(precision);
+        uint dayBase=epochBase.mul(epochBase).mul(epochBase).div(precision*precision);
+        uint total=dayBase;
+        for(uint i=0;i<numberOfDays-1;i++){
+            total=total.mul(dayBase).div(precision);
+        }
+        return total.sub(precision).div(100);
     }
 
     function getPrice() public view returns (uint){
