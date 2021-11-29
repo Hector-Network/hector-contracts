@@ -411,6 +411,9 @@ interface IStaking{
 }
 
 contract PriceStrategy is Ownable{
+
+    using SafeMath for uint;
+
     IPriceHelper public helper1;
     IPriceHelperV2 public helper2;
     IUniV2Pair public hecdai;
@@ -430,6 +433,9 @@ contract PriceStrategy is Ownable{
     uint public adjustmentBlockGap;
 
     mapping( address => bool ) public executors;
+
+    mapping(address=>TYPES) public bondTypes;
+    address[] public bonds;
 
     constructor(
         address _helper1,
@@ -490,9 +496,61 @@ contract PriceStrategy is Ownable{
     function removeExecutor(address executor) external onlyManager{
         delete executors[executor];
     }
+
+    enum TYPES { ASSET11,ASSET44,LP11,LP44 }
+
+    function addBond(address bond, TYPES bondType) external onlyManager{
+        require(bondType==TYPES.ASSET11||bondType==TYPES.ASSET44||bondType==TYPES.LP11||bondType==TYPES.LP44,"incorrect bond type");
+        for( uint i = 0; i < bonds.length; i++ ) {
+            if(bonds[i]==bond)return;
+        }
+        bonds.push( bond );
+        bondTypes[bond]=bondType;
+    }
+
+    function removeBond(address bond) external onlyManager{
+        for( uint i = 0; i < bonds.length; i++ ) {
+            if(bonds[i]==bond){
+                bonds[i]=address(0);
+                delete bondTypes[bond];
+                return;
+            }
+        }
+    }
+
     //todo
     function runPriceStrategy() external{
+        require(lastAdjustBlockNumber+adjustmentBlockGap>block.number,"cool down time not passed yet");
+        uint hecPrice=getPrice();//$220 = 22000
+        uint roi5day=getRoi5Day();//2% = 200
+        for( uint i = 0; i < bonds.length; i++ ) {
+            if(bonds[i]!=address(0)){
+                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice);
+            }
+        }
+    }
 
+    function executeStrategy(address bond,TYPES bondType,uint hecPrice) internal{
+        if(bondType==TYPES.LP44||bondType==TYPES.ASSET44){
+
+        }else if(bondType==TYPES.LP11){
+
+        }else if(bondType==TYPES.ASSET11){
+
+        }
+    }
+
+    function getRoi5Day() public view returns (uint){
+        
+    }
+
+    function getPrice() public view returns (uint){
+        uint112 _reserve0=0;
+        uint112 _reserve1=0;
+        (_reserve0,_reserve1,)=hecdai.getReserves();
+        uint reserve0=uint(_reserve0);
+        uint reserve1=uint(_reserve1);
+        return reserve1.div(reserve0).div(1e7);//$220 = 22000
     }
 
 }
