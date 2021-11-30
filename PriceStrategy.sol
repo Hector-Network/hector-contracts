@@ -383,23 +383,17 @@ contract Ownable is IOwnable {
         _owner = _newOwner;
     }
 }
-
+interface IERC20 {
+    function decimals() external view returns(uint8);
+}
 interface IPriceHelperV2{
     function adjustPrice(address bond,uint percent) external;
 }
 
-interface IPriceHelper{
-    function adjustDaiPriceTo(uint percent) external;
-    
-    function adjustUsdcPriceTo(uint percent) external;
-
-    function adjustDaiLpPriceTo(uint percent) external;
-    
-    function adjustUsdcLpPriceTo(uint percent) external;
-}
-
 interface IUniV2Pair{
     function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
+    function token0() external view returns (address);
+    function token1() external view returns (address);
 }
 
 interface IsHEC{
@@ -418,9 +412,8 @@ contract PriceStrategy is Ownable{
 
     using SafeMath for uint;
 
-    IPriceHelper public helper1;
-    IPriceHelperV2 public helper2;
-    IUniV2Pair public hecdai;
+    IPriceHelperV2 public helper;
+    address public hecdai;
     IsHEC public sHEC;
     IStaking public staking;
 
@@ -433,50 +426,65 @@ contract PriceStrategy is Ownable{
     uint public additionalAsset11MinDiscount;
     uint public additionalAsset11MaxDiscount;
 
-    uint public lastAdjustBlockNumber;
     uint public adjustmentBlockGap;
 
     mapping( address => bool ) public executors;
 
     mapping(address=>TYPES) public bondTypes;
     mapping(address=>uint) public usdPriceDecimals;
+    mapping(address=>uint) public lastAdjustBlockNumbers;
     address[] public bonds;
 
+    address public immutable hec;
+
     constructor(
-        address _helper1,
-        address _helper2,
+        address _helper,
         address _hecdai,
         address _sHEC,
         address _staking,
-        uint _adjustmentBlockGap
+        uint _adjustmentBlockGap,
+        address _hec
     ){
-        require( _helper1 != address(0) );
-        helper1 = IPriceHelper(_helper1);
-        require( _helper2 != address(0) );
-        helper2 = IPriceHelperV2(_helper2);
+        require( _helper != address(0) );
+        helper = IPriceHelperV2(_helper);
         require( _hecdai != address(0) );
-        hecdai = IUniV2Pair(_hecdai);
+        hecdai = _hecdai;
         require( _sHEC != address(0) );
         sHEC = IsHEC(_sHEC);
         require( _staking != address(0) );
         staking = IStaking(_staking);
         require( _adjustmentBlockGap>=600&&_adjustmentBlockGap<=28800,"adjustment block gap must be between 600 and 28800");
         adjustmentBlockGap=_adjustmentBlockGap;
+        require( _hec != address(0) );
+        hec = _hec;
     }
 
-    function setHelper1(address _helper1) external onlyManager{
-        require( _helper1 != address(0) );
-        helper1 = IPriceHelper(_helper1);
+    function setLp11(uint min,uint max) external onlyManager{
+        require(min<=500&&max<=1000,"additional disccount can't be more than 5%-10%");
+        additionalLp11MinDiscount=min;
+        additionalLp11MaxDiscount=max;
     }
 
-    function setHelper2(address _helper2) external onlyManager{
-        require( _helper2 != address(0) );
-        helper2 = IPriceHelperV2(_helper2);
+    function setAsset11(uint min,uint max) external onlyManager{
+        require(min<=500&&max<=1000,"additional disccount can't be more than 5%-10%");
+        additionalAsset11MinDiscount=min;
+        additionalAsset11MaxDiscount=max;
+    }
+
+    function setAll44(uint min,uint max) external onlyManager{
+        require(min<=500&&max<=1000,"additional disccount can't be more than 5%-10%");
+        min44Discount=min;
+        max44Discount=max;
+    }
+
+    function setHelper(address _helper) external onlyManager{
+        require( _helper != address(0) );
+        helper = IPriceHelperV2(_helper);
     }
 
     function setHecdai(address _hecdai) external onlyManager{
         require( _hecdai != address(0) );
-        hecdai = IUniV2Pair(_hecdai);
+        hecdai = _hecdai;
     }
 
     function setSHEC(address _sHEC) external onlyManager{
@@ -512,6 +520,7 @@ contract PriceStrategy is Ownable{
         bonds.push( bond );
         bondTypes[bond]=bondType;
         usdPriceDecimals[bond]=usdPriceDecimal;
+        lastAdjustBlockNumbers[bond]=block.number;
     }
 
     function removeBond(address bond) external onlyManager{
@@ -520,6 +529,7 @@ contract PriceStrategy is Ownable{
                 bonds[i]=address(0);
                 delete bondTypes[bond];
                 delete usdPriceDecimals[bond];
+                delete lastAdjustBlockNumbers[bond];
                 return;
             }
         }
@@ -527,28 +537,37 @@ contract PriceStrategy is Ownable{
 
     //todo
     function runPriceStrategy() external{
-        require(lastAdjustBlockNumber+adjustmentBlockGap>block.number,"cool down time not passed yet");
-        uint hecPrice=getPrice();//$220 = 22000
+        require(executors[msg.sender]==true,"not authorized to run strategy");
+        uint hecPrice=getPrice(hecdai);//$220 = 22000
         uint roi5day=getRoiForDays(5);//2% = 20000
         for( uint i = 0; i < bonds.length; i++ ) {
-            if(bonds[i]!=address(0)){
+            if(bonds[i]!=address(0)
+                &&
+                lastAdjustBlockNumbers[bonds[i]]+adjustmentBlockGap<block.number ){
                 uint bondPriceUsd=IBond(bonds[i]).bondPriceInUSD();
                 uint bondPrice=bondPriceUsd.mul(100).div(usdPriceDecimals[bonds[i]]);
                 executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,bondPrice,roi5day);
+                lastAdjustBlockNumbers[bonds[i]]=block.number;
             }
         }
     }
 
-    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) public view returns (uint){
+    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) internal{
+        uint percent = calcPercentage(bondType,hecPrice,bondPrice,roi5day);
+        helper.adjustPrice(bond,percent);
+    }
+    function calcPercentage(TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) public view returns (uint){
         uint upper=bondPrice;
         uint lower=bondPrice;
         if(bondType==TYPES.LP44||bondType==TYPES.ASSET44){
-            upper=hecPrice.mul(uint(10000).sub(min44Discount)).div(10000);
-            lower=hecPrice.mul(uint(10000).sub(max44Discount)).div(10000);
+            upper=hecPrice.mul(10000).div(uint(10000).add(min44Discount));
+            lower=hecPrice.mul(10000).div(uint(10000).add(max44Discount));
         }else if(bondType==TYPES.LP11){
-            
+            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MinDiscount));
+            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MaxDiscount));
         }else if(bondType==TYPES.ASSET11){
-
+            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MinDiscount));
+            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MaxDiscount));
         }
         uint targetPrice=bondPrice;
         if(bondPrice>upper)targetPrice=upper;
@@ -573,13 +592,18 @@ contract PriceStrategy is Ownable{
         return total.sub(precision).div(100);
     }
 
-    function getPrice() public view returns (uint){
+    function getPrice(address _hecdai) public view returns (uint){
         uint112 _reserve0=0;
         uint112 _reserve1=0;
-        (_reserve0,_reserve1,)=hecdai.getReserves();
+        (_reserve0,_reserve1,)=IUniV2Pair(_hecdai).getReserves();
         uint reserve0=uint(_reserve0);
         uint reserve1=uint(_reserve1);
-        return reserve1.div(reserve0).div(1e7);//$220 = 22000
+        uint decimals0=uint(IERC20(IUniV2Pair(_hecdai).token0()).decimals());
+        uint decimals1=uint(IERC20(IUniV2Pair(_hecdai).token1()).decimals());
+        if(IUniV2Pair(_hecdai).token0()==hec)
+            return reserve1.div(reserve0).mul(100).mul(decimals0).div(decimals1);//$220 = 22000
+        else
+            return reserve0.div(reserve1).mul(100).mul(decimals1).div(decimals0);//$220 = 22000
     }
 
 }
