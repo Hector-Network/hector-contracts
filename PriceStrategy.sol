@@ -548,37 +548,38 @@ contract PriceStrategy is Ownable{
         uint hecPrice=getPrice(hecdai);//$220 = 22000
         uint roi5day=getRoiForDays(5);//2% = 200
         for( uint i = 0; i < bonds.length; i++ ) {
-            if(bonds[i]!=address(0)
+            address bond=bonds[i];
+            if(bond!=address(0)
                 &&
-                lastAdjustBlockNumbers[bonds[i]]+adjustmentBlockGap<block.number ){
-                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,getBondPrice(i),roi5day);
-                lastAdjustBlockNumbers[bonds[i]]=block.number;
+                lastAdjustBlockNumbers[bond]+adjustmentBlockGap<block.number ){
+                executeStrategy(bond,hecPrice,roi5day);
+                lastAdjustBlockNumbers[bond]=block.number;
             }
         }
     }
 
     function runSinglePriceStrategy(uint i) external{
         require(executors[msg.sender]==true,"not authorized to run strategy");
+        address bond=bonds[i];
+        require(bond!=address(0),"bond not found");
         uint hecPrice=getPrice(hecdai);//$220 = 22000
         uint roi5day=getRoiForDays(5);//2% = 200
-        if(bonds[i]!=address(0)
-            &&
-            lastAdjustBlockNumbers[bonds[i]]+adjustmentBlockGap<block.number ){
-            executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,getBondPrice(i),roi5day);
-            lastAdjustBlockNumbers[bonds[i]]=block.number;
+        if(lastAdjustBlockNumbers[bond]+adjustmentBlockGap<block.number ){
+            executeStrategy(bond,hecPrice,roi5day);
+            lastAdjustBlockNumbers[bond]=block.number;
         }
     }
 
-    function getBondPriceUSD(uint i) public view returns (uint){
-        return IBond(bonds[i]).bondPriceInUSD();
+    function getBondPriceUSD(address bond) public view returns (uint){
+        return IBond(bond).bondPriceInUSD();
     }
 
-    function getBondPrice(uint i) public view returns (uint){
-        return getBondPriceUSD(i).mul(100).div(10**usdPriceDecimals[bonds[i]]);
+    function getBondPrice(address bond) public view returns (uint){
+        return getBondPriceUSD(bond).mul(100).div(10**usdPriceDecimals[bond]);
     }
 
-    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) internal{
-        uint percent = calcPercentage(bondType,hecPrice,bondPrice,roi5day,perBondDiscounts[bond]);
+    function executeStrategy(address bond,uint hecPrice,uint roi5day) internal{
+        uint percent = calcPercentage(bondTypes[bond],hecPrice,getBondPrice(bond),roi5day,perBondDiscounts[bond]);
         if(percent>11000)helper.adjustPrice(bond,11000);
         else if(percent<9000)helper.adjustPrice(bond,9000);
         else if(percent>=10100||percent<=9900)helper.adjustPrice(bond,percent);
