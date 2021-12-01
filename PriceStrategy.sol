@@ -434,6 +434,7 @@ contract PriceStrategy is Ownable{
     mapping(address=>uint) public usdPriceDecimals;
     mapping(address=>uint) public lastAdjustBlockNumbers;
     address[] public bonds;
+    mapping(address=>uint) public perBondDiscounts;
 
     address public immutable hec;
 
@@ -510,7 +511,7 @@ contract PriceStrategy is Ownable{
         delete executors[executor];
     }
 
-    enum TYPES { ASSET11,ASSET44,LP11,LP44 }
+    enum TYPES { NOTYPE,ASSET11,ASSET44,LP11,LP44 }
 
     function addBond(address bond, TYPES bondType, uint usdPriceDecimal) external onlyManager{
         require(bondType==TYPES.ASSET11||bondType==TYPES.ASSET44||bondType==TYPES.LP11||bondType==TYPES.LP44,"incorrect bond type");
@@ -530,44 +531,70 @@ contract PriceStrategy is Ownable{
                 delete bondTypes[bond];
                 delete usdPriceDecimals[bond];
                 delete lastAdjustBlockNumbers[bond];
+                delete perBondDiscounts[bond];
                 return;
             }
         }
     }
 
-    //todo
+    function setBondSpecificDiscount(address bond, uint discount) external onlyManager{
+        require(discount<=200,"per bond discount can't be more than 2%");
+        require(bondTypes[bond]!=TYPES.NOTYPE,"not a bond under strategy");
+        perBondDiscounts[bond]=discount;
+    }
+
     function runPriceStrategy() external{
         require(executors[msg.sender]==true,"not authorized to run strategy");
         uint hecPrice=getPrice(hecdai);//$220 = 22000
-        uint roi5day=getRoiForDays(5);//2% = 20000
+        uint roi5day=getRoiForDays(5);//2% = 200
         for( uint i = 0; i < bonds.length; i++ ) {
             if(bonds[i]!=address(0)
                 &&
                 lastAdjustBlockNumbers[bonds[i]]+adjustmentBlockGap<block.number ){
-                uint bondPriceUsd=IBond(bonds[i]).bondPriceInUSD();
-                uint bondPrice=bondPriceUsd.mul(100).div(usdPriceDecimals[bonds[i]]);
-                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,bondPrice,roi5day);
+                executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,getBondPrice(i),roi5day);
                 lastAdjustBlockNumbers[bonds[i]]=block.number;
             }
         }
     }
 
-    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) internal{
-        uint percent = calcPercentage(bondType,hecPrice,bondPrice,roi5day);
-        helper.adjustPrice(bond,percent);
+    function runSinglePriceStrategy(uint i) external{
+        require(executors[msg.sender]==true,"not authorized to run strategy");
+        uint hecPrice=getPrice(hecdai);//$220 = 22000
+        uint roi5day=getRoiForDays(5);//2% = 200
+        if(bonds[i]!=address(0)
+            &&
+            lastAdjustBlockNumbers[bonds[i]]+adjustmentBlockGap<block.number ){
+            executeStrategy(bonds[i],bondTypes[bonds[i]],hecPrice,getBondPrice(i),roi5day);
+            lastAdjustBlockNumbers[bonds[i]]=block.number;
+        }
     }
-    function calcPercentage(TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) public view returns (uint){
+
+    function getBondPriceUSD(uint i) public view returns (uint){
+        return IBond(bonds[i]).bondPriceInUSD();
+    }
+
+    function getBondPrice(uint i) public view returns (uint){
+        return getBondPriceUSD(i).mul(100).div(10**usdPriceDecimals[bonds[i]]);
+    }
+
+    function executeStrategy(address bond,TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day) internal{
+        uint percent = calcPercentage(bondType,hecPrice,bondPrice,roi5day,perBondDiscounts[bond]);
+        if(percent>11000)helper.adjustPrice(bond,11000);
+        else if(percent<9000)helper.adjustPrice(bond,9000);
+        else if(percent>=10100||percent<=9900)helper.adjustPrice(bond,percent);
+    }
+    function calcPercentage(TYPES bondType,uint hecPrice,uint bondPrice,uint roi5day,uint perBondDiscount) public view returns (uint){
         uint upper=bondPrice;
         uint lower=bondPrice;
         if(bondType==TYPES.LP44||bondType==TYPES.ASSET44){
-            upper=hecPrice.mul(10000).div(uint(10000).add(min44Discount));
-            lower=hecPrice.mul(10000).div(uint(10000).add(max44Discount));
+            upper=hecPrice.mul(10000).div(uint(10000).add(min44Discount).add(perBondDiscount));
+            lower=hecPrice.mul(10000).div(uint(10000).add(max44Discount).add(perBondDiscount));
         }else if(bondType==TYPES.LP11){
-            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MinDiscount));
-            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MaxDiscount));
+            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MinDiscount).add(perBondDiscount));
+            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalLp11MaxDiscount).add(perBondDiscount));
         }else if(bondType==TYPES.ASSET11){
-            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MinDiscount));
-            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MaxDiscount));
+            upper = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MinDiscount).add(perBondDiscount));
+            lower = hecPrice.mul(10000).div(uint(10000).add(roi5day).add(additionalAsset11MaxDiscount).add(perBondDiscount));
         }
         uint targetPrice=bondPrice;
         if(bondPrice>upper)targetPrice=upper;
@@ -601,9 +628,9 @@ contract PriceStrategy is Ownable{
         uint decimals0=uint(IERC20(IUniV2Pair(_hecdai).token0()).decimals());
         uint decimals1=uint(IERC20(IUniV2Pair(_hecdai).token1()).decimals());
         if(IUniV2Pair(_hecdai).token0()==hec)
-            return reserve1.div(reserve0).mul(100).mul(decimals0).div(decimals1);//$220 = 22000
+            return reserve1.mul(10**decimals0).div(reserve0).div(10**(decimals1.sub(2)));//$220 = 22000
         else
-            return reserve0.div(reserve1).mul(100).mul(decimals1).div(decimals0);//$220 = 22000
+            return reserve0.mul(10**decimals1).div(reserve1).div(10**(decimals0.sub(2)));//$220 = 22000
     }
 
 }
