@@ -436,29 +436,7 @@ contract PriceStrategy is Ownable{
     address[] public bonds;
     mapping(address=>uint) public perBondDiscounts;
 
-    address public immutable hec;
-
-    constructor(
-        address _helper,
-        address _hecdai,
-        address _sHEC,
-        address _staking,
-        uint _adjustmentBlockGap,
-        address _hec
-    ){
-        require( _helper != address(0) );
-        helper = IPriceHelperV2(_helper);
-        require( _hecdai != address(0) );
-        hecdai = _hecdai;
-        require( _sHEC != address(0) );
-        sHEC = IsHEC(_sHEC);
-        require( _staking != address(0) );
-        staking = IStaking(_staking);
-        require( _adjustmentBlockGap>=600&&_adjustmentBlockGap<=28800,"adjustment block gap must be between 600 and 28800");
-        adjustmentBlockGap=_adjustmentBlockGap;
-        require( _hec != address(0) );
-        hec = _hec;
-    }
+    address public hec;
 
     function setLp11(uint min,uint max) external onlyManager{
         require(min<=500&&max<=1000,"additional disccount can't be more than 5%-10%");
@@ -496,6 +474,11 @@ contract PriceStrategy is Ownable{
     function setStaking(address _staking) external onlyManager{
         require( _staking != address(0) );
         staking = IStaking(_staking);
+    }
+
+    function setHEC(address _hec) external onlyManager{
+        require( _hec != address(0) );
+        hec = _hec;
     }
 
    function setAdjustmentBlockGap(uint _adjustmentBlockGap) external onlyManager{
