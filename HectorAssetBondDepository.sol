@@ -1,11 +1,3 @@
-/**
- *Submitted for verification at FtmScan.com on 2021-11-04
-*/
-
-/**
- *Submitted for verification at Etherscan.io on 2021-08-04
-*/
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -627,6 +619,7 @@ interface ITreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
     function mintRewards( address _recipient, uint _amount ) external;
+    function totalReserves() external view returns(uint);
 }
 
 interface IStaking {
@@ -637,7 +630,7 @@ interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
 
-contract HectorBondDepository is Ownable {
+contract HectorAssetBondDepository is Ownable {
 
     using FixedPoint for *;
     using SafeERC20 for IERC20;
@@ -677,8 +670,9 @@ contract HectorBondDepository is Ownable {
     uint public totalDebt; // total value of outstanding bonds; used for pricing
     uint public lastDecay; // reference block for debt decay
 
-
-
+    uint public totalPrinciple; // total principle bonded through this depository
+    string internal name_; //name of this bond
+    uint public maxWeight;
 
     /* ======== STRUCTS ======== */
 
@@ -688,6 +682,7 @@ contract HectorBondDepository is Ownable {
         uint vestingTerm; // in blocks
         uint minimumPrice; // vs principle value. 4 decimals (1500 = 0.15)
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
+        uint fee; // never used, for compatibility
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
     }
 
@@ -714,6 +709,7 @@ contract HectorBondDepository is Ownable {
     /* ======== INITIALIZATION ======== */
 
     constructor ( 
+        string memory _name,
         address _HEC,
         address _principle,
         address _treasury, 
@@ -730,14 +726,17 @@ contract HectorBondDepository is Ownable {
         DAO = _DAO;
         require( _feed != address(0) );
         priceFeed = AggregatorV3Interface( _feed );
+        name_ = _name;
+        maxWeight=500;
     }
 
     /**
-     *  @notice initializes bond parameters
+     *  @notice initializes bond parameters, fee is no use just for compatibility
      *  @param _controlVariable uint
      *  @param _vestingTerm uint
      *  @param _minimumPrice uint
      *  @param _maxPayout uint
+     *  @param _fee uint
      *  @param _maxDebt uint
      *  @param _initialDebt uint
      */
@@ -746,15 +745,16 @@ contract HectorBondDepository is Ownable {
         uint _vestingTerm,
         uint _minimumPrice,
         uint _maxPayout,
+        uint _fee,
         uint _maxDebt,
         uint _initialDebt
     ) external onlyPolicy() {
-        require( currentDebt() == 0, "Debt must be 0 for initialization" );
         terms = Terms ({
             controlVariable: _controlVariable,
             vestingTerm: _vestingTerm,
             minimumPrice: _minimumPrice,
             maxPayout: _maxPayout,
+            fee: _fee,
             maxDebt: _maxDebt
         });
         totalDebt = _initialDebt;
@@ -766,7 +766,7 @@ contract HectorBondDepository is Ownable {
     
     /* ======== POLICY FUNCTIONS ======== */
 
-    enum PARAMETER { VESTING, PAYOUT, DEBT }
+    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT, MINPRICE }
     /**
      *  @notice set parameters for new bonds
      *  @param _parameter PARAMETER
@@ -779,8 +779,13 @@ contract HectorBondDepository is Ownable {
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
             require( _input <= 1000, "Payout cannot be above 1 percent" );
             terms.maxPayout = _input;
+        } else if ( _parameter == PARAMETER.FEE ) { // 2 not in use
+            require( _input <= 10000, "DAO fee cannot exceed payout" );
+            terms.fee = _input;
         } else if ( _parameter == PARAMETER.DEBT ) { // 3
-            terms.maxDebt = _input;
+            terms.maxDebt = _input;	
+        } else if ( _parameter == PARAMETER.MINPRICE ) { // 4
+            terms.minimumPrice = _input;
         }
     }
 
@@ -797,8 +802,6 @@ contract HectorBondDepository is Ownable {
         uint _target,
         uint _buffer 
     ) external onlyPolicy() {
-        require( _increment <= terms.controlVariable.mul( 25 ).div( 1000 ), "Increment too large" );
-
         adjustment = Adjust({
             add: _addition,
             rate: _increment,
@@ -843,9 +846,11 @@ contract HectorBondDepository is Ownable {
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
 
+        require(principlePercentAfterPurchase(_amount)<=maxWeight, "total value of this token too high");
+
         decayDebt();
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
-        
+       
         uint priceInUSD = bondPriceInUSD(); // Stored in bond info
         uint nativePrice = _bondPrice();
 
@@ -863,7 +868,7 @@ contract HectorBondDepository is Ownable {
          */
         IERC20( principle ).safeTransferFrom( msg.sender, treasury, _amount );
         ITreasury( treasury ).mintRewards( address(this), payout );
-        
+        totalPrinciple=totalPrinciple.add(_amount);
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
                 
@@ -1019,6 +1024,11 @@ contract HectorBondDepository is Ownable {
         }
     }
 
+    function setMaxWeight(uint _maxWeight) external{
+        require(_maxWeight<=800,"cant be more than 8%(800)");
+        maxWeight=_maxWeight;
+    }
+
     /**
      *  @notice get asset price from chainlink
      */
@@ -1110,6 +1120,24 @@ contract HectorBondDepository is Ownable {
         }
     }
 
+    /**
+     *  @notice show the name of current bond
+     *  @return _name string
+     */
+    function name() public view returns (string memory _name) {
+        return name_;
+    }
+
+    /**
+     *  @notice return percentage of total principle value over total reserve
+     *  @param _amount uint
+     *  @return uint
+     */
+    function principlePercentAfterPurchase(uint _amount) public view returns (uint){
+        return IERC20(principle).balanceOf(treasury).add(_amount).mul(uint(assetPrice()))
+        .div(10**(uint(IERC20(principle).decimals()).sub(5)))
+        .div(ITreasury(treasury).totalReserves());
+    }
 
 
 
