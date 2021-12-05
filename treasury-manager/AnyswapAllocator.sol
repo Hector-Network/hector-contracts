@@ -506,14 +506,6 @@ interface IERC20 {
      */
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
-interface AnyswapV1ERC20 {
-    function mint(address to, uint256 amount) external returns (bool);
-    function burn(address from, uint256 amount) external returns (bool);
-    function changeVault(address newVault) external returns (bool);
-    function depositVault(uint amount, address to) external returns (uint);
-    function withdrawVault(address from, uint amount, address to) external returns (uint);
-    function underlying() external view returns (address);
-}
 interface IOwnable {
   function policy() external view returns (address);
 
@@ -570,16 +562,18 @@ interface ITreasury {
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
+interface AnyswapV1ERC20 {
+    function underlying() external view returns (address);
+}
 interface IAnyswapRouter{
     function anySwapOutUnderlying(address token, address to, uint amount, uint toChainID) external;
 }
 
 /**
- *  Contract deploys reserves from treasury into the curve gauge pool,
- *  earning interest and crv.
+ *  Contract deploys reserves from treasury and send to ethereum allocator contract through anysway router,
  */
 
-contract AnyswapAllocator is Ownable {
+contract AnyswapEthereumAllocator is Ownable {
 
     /* ======== DEPENDENCIES ======== */
 
@@ -593,6 +587,7 @@ contract AnyswapAllocator is Ownable {
     struct tokenData {
         address underlying;
         address anyswapERC20;
+        address ethereumAddress;
         uint deployed;
         uint limit;
         uint newLimit;
@@ -607,6 +602,7 @@ contract AnyswapAllocator is Ownable {
     IAnyswapRouter public immutable anyswapRouter; // Treasury
     address public rewardPool;
     string public name;
+    uint constant ETHEREUM_CHAINID=1;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
 
@@ -651,7 +647,7 @@ contract AnyswapAllocator is Ownable {
     /* ======== OPEN FUNCTIONS ======== */
 
     /**
-     *  @notice claims accrued rewards for all tracked crvTokens
+     *  @notice claims accrued rewards
      */
     function harvest() public {
 
@@ -670,24 +666,20 @@ contract AnyswapAllocator is Ownable {
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
-     *  @notice withdraws asset from treasury, deposits asset into curve pool, then deposit curve pool token into gauge
+     *  @notice withdraws asset from treasury, transfer out to other chain through 
      *  @param token address
      *  @param amount uint
      */
     function deposit( address token, uint amount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
-        
-        IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
-        anySwapOutUnderlying(tokenInfo[token].anyswapERC20, address to, uint256 amount, uint256 toChainID);
-        uint curveAmount = curve2Pool.add_liquidity(amounts, minAmount); // deposit into curve
 
-        address curveToken = tokenInfo[ token ].curveToken;
-        IERC20( curveToken ).approve( address(curveGauge), curveAmount ); // approve to deposit to gauge
-        curveGauge.deposit( curveAmount ); // deposit into gauge
+        IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
+        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, tokenInfo[token].ethereumAddress, amount, ETHEREUM_CHAINID);
+
         // account for deposit
         uint value = treasury.valueOf( token, amount );
-        accountingFor( token, amount, value, curveAmount, true );
+        accountingFor( token, amount, value, true );
     }
 
     function disableSendback() external onlyPolicy{
@@ -706,29 +698,28 @@ contract AnyswapAllocator is Ownable {
     }
 
     /**
-     *  @notice withdraws crvToken from gauge, withdraws from curve pool, then deposits asset into treasury
+     *  @notice deposit balance of certain token back into treasury
      *  @param token address
-     *  @param amount uint
-     *  @param minAmount uint
      */
-    function withdraw( address token, uint amount, uint minAmount ) public onlyPolicy() {
+    function withdraw( address token ) public onlyPolicy() {
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
 
         // account for withdrawal
         uint value = treasury.valueOf( token, balance );
-        accountingFor( token, balance, value, amount, false );
+        accountingFor( token, balance, value, false );
 
         IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
         treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
     }
 
     /**
-     *  @notice adds asset and corresponding crvToken to mapping
+     *  @notice adds asset and corresponding anyswapERC20Token to mapping
      *  @param principleToken address
      *  @param anyswapERC20Token address
+     *  @param ethereumAddress address
      *  @param max uint
      */
-    function addToken( address principleToken, address anyswapERC20Token, uint max ) external onlyPolicy() {
+    function addToken( address principleToken, address anyswapERC20Token, address ethereumAddress, uint max ) external onlyPolicy() {
         
         require(anyswapERC20Token!=address(0),"invalid anyswap erc20 token");
         address token=AnyswapV1ERC20(anyswapERC20Token).underlying();
@@ -738,6 +729,7 @@ contract AnyswapAllocator is Ownable {
         tokenInfo[ token ] = tokenData({
             underlying: token,
             anyswapERC20: anyswapERC20Token,
+            ethereumAddress: ethereumAddress,
             deployed: 0,
             limit: max,
             newLimit: 0,
@@ -805,13 +797,11 @@ contract AnyswapAllocator is Ownable {
      *  @param value uint
      *  @param add bool
      */
-    function accountingFor( address token, uint amount, uint value, uint curveAmount, bool add ) internal {
+    function accountingFor( address token, uint amount, uint value, bool add ) internal {
         if( add ) {
             tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
         
             totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
-
-            tokenInfo[token].curveBalance=tokenInfo[token].curveBalance.add(curveAmount);
             
         } else {
             // track amount allocated into pool
@@ -819,12 +809,6 @@ contract AnyswapAllocator is Ownable {
                 tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.sub( amount ); 
             } else {
                 tokenInfo[ token ].deployed = 0;
-            }
-
-            if(curveAmount < tokenInfo[token].curveBalance){
-                tokenInfo[token].curveBalance=tokenInfo[token].curveBalance.sub(curveAmount);
-            }else{
-                tokenInfo[token].curveBalance=0;
             }
             
             // track total value allocated into pools
@@ -848,17 +832,5 @@ contract AnyswapAllocator is Ownable {
         uint willBeDeployed = tokenInfo[ token ].deployed.add( amount );
 
         return ( willBeDeployed > tokenInfo[ token ].limit );
-    }
-
-    function showPrinciplePnL( address token ) public view returns (bool _profit, uint _amount) {
-        //address curveToken = tokenInfo[ token ].curveToken;
-        uint curveAmount = tokenInfo[token].curveBalance;
-        uint underlyingAmount = curve2Pool.calc_withdraw_one_coin(curveAmount,tokenInfo[ token ].index);
-        uint invested = tokenInfo[ token ].deployed;
-        _profit = underlyingAmount>=invested;
-        if(_profit)
-            _amount = underlyingAmount - invested;
-        else
-            _amount = invested -  underlyingAmount;
     }
 }
