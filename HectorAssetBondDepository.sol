@@ -1139,6 +1139,10 @@ contract HectorAssetBondDepository is Ownable {
         .div(ITreasury(treasury).totalReserves());
     }
 
+    
+    function isLiquidityBond() external pure returns(bool){
+        return true;//for compatibility with price helper
+    }
 
 
     /* ======= AUXILLIARY ======= */
