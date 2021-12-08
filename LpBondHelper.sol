@@ -411,6 +411,55 @@ library SafeERC20 {
         }
     }
 }
+interface IOwnable {
+  function policy() external view returns (address);
+
+  function renounceManagement() external;
+  
+  function pushManagement( address newOwner_ ) external;
+  
+  function pullManagement() external;
+}
+
+contract Ownable is IOwnable {
+
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        emit OwnershipPushed( address(0), _owner );
+    }
+
+    function policy() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyPolicy() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceManagement() public virtual override onlyPolicy() {
+        emit OwnershipPushed( _owner, address(0) );
+        _owner = address(0);
+    }
+
+    function pushManagement( address newOwner_ ) public virtual override onlyPolicy() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+    
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
+    }
+}
 interface IERC20 {
     function approve(address spender, uint256 amount) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
@@ -475,7 +524,7 @@ interface IBond{
     function principle() external returns(address);
     function bondPrice() external view returns ( uint price_ );
 }
-contract LpBondHelper{
+contract LpBondHelper is Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
     //fee unit is 1/1000, 3=0.003=0.3%, 2=0.002=0.2%
@@ -494,7 +543,7 @@ contract LpBondHelper{
             path[0]=token0;
             path[1]=token1;
             IERC20(token0).approve(router,toSwapIn);
-            uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.number);
+            uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.timestamp);
             amount0=inAmount.sub(toSwapIn);
             amount1=amountOuts[1];
         }else{
@@ -503,13 +552,13 @@ contract LpBondHelper{
             path[0]=token1;
             path[1]=token0;
             IERC20(token1).approve(router,toSwapIn);
-            uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.number);
+            uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.timestamp);
             amount0=amountOuts[1];
             amount1=inAmount.sub(toSwapIn);
         }
         IERC20(token0).approve(router,amount0);
         IERC20(token1).approve(router,amount1);
-        (,,uint lpAmount)=IUniswapRouter(router).addLiquidity(token0,token1,amount0,amount1,1,1,address(this),block.number);
+        (,,uint lpAmount)=IUniswapRouter(router).addLiquidity(token0,token1,amount0,amount1,1,1,address(this),block.timestamp);
         uint bal0=IERC20(token0).balanceOf(address(this));
         if(bal0>0)IERC20(token0).transfer(msg.sender,bal0);
         uint bal1=IERC20(token1).balanceOf(address(this));
@@ -518,6 +567,18 @@ contract LpBondHelper{
     }
     mapping(address=>address) internal pairRouters;
     mapping(address=>uint) internal pairFees;
+    function addPair(address pair,address router,uint fee) external onlyPolicy{
+        require(pair!=address(0),"invalid pair address");
+        require(router!=address(0),"invalid router address");
+        require(pairRouters[pair]==address(0),"pair registered");
+        pairRouters[pair]=router;
+        pairFees[pair]=fee;
+    }
+    function removePair(address pair,address router) external onlyPolicy{
+        require(pairRouters[pair]==router,"pair and router not matched");
+        delete pairRouters[pair];
+        delete pairFees[pair];
+    }
     function bond(address liquidityBond,address inToken,uint inAmount) external{
         address pair=IBond(liquidityBond).principle();
         require(pairRouters[pair]!=address(0)&&pairFees[pair]!=0,"pair not registered");
@@ -526,7 +587,7 @@ contract LpBondHelper{
         IBond(liquidityBond).deposit(lpAmount,IBond(liquidityBond).bondPrice(),msg.sender);
     }
     function calculateSwapInAmount(uint256 reserveIn, uint256 userIn, uint256 fee)
-        internal
+        public
         pure
         returns (uint256)
     {
@@ -535,4 +596,9 @@ contract LpBondHelper{
                 reserveIn * ((userIn * (uint(4000).sub(4*fee)) *1000) + (reserveIn * ((uint(4000).sub(4*fee))* 1000+fee*fee)))
             ).sub(reserveIn * (2000-fee))) / (2000-2*fee);
     }
+    function sendBack(address token) external onlyPolicy{
+        uint bal=IERC20(token).balanceOf(address(this));
+        if(bal>0)IERC20(token).transfer(msg.sender,bal);
+    }
+
 }
