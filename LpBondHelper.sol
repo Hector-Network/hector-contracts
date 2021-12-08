@@ -559,10 +559,13 @@ contract LpBondHelper is Ownable{
         IERC20(token0).approve(router,amount0);
         IERC20(token1).approve(router,amount1);
         (,,uint lpAmount)=IUniswapRouter(router).addLiquidity(token0,token1,amount0,amount1,1,1,address(this),block.timestamp);
+        //keep the dust
+        /*
         uint bal0=IERC20(token0).balanceOf(address(this));
         if(bal0>0)IERC20(token0).transfer(msg.sender,bal0);
         uint bal1=IERC20(token1).balanceOf(address(this));
-        if(bal0>1)IERC20(token1).transfer(msg.sender,bal1);
+        if(bal1>0)IERC20(token1).transfer(msg.sender,bal1);
+        */
         return lpAmount;
     }
     mapping(address=>address) internal pairRouters;
