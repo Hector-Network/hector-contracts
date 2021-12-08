@@ -522,6 +522,7 @@ contract LpBondHelper{
         address pair=IBond(liquidityBond).principle();
         require(pairRouters[pair]!=address(0)&&pairFees[pair]!=0,"pair not registered");
         uint lpAmount=zapin(pairRouters[pair],pair,pairFees[pair],inToken,inAmount);
+        IERC20(pair).approve(liquidityBond,lpAmount);
         IBond(liquidityBond).deposit(lpAmount,IBond(liquidityBond).bondPrice(),msg.sender);
     }
     function calculateSwapInAmount(uint256 reserveIn, uint256 userIn, uint256 fee)
