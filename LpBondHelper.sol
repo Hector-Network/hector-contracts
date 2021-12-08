@@ -16,6 +16,69 @@ library Babylonian {
         // else z = 0
     }
 }
+library SafeMath {
+
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
+
+        return c;
+    }
+
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        return c;
+    }
+
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
+    }
+
+    function sqrrt(uint256 a) internal pure returns (uint c) {
+        if (a > 3) {
+            c = a;
+            uint b = add( div( a, 2), 1 );
+            while (b < c) {
+                c = b;
+                b = div( add( div( a, b ), b), 2 );
+            }
+        } else if (a != 0) {
+            c = 1;
+        }
+    }
+}
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -413,6 +476,8 @@ interface IBond{
     function bondPrice() external view returns ( uint price_ );
 }
 contract LpBondHelper{
+    using SafeERC20 for IERC20;
+    using SafeMath for uint;
     //fee unit is 1/1000, 3=0.003=0.3%, 2=0.002=0.2%
     function zapin(address router,address pair,uint fee,address inToken,uint inAmount) internal returns(uint){
         address token0=IUniswapV2Pair(pair).token0();
@@ -430,7 +495,7 @@ contract LpBondHelper{
             path[1]=token1;
             IERC20(token0).approve(router,toSwapIn);
             uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.number);
-            amount0=inAmount-toSwapIn;
+            amount0=inAmount.sub(toSwapIn);
             amount1=amountOuts[1];
         }else{
             toSwapIn=calculateSwapInAmount(rsv1,inAmount,fee);
@@ -440,7 +505,7 @@ contract LpBondHelper{
             IERC20(token1).approve(router,toSwapIn);
             uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(toSwapIn,1,path,address(this),block.number);
             amount0=amountOuts[1];
-            amount1=inAmount-toSwapIn;
+            amount1=inAmount.sub(toSwapIn);
         }
         IERC20(token0).approve(router,amount0);
         IERC20(token1).approve(router,amount1);
@@ -466,7 +531,7 @@ contract LpBondHelper{
     {
         return
             (Babylonian.sqrt(
-                reserveIn * ((userIn * (4000-4*fee) *1000) + (reserveIn * ((4000-4*fee)* 1000+fee*fee)))
-            ) - (reserveIn * (2000-fee))) / (2000-2*fee);
+                reserveIn * ((userIn * (uint(4000).sub(4*fee)) *1000) + (reserveIn * ((uint(4000).sub(4*fee))* 1000+fee*fee)))
+            ).sub(reserveIn * (2000-fee))) / (2000-2*fee);
     }
 }
