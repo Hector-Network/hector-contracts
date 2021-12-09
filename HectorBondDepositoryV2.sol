@@ -654,7 +654,7 @@ contract HectorBondDepositoryV2 is Ownable {
     struct Terms {
         uint controlVariable; // scaling variable for price
         uint vestingTerm; // in blocks
-        uint minimumPrice; // vs principle value
+        uint minimumPrice; // vs principle value , 4 decimals 0.15 = 1500
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
@@ -980,7 +980,7 @@ contract HectorBondDepositoryV2 is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e14 );
     }
 
 
@@ -988,8 +988,11 @@ contract HectorBondDepositoryV2 is Ownable {
      *  @notice calculate current bond premium
      *  @return price_ uint
      */
-    function bondPrice() public view returns ( uint price_ ) {        
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+    function bondPrice() public view returns ( uint price_ ) {
+        if(isLiquidityBond)
+            price_ = terms.controlVariable.mul( debtRatio() ).div( 1e5 );
+        else
+            price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
@@ -1000,7 +1003,10 @@ contract HectorBondDepositoryV2 is Ownable {
      *  @return price_ uint
      */
     function _bondPrice() internal returns ( uint price_ ) {
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        if(isLiquidityBond)
+            price_ = terms.controlVariable.mul( debtRatio() ).div( 1e5 );
+        else
+            price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
@@ -1014,9 +1020,9 @@ contract HectorBondDepositoryV2 is Ownable {
      */
     function bondPriceInUSD() public view returns ( uint price_ ) {
         if( isLiquidityBond ) {
-            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100 );
+            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 1e4 );
         } else {
-            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100 );
+            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 1e4 );
         }
     }
 
