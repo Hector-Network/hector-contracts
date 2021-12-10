@@ -1,15 +1,3 @@
-/**
- *Submitted for verification at FtmScan.com on 2021-11-08
-*/
-
-/**
- *Submitted for verification at Etherscan.io on 2021-05-28
-*/
-
-/**
- * fix the K value calculation when reserve0 and reserve1 small in decimals
- */
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 
@@ -271,7 +259,7 @@ interface IBondingCalculator {
   function valuation( address pair_, uint amount_ ) external view returns ( uint _value );
 }
 
-contract HECgOHMBondingCalculator is IBondingCalculator {
+contract HECgOHMBondCalculator is IBondingCalculator {
 
     using FixedPoint for *;
     using SafeMath for uint;
@@ -287,28 +275,25 @@ contract HECgOHMBondingCalculator is IBondingCalculator {
         require( _hecDaiPair!=address(0));
         hecDaiPair=_hecDaiPair;
     }
-/*
+
     function getKValue( address _pair ) public view returns( uint k_ ) {
-        uint token0 = IERC20( IUniswapV2Pair( _pair ).token0() ).decimals();
-        uint token1 = IERC20( IUniswapV2Pair( _pair ).token1() ).decimals();
+        uint token0 = IERC20( IUniswapV2Pair( hecDaiPair ).token0() ).decimals();
+        uint token1 = IERC20( IUniswapV2Pair( hecDaiPair ).token1() ).decimals();
         uint decimals = token0.add( token1 );
-        uint pair = IERC20( _pair ).decimals();
-        (uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
+        uint pair = IERC20( hecDaiPair ).decimals();
+        (uint reserve0, uint reserve1, ) = IUniswapV2Pair( hecDaiPair ).getReserves();
+        uint k;
         if(decimals>=pair)
-            k_ = reserve0.mul(reserve1).div( 10 ** decimals.sub(pair) );
+            k = reserve0.mul(reserve1).div( 10 ** decimals.sub(pair) );
         else
-            k_ = reserve0.mul(reserve1).mul( 10 ** pair.sub(decimals) );
+            k = reserve0.mul(reserve1).mul( 10 ** pair.sub(decimals) );
+        uint reserve = hecAmount( _pair );
+        uint basePairHecReserve = hecAmount(hecDaiPair);
+        k_=k.mul(reserve).div(basePairHecReserve).mul(reserve).div(basePairHecReserve);
     }
-*/
+
     function getTotalValue( address _pair ) public view returns ( uint _value ) {
-        (uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
-        uint token0 = IERC20( IUniswapV2Pair( _pair ).token0() ).decimals();
-        if(token0>9) reserve0=reserve0.div(10**(token0.sub(9)));
-        else if(token0<9) reserve0=reserve0.mul(10**(uint(9).sub(token0)));
-        uint token1 = IERC20( IUniswapV2Pair( _pair ).token1() ).decimals();
-        if(token1>9) reserve1=reserve1.div(10**(token1.sub(9)));
-        else if(token1<9) reserve1=reserve1.mul(10**(uint(9).sub(token1)));
-       _value = reserve0.add(reserve1);
+        _value = getKValue( _pair ).sqrrt().mul(2);
     }
 
     function valuation( address _pair, uint amount_ ) external view override returns ( uint _value ) {
@@ -319,26 +304,25 @@ contract HECgOHMBondingCalculator is IBondingCalculator {
     }
 
     function markdown( address _pair ) external view returns ( uint ) {
+        _pair=hecDaiPair;
         ( uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
-        ( uint hec,uint dai )=hecAndDai(hecDaiPair);
+
         uint reserve;
         if ( IUniswapV2Pair( _pair ).token0() == HEC ) {
-            reserve = reserve0.mul(dai).div(hec);
+            reserve = reserve1;
         } else {
-            reserve = reserve1.mul(dai).div(hec);
+            reserve = reserve0;
         }
         return reserve.mul( 2 * ( 10 ** IERC20( HEC ).decimals() ) ).div( getTotalValue( _pair ) );
     }
 
-    function hecAndDai(address _hecDaiPair) internal view returns (uint _hec,uint _dai){
-        ( uint reserve0, uint reserve1, ) = IUniswapV2Pair( _hecDaiPair ).getReserves();
+    function hecAmount( address _pair ) public view returns ( uint _reserve){
+        ( uint reserve0, uint reserve1, ) = IUniswapV2Pair( _pair ).getReserves();
 
-        if ( IUniswapV2Pair( _hecDaiPair ).token0() == HEC ) {
-            _hec=reserve0;
-            _dai=reserve1;
+        if ( IUniswapV2Pair( _pair ).token0() == HEC ) {
+            _reserve=reserve0;
         } else {
-            _hec=reserve1;
-            _dai=reserve0;
+            _reserve=reserve1;
         }
     }
 }
