@@ -562,6 +562,8 @@ interface ITreasury {
     function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ );
     function manage( address _token, uint _amount ) external;
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function isLiquidityToken( address _token ) external view returns (bool) ;
+    function isReserveToken( address _token ) external view returns (bool) ;
 }
 
 interface IUniswapRouter{
@@ -572,27 +574,24 @@ interface IUniswapRouter{
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
-    function addLiquidity(
+    function removeLiquidity(
         address tokenA,
         address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
+        uint liquidity,
+        uint amountAMin,
+        uint amountBMin,
         address to,
-        uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
+        uint deadline
+    ) external returns (uint amountA, uint amountB);
 }
 interface IUniV2Pair{
     function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
     function token0() external view returns (address);
     function token1() external view returns (address);
+}
+
+interface IBackingCalculator{
+    function backing() external view returns (uint lpBacking, uint treasuryBacking);
 }
 
 /**
@@ -625,7 +624,6 @@ contract HecBurnAllocator is Ownable {
 
     ITreasury public immutable treasury; // Treasury
     address public immutable uniRouter; // router
-    address public immutable hecPair;
     string public name;
 
     mapping( address => tokenData ) public tokenInfo; // info for reserve token to burn hec
@@ -637,6 +635,8 @@ contract HecBurnAllocator is Ownable {
     bool public enableSendback;
 
     address public immutable hec=0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
+
+    address public backingCalculator;
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -645,7 +645,7 @@ contract HecBurnAllocator is Ownable {
         string memory name_,
         address _treasury,
         address _uniRouter,
-        address _hecPair,
+        address _backingCalculator,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
@@ -653,9 +653,9 @@ contract HecBurnAllocator is Ownable {
 
         require( _uniRouter != address(0) );
         uniRouter =  _uniRouter ;
-        
-        require( _hecPair != address(0) );
-        hecPair = _hecPair;
+
+        require(_backingCalculator!=address(0));
+        backingCalculator=_backingCalculator;
         
         timelockInBlocks = _timelockInBlocks;
 
@@ -675,9 +675,9 @@ contract HecBurnAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      */
-    function burn( address token, uint amount ) public onlyPolicy() {
+    function burnAsset( address token, uint amount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
-        require(getPrice(hecPair)<priceLimit(),"price is not yet lower than price limit");
+        require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
         IERC20(token).approve(uniRouter, amount); // approve anyswap router to spend tokens
@@ -688,7 +688,7 @@ contract HecBurnAllocator is Ownable {
         uint[] memory amountOuts=IUniswapRouter(uniRouter).swapExactTokensForTokens(amount,1,path,address(this),block.timestamp);
         uint bought=amountOuts[1];
         
-        // account for deposit
+        // account for burn
         uint value = treasury.valueOf( token, amount );
         accountingFor( token, amount, value, bought );
     }
@@ -793,21 +793,9 @@ contract HecBurnAllocator is Ownable {
         return ( willBeDeployed > tokenInfo[ token ].limit );
     }
 
-    function getPrice(address _hecPair) public view returns (uint){
-        uint112 _reserve0=0;
-        uint112 _reserve1=0;
-        (_reserve0,_reserve1,)=IUniV2Pair(_hecPair).getReserves();
-        uint reserve0=uint(_reserve0);
-        uint reserve1=uint(_reserve1);
-        uint decimals0=uint(IERC20(IUniV2Pair(_hecPair).token0()).decimals());
-        uint decimals1=uint(IERC20(IUniV2Pair(_hecPair).token1()).decimals());
-        if(IUniV2Pair(_hecPair).token0()==hec)
-            return reserve1.mul(10**decimals0).div(reserve0).div(10**(decimals1.sub(2)));//$220 = 22000
-        else
-            return reserve0.mul(10**decimals1).div(reserve1).div(10**(decimals0.sub(2)));//$220 = 22000
-    }
-
-    function priceLimit() public view returns(uint){
-        return 7000;
+    function priceMeetCriteria() public view returns (bool){
+        //backingPerHec decimals = 4, 101.23$ = 1012300, 75.8321$ = 758321
+        (uint lpBacking, uint treasuryBacking) = IBackingCalculator(backingCalculator).backing();
+        return treasuryBacking>lpBacking.mul(105).div(100);
     }
 }
