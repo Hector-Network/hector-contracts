@@ -507,6 +507,7 @@ interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
     function decimals() external view returns(uint8);
+    function burn(uint256 amount) external;
 }
 interface IOwnable {
   function policy() external view returns (address);
@@ -584,12 +585,15 @@ interface IUniswapRouter{
         uint deadline
     ) external returns (uint amountA, uint amountB);
 }
-interface IUniV2Pair{
+interface IPair{
     function getReserves() external view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast);
     function token0() external view returns (address);
     function token1() external view returns (address);
 }
-
+interface ICurvePool{
+    function get_dy(int128 i, int128 j, uint _dx) external view returns(uint);
+    function exchange(int128 i, int128 j, uint _dx, uint _min_dy) external returns(uint);
+}
 interface IBackingCalculator{
     function backing() external view returns (uint lpBacking, uint treasuryBacking);
 }
@@ -636,6 +640,14 @@ contract HecBurnAllocator is Ownable {
 
     address public immutable hec=0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
 
+    address public immutable dai=0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E;
+    address public immutable usdc=0x04068DA6C83AFCFA0e13ba15A6696662335D5B75;
+    address public immutable daiHec=0xbc0eecdA2d8141e3a26D2535C57cadcb1095bca9;
+    address public immutable usdcHec=0xd661952749f05aCc40503404938A91aF9aC1473b;
+    address public immutable spooky=0xF491e7B69E4244ad4002BC14e878a34207E38c29;
+    address public immutable spirit=0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52;
+    
+    ICurvePool constant daiUsdc=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
     address public backingCalculator;
     
 
@@ -672,25 +684,81 @@ contract HecBurnAllocator is Ownable {
 
     /**
      *  @notice withdraws asset from treasury, transfer out to other chain through 
-     *  @param token address
-     *  @param amount uint
+     *  @param token address either usdc or dai
+     *  @param amount uint amount of stable coin
      */
     function burnAsset( address token, uint amount ) public onlyPolicy() {
+        require(token==dai||token==usdc,"only support buyback with usdc or dai");
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
+        uint daiAmount;
+        if(token==usdc){
+            IERC20(token).approve(address(daiUsdc),amount);
+            daiAmount=daiUsdc.exchange(1,0,amount,0);
+        }else{
+            daiAmount=amount;
+        }
 
-        IERC20(token).approve(uniRouter, amount); // approve anyswap router to spend tokens
         address[] memory path=new address[](2);
-        path[0]=token;
+        path[0]=dai;
         path[1]=hec;
-        IERC20(token).approve(uniRouter,amount);
+        IERC20(dai).approve(uniRouter, daiAmount); // approve uniswap router to spend dai
         uint[] memory amountOuts=IUniswapRouter(uniRouter).swapExactTokensForTokens(amount,1,path,address(this),block.timestamp);
         uint bought=amountOuts[1];
+
+        IERC20(hec).burn(bought);
         
         // account for burn
         uint value = treasury.valueOf( token, amount );
         accountingFor( token, amount, value, bought );
+    }
+
+    /**
+     *  @notice withdraws asset from treasury, transfer out to other chain through 
+     *  @param token address either usdc or dai
+     *  @param amount uint amount of stable coin
+     */
+    function burnLp( address token, uint amount ) public onlyPolicy() {
+        require(token==dai||token==usdc,"only support buyback with usdc or dai");
+        require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
+        require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
+        address lpToken;
+        address router;
+        if(token==dai) {
+            lpToken=daiHec;
+            router=spooky;
+        }else{
+            lpToken=usdcHec;
+            router=spirit;
+        }
+        (,uint stableReserve)=hecStableAmount(IPair(lpToken));
+        uint lpAmount=amount.mul(IERC20(lpToken).totalSupply()).div(stableReserve);
+        treasury.manage( lpToken, lpAmount ); // retrieve amount of asset from treasury
+        IERC20(lpToken).approve(router,lpAmount);
+        (uint stableAmount,uint hecAmount)=
+        IUniswapRouter(router).removeLiquidity(
+            token,
+            hec,
+            lpAmount,
+            0,
+            0,
+            address(this),
+            block.timestamp
+        );
+
+        address[] memory path=new address[](2);
+        path[0]=token;
+        path[1]=hec;
+        IERC20(token).approve(router, stableAmount); // approve uniswap router to spend dai
+        uint[] memory amountOuts=IUniswapRouter(router).swapExactTokensForTokens(stableAmount,1,path,address(this),block.timestamp);
+        uint bought=amountOuts[1];
+
+        IERC20(hec).burn(bought.add(hecAmount));
+        
+        // account for burn
+        uint value = treasury.valueOf( token, amount );
+        accountingFor( token, amount, value, bought.add(hecAmount) );
     }
 
     function disableSendback() external onlyPolicy{
@@ -797,5 +865,18 @@ contract HecBurnAllocator is Ownable {
         //backingPerHec decimals = 4, 101.23$ = 1012300, 75.8321$ = 758321
         (uint lpBacking, uint treasuryBacking) = IBackingCalculator(backingCalculator).backing();
         return treasuryBacking>lpBacking.mul(105).div(100);
+    }
+    function hecStableAmount( IPair _pair ) public view returns ( uint hecReserve,uint stableReserve){
+        ( uint reserve0, uint reserve1, ) =  _pair .getReserves();
+        uint8 stableDecimals;
+        if ( _pair.token0() == hec ) {
+            hecReserve=reserve0;
+            stableReserve=reserve1;
+            stableDecimals=IERC20(_pair.token1()).decimals();
+        } else {
+            hecReserve=reserve1;
+            stableReserve=reserve0;
+            stableDecimals=IERC20(_pair.token0()).decimals();
+        }
     }
 }
