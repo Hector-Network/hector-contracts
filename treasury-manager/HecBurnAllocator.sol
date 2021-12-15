@@ -705,7 +705,7 @@ contract HecBurnAllocator is Ownable {
         path[0]=dai;
         path[1]=hec;
         IERC20(dai).approve(spooky, daiAmount); // approve uniswap router to spend dai
-        uint[] memory amountOuts=IUniswapRouter(spooky).swapExactTokensForTokens(amount,1,path,address(this),block.timestamp);
+        uint[] memory amountOuts=IUniswapRouter(spooky).swapExactTokensForTokens(daiAmount,1,path,address(this),block.timestamp);
         uint bought=amountOuts[1];
 
         IERC20(hec).burn(bought);
