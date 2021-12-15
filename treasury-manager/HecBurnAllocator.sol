@@ -653,6 +653,7 @@ contract HecBurnAllocator is Ownable {
     
     ICurvePool constant daiUsdc=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
     address public backingCalculator;
+    uint public premium;
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -721,7 +722,6 @@ contract HecBurnAllocator is Ownable {
      */
     function burnLp( address token, uint amount ) public onlyPolicy() {
         require(token==dai||token==usdc,"only support buyback with usdc or dai lp");
-        require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         address lpToken;
         address router;
         if(token==dai) {
@@ -873,23 +873,24 @@ contract HecBurnAllocator is Ownable {
         return stableSpent>tokenInfo[token].transactionLimit;
     }
 
+    function setPremium(uint _premium) external onlyPolicy{
+        require(_premium<11,"price premium must be in range of 0 to 10");
+        premium=_premium;
+    }
+
     function priceMeetCriteria() public view returns (bool){
-        if(true)return true;
         //backingPerHec decimals = 4, 101.23$ = 1012300, 75.8321$ = 758321
         (uint lpBacking, uint treasuryBacking) = IBackingCalculator(backingCalculator).backing();
-        return treasuryBacking>lpBacking.mul(105).div(100);
+        return treasuryBacking>lpBacking.mul(premium.add(100)).div(100);
     }
     function hecStableAmount( IPair _pair ) public view returns ( uint hecReserve,uint stableReserve){
         ( uint reserve0, uint reserve1, ) =  _pair .getReserves();
-        uint8 stableDecimals;
         if ( _pair.token0() == hec ) {
             hecReserve=reserve0;
             stableReserve=reserve1;
-            stableDecimals=IERC20(_pair.token1()).decimals();
         } else {
             hecReserve=reserve1;
             stableReserve=reserve0;
-            stableDecimals=IERC20(_pair.token0()).decimals();
         }
     }
 }
