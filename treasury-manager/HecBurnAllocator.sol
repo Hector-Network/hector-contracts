@@ -614,9 +614,12 @@ contract HecBurnAllocator is Ownable {
     /* ======== STRUCTS ======== */
 
     struct tokenData {
-        address underlying;
-        uint deployed;
+        address token;
+        uint tokenSpent;
+        uint stableSpent;
         uint hecBought;
+        uint hecBurnt;
+        uint transactionLimit;
         uint limit;
         uint newLimit;
         uint limitChangeTimelockEnd;
@@ -627,12 +630,13 @@ contract HecBurnAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     ITreasury public immutable treasury; // Treasury
-    address public immutable uniRouter; // router
     string public name;
+    
 
     mapping( address => tokenData ) public tokenInfo; // info for reserve token to burn hec
 
-    uint public totalValueDeployed; // total RFV deployed into lending pool
+    uint public totalBought; // total hec bought
+    uint public totalBurnt; // total hec burnt
 
     uint public immutable timelockInBlocks; // timelock to raise deployment limit
 
@@ -656,15 +660,11 @@ contract HecBurnAllocator is Ownable {
     constructor ( 
         string memory name_,
         address _treasury,
-        address _uniRouter,
         address _backingCalculator,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
-
-        require( _uniRouter != address(0) );
-        uniRouter =  _uniRouter ;
 
         require(_backingCalculator!=address(0));
         backingCalculator=_backingCalculator;
@@ -690,6 +690,7 @@ contract HecBurnAllocator is Ownable {
     function burnAsset( address token, uint amount ) public onlyPolicy() {
         require(token==dai||token==usdc,"only support buyback with usdc or dai");
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
+        require(!exceedsTransactionLimit(token,amount),"transaction amount too large");
         require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
         uint daiAmount;
@@ -703,15 +704,14 @@ contract HecBurnAllocator is Ownable {
         address[] memory path=new address[](2);
         path[0]=dai;
         path[1]=hec;
-        IERC20(dai).approve(uniRouter, daiAmount); // approve uniswap router to spend dai
-        uint[] memory amountOuts=IUniswapRouter(uniRouter).swapExactTokensForTokens(amount,1,path,address(this),block.timestamp);
+        IERC20(dai).approve(spooky, daiAmount); // approve uniswap router to spend dai
+        uint[] memory amountOuts=IUniswapRouter(spooky).swapExactTokensForTokens(amount,1,path,address(this),block.timestamp);
         uint bought=amountOuts[1];
 
         IERC20(hec).burn(bought);
         
         // account for burn
-        uint value = treasury.valueOf( token, amount );
-        accountingFor( token, amount, value, bought );
+        accountingFor( token, amount, amount, bought, bought );
     }
 
     /**
@@ -720,8 +720,7 @@ contract HecBurnAllocator is Ownable {
      *  @param amount uint amount of stable coin
      */
     function burnLp( address token, uint amount ) public onlyPolicy() {
-        require(token==dai||token==usdc,"only support buyback with usdc or dai");
-        require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
+        require(token==dai||token==usdc,"only support buyback with usdc or dai lp");
         require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         address lpToken;
         address router;
@@ -732,6 +731,8 @@ contract HecBurnAllocator is Ownable {
             lpToken=usdcHec;
             router=spirit;
         }
+        require( !exceedsLimit( lpToken, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
+        require(!exceedsTransactionLimit(lpToken,amount),"transaction amount too large");
         (,uint stableReserve)=hecStableAmount(IPair(lpToken));
         uint lpAmount=amount.mul(IERC20(lpToken).totalSupply()).div(stableReserve);
         treasury.manage( lpToken, lpAmount ); // retrieve amount of asset from treasury
@@ -757,8 +758,7 @@ contract HecBurnAllocator is Ownable {
         IERC20(hec).burn(bought.add(hecAmount));
         
         // account for burn
-        uint value = treasury.valueOf( token, amount );
-        accountingFor( token, amount, value, bought.add(hecAmount) );
+        accountingFor( lpToken, lpAmount, stableAmount, bought, bought.add(hecAmount) );
     }
 
     function disableSendback() external onlyPolicy{
@@ -767,25 +767,28 @@ contract HecBurnAllocator is Ownable {
 
     function sendBack(address _token) external onlyPolicy {
         require(enableSendback==true,"send back token is disabled");
-        require(tokenInfo[_token].underlying==address(0),"only none registered token can be sent back");
+        //require(tokenInfo[_token].underlying==address(0),"only none registered token can be sent back");
         uint amount = IERC20(_token).balanceOf(address(this));
         IERC20(_token).safeTransfer(policy(),amount);
     }
 
     /**
-     *  @notice adds asset and corresponding anyswapERC20Token to mapping
-     *  @param principleToken address
+     *  @notice adds asset token
+     *  @param token address
      *  @param max uint
+     *  @param transactionLimit uint
      */
-    function addToken( address principleToken, uint max ) external onlyPolicy() {
-        
-        require( principleToken!= address(0),"principle token not matched with anyswap ERC20 underlying token");
-        require( tokenInfo[ principleToken ].deployed == 0 ); 
+    function addToken( address token, uint max ,uint transactionLimit) external onlyPolicy() {
+        require(token==dai||token==usdc||token==daiHec||token==usdcHec,"principle token invalid");
+        require( tokenInfo[ token ].stableSpent == 0 ,"token is burnt already, can't re-register"); 
 
-        tokenInfo[ principleToken ] = tokenData({
-            underlying: principleToken,
-            deployed: 0,
+        tokenInfo[ token ] = tokenData({
+            token: token,
+            tokenSpent: 0,
+            stableSpent: 0,
             hecBought: 0,
+            hecBurnt: 0,
+            transactionLimit: transactionLimit,
             limit: max,
             newLimit: 0,
             limitChangeTimelockEnd: 0
@@ -800,7 +803,7 @@ contract HecBurnAllocator is Ownable {
      */
     function lowerLimit( address token, uint newMax ) external onlyPolicy() {
         require( newMax < tokenInfo[ token ].limit );
-        require( newMax > tokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
+        require( newMax > tokenInfo[ token ].stableSpent ); // cannot set limit below what has been deployed already
         tokenInfo[ token ].limit = newMax;
         tokenInfo[ token ].newLimit = 0;
         tokenInfo[ token ].limitChangeTimelockEnd = 0;
@@ -829,22 +832,27 @@ contract HecBurnAllocator is Ownable {
         tokenInfo[ token ].limitChangeTimelockEnd = 0;
     }
 
-
+    function setTransactionLimit(address token, uint transactionLimit) external onlyPolicy(){
+        require(tokenInfo[token].token!=address(0),"unregistered token");
+        tokenInfo[token].transactionLimit=transactionLimit;
+    }
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
     /**
      *  @notice accounting of deposits/withdrawals of assets
      *  @param token address
-     *  @param amount uint
-     *  @param value uint
+     *  @param tokenSpent uint
+     *  @param stableSpent uint
      *  @param hecBought uint
      */
-    function accountingFor( address token, uint amount, uint value, uint hecBought ) internal {
-        tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
+    function accountingFor( address token, uint tokenSpent, uint stableSpent, uint hecBought, uint hecBurnt ) internal {
+        tokenInfo[ token ].tokenSpent = tokenInfo[ token ].tokenSpent.add( tokenSpent ); // track amount allocated into pool
+        tokenInfo[ token ].stableSpent = tokenInfo[ token ].stableSpent.add( stableSpent );
         tokenInfo[ token ].hecBought = tokenInfo[ token ].hecBought.add(hecBought);
-        totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
-            
+        tokenInfo[ token ].hecBurnt = tokenInfo[ token ].hecBurnt.add(hecBurnt);
+        totalBurnt = totalBurnt.add( hecBurnt );
+        totalBought = totalBought.add( hecBought );
     }
 
 
@@ -853,15 +861,20 @@ contract HecBurnAllocator is Ownable {
     /**
      *  @notice checks to ensure deposit does not exceed max allocation for asset
      *  @param token address
-     *  @param amount uint
+     *  @param stableSpent uint
      */
-    function exceedsLimit( address token, uint amount ) public view returns ( bool ) {
-        uint willBeDeployed = tokenInfo[ token ].deployed.add( amount );
+    function exceedsLimit( address token, uint stableSpent ) public view returns ( bool ) {
+        uint willSpent = tokenInfo[ token ].stableSpent.add( stableSpent );
 
-        return ( willBeDeployed > tokenInfo[ token ].limit );
+        return ( willSpent > tokenInfo[ token ].limit );
+    }
+
+    function exceedsTransactionLimit(address token, uint stableSpent) public view returns(bool){
+        return stableSpent>tokenInfo[token].transactionLimit;
     }
 
     function priceMeetCriteria() public view returns (bool){
+        if(true)return true;
         //backingPerHec decimals = 4, 101.23$ = 1012300, 75.8321$ = 758321
         (uint lpBacking, uint treasuryBacking) = IBackingCalculator(backingCalculator).backing();
         return treasuryBacking>lpBacking.mul(105).div(100);
