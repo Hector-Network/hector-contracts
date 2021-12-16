@@ -815,6 +815,7 @@ contract HecBurnAllocator is Ownable {
      *  @param newMax uint
      */
     function queueRaiseLimit( address token, uint newMax ) external onlyPolicy() {
+        require(newMax>tokenInfo[ token ].limit,"new max must be greater than current limit");
         tokenInfo[ token ].limitChangeTimelockEnd = block.number.add( timelockInBlocks );
         tokenInfo[ token ].newLimit = newMax;
     }
