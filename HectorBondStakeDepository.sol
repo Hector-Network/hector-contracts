@@ -856,8 +856,8 @@ contract HectorBondStakeDepository is Ownable {
         //TODO
         //uint stakeAmount = totalBond.sub(fee);
         IERC20( HEC ).approve( staking, payout );
-        IStaking( staking ).stake( payout, address(this) );
         IStaking( staking ).claim( address(this) );
+        IStaking( staking ).stake( payout, address(this) );
         uint stakeGons=ISHEC(sHEC).gonsForBalance(payout);
 
         // depositor info is stored
@@ -888,6 +888,7 @@ contract HectorBondStakeDepository is Ownable {
         uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
 
         require ( percentVested >= 10000 ,"not yet fully vested") ; // if fully vested
+        IStaking( staking ).claim( address(this) ); // claim any remaining available warmup staking rewards
         delete _bondInfo[ _recipient ]; // delete user info
         uint _amount = ISHEC(sHEC).balanceForGons(info.gonsPayout);
         emit BondRedeemed( _recipient, _amount, 0 ); // emit bond data
