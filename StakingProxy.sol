@@ -585,7 +585,14 @@ library FixedPoint {
 interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
     function claim( address _recipient ) external;
-    
+
+    struct Epoch {
+        uint length;
+        uint number;
+        uint endBlock;
+        uint distribute;
+    }
+    Epoch public epoch;
     uint public warmupPeriod;
 }
 
@@ -601,6 +608,11 @@ contract BondStakeProxy {
     
     address public staking;
 
+    struct Claim {
+        uint deposit;
+        uint gons;
+        uint expiry;
+    }
     mapping(address => uint) bondDepositories;
     
     constructor(
@@ -627,8 +639,12 @@ contract BondStakeProxy {
         IERC20( HEC ).safeTransferFrom( msg.sender, address(this), _amount );
 
         //TODO need to store expiry info
-        uint memory deposit = bondDepositories[_recipient];
-        bondDepositories[_recipient] = claim.add(_amount);
+        Claim memory claim = bondDepositories[_recipient];
+        bondDepositories[_recipient] = Claim({
+            deposit: claim.deposit.add(_amount),
+            gons: claim.gons.add(IsHEC(sHEC).gonsForBalance(_amount)),
+            expiry: 
+        });
         //**************
         
         return IStaking(staking).stake(_amount, address(this));

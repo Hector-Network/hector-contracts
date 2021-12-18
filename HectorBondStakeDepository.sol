@@ -634,6 +634,7 @@ contract HectorBondStakeDepository is Ownable {
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
     address public immutable bondCalculator; // calculates value of LP tokens
 
+    //TODO get rid of the reference to Staking?
     address public staking; // to stake and claim if no staking warmup
 
     Terms public terms; // stores terms for new bonds
@@ -789,7 +790,8 @@ contract HectorBondStakeDepository is Ownable {
             lastBlock: block.number
         });
     }
-
+    
+    //TODO get rid of the reference to Staking?
     /**
      *  @notice set contract for auto stake
      *  @param _staking address
@@ -856,8 +858,12 @@ contract HectorBondStakeDepository is Ownable {
         //TODO
         //uint stakeAmount = totalBond.sub(fee);
         IERC20( HEC ).approve( staking, payout );
+        
+        /* TODO Retarget these to use the appropriate proxy based on epoch */
         IStaking( staking ).stake( payout, address(this) );
         IStaking( staking ).claim( address(this) );
+        /* ---------------------------------------------------------- */
+        
         uint stakeGons=ISHEC(sHEC).gonsForBalance(payout);
 
         // depositor info is stored
@@ -888,6 +894,11 @@ contract HectorBondStakeDepository is Ownable {
         uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
 
         require ( percentVested >= 10000 ,"not yet fully vested") ; // if fully vested
+
+        /* TODO claim from appropriate proxy based on epoch */
+        IStaking( staking ).claim( address(this) );
+        /* ------------------------------------------------ */
+        
         delete _bondInfo[ _recipient ]; // delete user info
         uint _amount = ISHEC(sHEC).balanceForGons(info.gonsPayout);
         emit BondRedeemed( _recipient, _amount, 0 ); // emit bond data
