@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.7.5;
+pragma solidity ^0.7.5;
 
 interface IOwnable {
     function policy() external view returns (address);
@@ -586,15 +586,6 @@ library FixedPoint {
 interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
     function claim( address _recipient ) external;
-
-    struct Epoch {
-        uint length;
-        uint number;
-        uint endBlock;
-        uint distribute;
-    }
-    Epoch public epoch;
-    uint public warmupPeriod;
 }
 
 interface IsHEC {
@@ -602,7 +593,7 @@ interface IsHEC {
     function balanceForGons( uint gons ) external view returns ( uint );
 }
 
-contract BondStakeProxy {
+contract StakingProxy is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -621,9 +612,9 @@ contract BondStakeProxy {
     constructor(
         address _hec, // HEC Token contract address
         address _shec, // sHEC Token contract address
-        address _manger, // Staking Manager contract address 
+        address _manager, // Staking Manager contract address 
         address _staking
-    ) public {
+    ) {
         require(_hec != address(0));
         require(_shec != address(0));
         require(_manager != address(0));
@@ -640,10 +631,10 @@ contract BondStakeProxy {
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
 
-        Claim memory claim = claims[_recipient];
+        Claim memory claimInfo = claims[_recipient];
         claims[_recipient] = Claim({
-            deposit: claim.deposit.add(_amount),
-            gons: claim.gons.add(IsHEC(sHEC).gonsForBalance(_amount))
+            deposit: claimInfo.deposit.add(_amount),
+            gons: claimInfo.gons.add(IsHEC(sHEC).gonsForBalance(_amount))
         });
 
         IERC20(HEC).approve(staking, _amount);
@@ -656,10 +647,10 @@ contract BondStakeProxy {
 
         IStaking(staking).claim(address(this));
 
-        Claim memory claim = claims[ _recipient ];
-        uint newBalance = ISHEC(sHEC).balanceForGons(claim.gons);
+        Claim memory claimInfo = claims[ _recipient ];
+        uint newBalance = IsHEC(sHEC).balanceForGons(claimInfo.gons);
         
-        require(newBalance >= claim.deposit); // balance after staking should always be at least as much as the original deposit 
+        require(newBalance >= claimInfo.deposit); // balance after staking should always be at least as much as the original deposit 
         IERC20(sHEC).transfer(_recipient, newBalance);
     }
 }

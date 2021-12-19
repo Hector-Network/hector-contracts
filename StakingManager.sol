@@ -1,4 +1,4 @@
-﻿pragma solidity ^0.8.0;
+pragma solidity ^0.7.5;
 
 interface IOwnable {
     function policy() external view returns (address);
@@ -593,7 +593,7 @@ interface IStakingProxy {
     function claim( address _recipient ) external;
 }
 
-contract StakingManager {
+contract StakingManager is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -605,15 +605,15 @@ contract StakingManager {
     uint public epoch = 0;
 
     uint public warmupPeriod = 0;
-    address[] storage proxies;
+    address[] proxies;
     
     constructor(
         address _hec,
         uint _epochLength, 
         uint _nextEpochBlock
-    ) public {
+    ) {
         require(_hec != address(0));
-        hec = _hec;
+        HEC = _hec;
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
     }
@@ -666,7 +666,7 @@ contract StakingManager {
         return IStakingProxy(targetProxy).stake(_amount, _recipient);
     }
 
-    function claim(address _recipient) external {
+    function claim(address _recipient) public {
         require(proxies.length > 0, "No proxies defined.");
         require(_recipient != address(0));
 

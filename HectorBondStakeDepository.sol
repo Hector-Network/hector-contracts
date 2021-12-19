@@ -792,7 +792,7 @@ contract HectorBondStakeDepository is Ownable {
     
     /**
      *  @notice set contract for auto stake
-     *  @param _staking address
+     *  @param _manager address
      */
     function setStakingManager( address _manager) external onlyPolicy() {
         require( _manager != address(0) );
