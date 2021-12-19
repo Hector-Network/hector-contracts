@@ -1,4 +1,5 @@
 ﻿pragma solidity ^0.7.5;
+
 interface IOwnable {
     function policy() external view returns (address);
 
@@ -602,68 +603,64 @@ interface ISHEC {
 }
 
 contract BondStakeProxy {
-    
+    using FixedPoint for *;
+    using SafeERC20 for IERC20;
+    using SafeMath for uint;
+
     address public immutable HEC;
     address public immutable sHEC;
-    
-    address public staking;
+    address public immutable manager;
+    address public immutable staking;
 
     struct Claim {
         uint deposit;
         uint gons;
-        uint expiry;
     }
-    mapping(address => uint) bondDepositories;
+    mapping(address => Claim) claims;
     
     constructor(
-        address _hec,
-        address _shec
+        address _hec, // HEC Token contract address
+        address _shec, // sHEC Token contract address
+        address _manger, // Staking Manager contract address 
+        address _staking
     ) public {
         require(_hec != address(0));
         require(_shec != address(0));
+        require(_manager != address(0));
+        require(_staking != address(0));
 
         HEC = _hec;
         sHEC = _shec;
-    }
-    
-    function setStaking(address _staking) external onlyPolicy() {
-        require(_staking != address(0));
-        
+        manager = _manager;
         staking = _staking;
     }
-  
+    
     function stake(uint _amount, address _recipient) external returns (bool) {
-        require(_amount > 0);
+        require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
+        require(_amount != 0); // why would anyone need to stake 0 HEC?
 
-        IERC20( HEC ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( HEC ).safeTransferFrom( _recipient, address(this), _amount );
 
-        //TODO need to store expiry info
-        Claim memory claim = bondDepositories[_recipient];
-        bondDepositories[_recipient] = Claim({
+        Claim memory claim = claims[_recipient];
+        claims[_recipient] = Claim({
             deposit: claim.deposit.add(_amount),
-            gons: claim.gons.add(IsHEC(sHEC).gonsForBalance(_amount)),
-            expiry: 
+            gons: claim.gons.add(IsHEC(sHEC).gonsForBalance(_amount))
         });
-        //**************
         
         return IStaking(staking).stake(_amount, address(this));
     }
     
     function claim(address _recipient) external {
+        require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
-        require(bondDepositories[_recipient] != 0);
 
-        //TODO need to know if warmup has expired yet
-        if ( epoch.number >= info.expiry && info.expiry != 0 ) {}
-        // ****************
-        
-        uint memory deposit = bondDepositories[ _recipient ];
-        
-        delete warmupInfo[ _recipient ];
         IStaking(staking).claim(address(this));
+
+        Claim memory claim = claims[ _recipient ];
+        uint newBalance = ISHEC(sHEC).balanceForGons(claim.gons);
         
-        IERC20(sHEC).transfer(_recipient, deposit);
+        require(newBalance >= claim.deposit); // balance after staking should always be at least as much as the original deposit 
+        IERC20(sHEC).transfer(_recipient, newBalance);
     }
-    
 }
