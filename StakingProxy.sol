@@ -597,7 +597,7 @@ interface IStaking {
     uint public warmupPeriod;
 }
 
-interface ISHEC {
+interface IsHEC {
     function gonsForBalance( uint amount ) external view returns ( uint );
     function balanceForGons( uint gons ) external view returns ( uint );
 }
@@ -640,14 +640,13 @@ contract BondStakeProxy {
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
 
-        IERC20( HEC ).safeTransferFrom( _recipient, address(this), _amount );
-
         Claim memory claim = claims[_recipient];
         claims[_recipient] = Claim({
             deposit: claim.deposit.add(_amount),
             gons: claim.gons.add(IsHEC(sHEC).gonsForBalance(_amount))
         });
-        
+
+        IERC20(HEC).approve(staking, _amount);
         return IStaking(staking).stake(_amount, address(this));
     }
     
