@@ -621,6 +621,12 @@ contract StakingManager is Ownable {
     
     function addProxy(address _proxy) external onlyPolicy() {
         require(_proxy != address(0));
+
+        for(uint i=0;i<proxies.length;i++) {
+            if(proxies[i] == _proxy) {
+                return;
+            }
+        }
         
         proxies.push(_proxy);
     }
