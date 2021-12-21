@@ -605,7 +605,7 @@ contract StakingManager is Ownable {
     uint public epoch = 0;
 
     uint public warmupPeriod = 0;
-    address[] proxies;
+    address[] public proxies;
     
     constructor(
         address _hec,
@@ -636,9 +636,12 @@ contract StakingManager is Ownable {
        
         for(uint i=0;i<proxies.length;i++) {
             if(proxies[i] == _proxy) {
+                require(proxies.length-1 >= warmupPeriod, "Not enough proxies to support specified period.");
                 for(uint j=i;j<proxies.length-1;j++) {
                     proxies[j] = proxies[j+1];
                 }
+
+                proxies.pop();
                 return true;
             }
         }
@@ -657,14 +660,14 @@ contract StakingManager is Ownable {
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
 
-        claim(_recipient); // claim any expired warmups before rolling to the next epoch
-
         if ( nextEpochBlock <= block.number ) {
+            claim(_recipient); // claim any expired warmups before rolling to the next epoch
+
             nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
             epoch++;
         }
         
-        address targetProxy = proxies[epoch % warmupPeriod];
+        address targetProxy = proxies[warmupPeriod == 0 ? 0 : epoch % warmupPeriod];
         require(targetProxy != address(0));
         
         IERC20(HEC).transferFrom(_recipient, targetProxy, _amount);
