@@ -125,7 +125,9 @@ interface IPair is IERC20{
 interface IHecCirculation{
     function HECCirculatingSupply() external view returns ( uint );
 }
-
+interface Investment{
+    function totalValueDeployed() external view returns (uint);
+}
 contract BackingCalculator{
     using SafeMath for uint;
     IPair public dailp=IPair(0xbc0eecdA2d8141e3a26D2535C57cadcb1095bca9);
@@ -138,44 +140,54 @@ contract BackingCalculator{
     address public HEC=0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
     address public treasury=0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
     IHecCirculation public hecCirculation=IHecCirculation(0x5a0325d0830f10044D82044fd04223F2E0Ea5047);
-    
-    function backing() external view returns (uint lpBacking, uint treasuryBacking){
-        (lpBacking,treasuryBacking,,,,)=backing_full();
+    Investment curveAllocator = Investment(0x344456Df952FA32Be9C860c4EB23385384C4ef7A);
+
+    function backing() external view returns (uint _lpBacking, uint _treasuryBacking){
+        (_lpBacking,_treasuryBacking,,,,)=backing_full();
+    }
+
+    function lpBacking() external view returns(uint _lpBacking){
+        (_lpBacking,,,,,)=backing_full();
+    }
+
+    function treasuryBacking() external view returns(uint _treasuryBacking){
+        (,_treasuryBacking,,,,)=backing_full();
     }
 
     //decimals for backing is 4
     function backing_full() public view returns (
-        uint lpBacking, 
-        uint treasuryBacking,
-        uint totalStableReserve,
-        uint totalHecReserve,
-        uint totalStableBal,
-        uint cirulatingHec
+        uint _lpBacking, 
+        uint _treasuryBacking,
+        uint _totalStableReserve,
+        uint _totalHecReserve,
+        uint _totalStableBal,
+        uint _cirulatingHec
     ){
-        // lp first
+        // lp
         uint stableReserve;
         uint hecReserve;
         //dailp
         (hecReserve,stableReserve)=hecStableAmount(dailp);
-        totalStableReserve=totalStableReserve.add(stableReserve);
-        totalHecReserve=totalHecReserve.add(hecReserve);
+        _totalStableReserve=_totalStableReserve.add(stableReserve);
+        _totalHecReserve=_totalHecReserve.add(hecReserve);
         //fraxlp
         (hecReserve,stableReserve)=hecStableAmount(fraxlp);
-        totalStableReserve=totalStableReserve.add(stableReserve);
-        totalHecReserve=totalHecReserve.add(hecReserve);
+        _totalStableReserve=_totalStableReserve.add(stableReserve);
+        _totalHecReserve=_totalHecReserve.add(hecReserve);
         //usdclp
         (hecReserve,stableReserve)=hecStableAmount(usdclp);
-        totalStableReserve=totalStableReserve.add(stableReserve);
-        totalHecReserve=totalHecReserve.add(hecReserve);
-        lpBacking=totalStableReserve.div(totalHecReserve).div(1e5);
+        _totalStableReserve=_totalStableReserve.add(stableReserve);
+        _totalHecReserve=_totalHecReserve.add(hecReserve);
+        _lpBacking=_totalStableReserve.div(_totalHecReserve).div(1e5);
 
-        //treasury next
-        totalStableBal=totalStableBal.add(toE18(dai.balanceOf(treasury),dai.decimals()));
-        totalStableBal=totalStableBal.add(toE18(usdc.balanceOf(treasury),usdc.decimals()));
-        totalStableBal=totalStableBal.add(toE18(mim.balanceOf(treasury),mim.decimals()));
-        totalStableBal=totalStableBal.add(toE18(frax.balanceOf(treasury),frax.decimals()));
-        cirulatingHec=hecCirculation.HECCirculatingSupply().sub(totalHecReserve);
-        treasuryBacking=totalStableBal.div(cirulatingHec).div(1e5);
+        //treasury
+        _totalStableBal=_totalStableBal.add(toE18(dai.balanceOf(treasury),dai.decimals()));
+        _totalStableBal=_totalStableBal.add(toE18(usdc.balanceOf(treasury),usdc.decimals()));
+        _totalStableBal=_totalStableBal.add(toE18(mim.balanceOf(treasury),mim.decimals()));
+        _totalStableBal=_totalStableBal.add(toE18(frax.balanceOf(treasury),frax.decimals()));
+        _totalStableBal=_totalStableBal.add(toE18(curveAllocator.totalValueDeployed(),9));
+        _cirulatingHec=hecCirculation.HECCirculatingSupply().sub(_totalHecReserve);
+        _treasuryBacking=_totalStableBal.div(_cirulatingHec).div(1e5);
     }
     function hecStableAmount( IPair _pair ) public view returns ( uint hecReserve,uint stableReserve){
         ( uint reserve0, uint reserve1, ) =  _pair .getReserves();
