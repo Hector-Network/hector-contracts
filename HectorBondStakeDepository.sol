@@ -637,7 +637,7 @@ contract HectorBondStakeDepository is Ownable {
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
     address public immutable bondCalculator; // calculates value of LP tokens
 
-    address public staking; // to stake and claim if no staking warmup
+    address public staking; // to auto-stake payout
 
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
