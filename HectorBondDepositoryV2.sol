@@ -601,7 +601,9 @@ interface IStaking {
 interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
-
+interface IBackingCalculator {
+    function treasuryBacking() external view returns(uint _treasuryBacking);
+}
 contract HectorBondDepositoryV2 is Ownable {
 
     using FixedPoint for *;
@@ -646,7 +648,8 @@ contract HectorBondDepositoryV2 is Ownable {
     uint public totalPrinciple; // total principle bonded through this depository
     
     string internal name_; //name of this bond
-
+    IBackingCalculator public backingCalculator;
+    uint8 public principleDecimals; //principle decimals or pair markdown decimals
 
     /* ======== STRUCTS ======== */
 
@@ -686,6 +689,7 @@ contract HectorBondDepositoryV2 is Ownable {
         string memory _name,
         address _HEC,
         address _principle,
+        uint8 _principleDecimals,
         address _treasury, 
         address _DAO, 
         address _bondCalculator
@@ -694,6 +698,8 @@ contract HectorBondDepositoryV2 is Ownable {
         HEC = _HEC;
         require( _principle != address(0) );
         principle = _principle;
+        require(_principleDecimals!=0);
+        principleDecimals =_principleDecimals;
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _DAO != address(0) );
@@ -961,7 +967,9 @@ contract HectorBondDepositoryV2 is Ownable {
         lastDecay = block.number;
     }
 
-
+    function setBackingCalculator(address _backingCalculator) external onlyPolicy{
+        backingCalculator=IBackingCalculator(_backingCalculator);
+    }
 
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -996,8 +1004,18 @@ contract HectorBondDepositoryV2 is Ownable {
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
+        }
     }
-
+    function toNativePrice(uint _bph) public view returns (uint _nativeBph){
+        if(isLiquidityBond)
+            _nativeBph=_bph.mul(10**principleDecimals).div(IBondCalculator( bondCalculator ).markdown( principle ));
+        else
+            _nativeBph=_bph;
+    }
     /**
      *  @notice calculate current bond price and remove floor if above
      *  @return price_ uint
