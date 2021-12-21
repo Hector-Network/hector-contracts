@@ -128,7 +128,27 @@ interface IHecCirculation{
 interface Investment{
     function totalValueDeployed() external view returns (uint);
 }
-contract BackingCalculator{
+interface IBackingCalculator{
+    //decimals for backing is 4
+    function backing() external view returns (uint _lpBacking, uint _treasuryBacking);
+
+    //decimals for backing is 4
+    function lpBacking() external view returns(uint _lpBacking);
+
+    //decimals for backing is 4
+    function treasuryBacking() external view returns(uint _treasuryBacking);
+
+    //decimals for backing is 4
+    function backing_full() external view returns (
+        uint _lpBacking, 
+        uint _treasuryBacking,
+        uint _totalStableReserve,
+        uint _totalHecReserve,
+        uint _totalStableBal,
+        uint _cirulatingHec
+    );
+}
+contract BackingCalculator is IBackingCalculator{
     using SafeMath for uint;
     IPair public dailp=IPair(0xbc0eecdA2d8141e3a26D2535C57cadcb1095bca9);
     IPair public fraxlp=IPair(0x0f8D6953F58C0dd38077495ACA64cbd1c76b7501);
@@ -142,20 +162,20 @@ contract BackingCalculator{
     IHecCirculation public hecCirculation=IHecCirculation(0x5a0325d0830f10044D82044fd04223F2E0Ea5047);
     Investment curveAllocator = Investment(0x344456Df952FA32Be9C860c4EB23385384C4ef7A);
 
-    function backing() external view returns (uint _lpBacking, uint _treasuryBacking){
+    function backing() external view override returns (uint _lpBacking, uint _treasuryBacking){
         (_lpBacking,_treasuryBacking,,,,)=backing_full();
     }
 
-    function lpBacking() external view returns(uint _lpBacking){
+    function lpBacking() external view override returns(uint _lpBacking){
         (_lpBacking,,,,,)=backing_full();
     }
 
-    function treasuryBacking() external view returns(uint _treasuryBacking){
+    function treasuryBacking() external view override returns(uint _treasuryBacking){
         (,_treasuryBacking,,,,)=backing_full();
     }
 
     //decimals for backing is 4
-    function backing_full() public view returns (
+    function backing_full() public view override returns (
         uint _lpBacking, 
         uint _treasuryBacking,
         uint _totalStableReserve,
