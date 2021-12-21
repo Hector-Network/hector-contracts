@@ -651,10 +651,8 @@ contract StakingProxy is Ownable {
         if(claimInfo.gons == 0) {
             return;
         }
-        uint newBalance = IsHEC(sHEC).balanceForGons(claimInfo.gons);
         
-        require(newBalance >= claimInfo.deposit); // balance after staking should always be at least as much as the original deposit 
         delete claims[_recipient];
-        IERC20(sHEC).transfer(_recipient, newBalance);
+        IERC20(sHEC).transfer(_recipient, IsHEC(sHEC).balanceForGons(claimInfo.gons));
     }
 }
