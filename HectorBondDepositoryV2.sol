@@ -692,6 +692,7 @@ contract HectorBondDepositoryV2 is Ownable {
         uint8 _principleDecimals,
         address _treasury, 
         address _DAO, 
+        address _backingCalculator,
         address _bondCalculator
     ) {
         require( _HEC != address(0) );
@@ -704,6 +705,8 @@ contract HectorBondDepositoryV2 is Ownable {
         treasury = _treasury;
         require( _DAO != address(0) );
         DAO = _DAO;
+        require(address(0)!=_backingCalculator);
+        backingCalculator=IBackingCalculator(_backingCalculator);
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
@@ -968,7 +971,13 @@ contract HectorBondDepositoryV2 is Ownable {
     }
 
     function setBackingCalculator(address _backingCalculator) external onlyPolicy{
+        require(address(0)!=_backingCalculator);
         backingCalculator=IBackingCalculator(_backingCalculator);
+    }
+
+    function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
+        require(_principleDecimals!=0);
+        principleDecimals=_principleDecimals;
     }
 
 
@@ -1029,6 +1038,11 @@ contract HectorBondDepositoryV2 is Ownable {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
             terms.minimumPrice = 0;
+        }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
         }
     }
 
