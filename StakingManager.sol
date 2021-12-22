@@ -670,7 +670,7 @@ contract StakingManager is Ownable {
         address targetProxy = proxies[warmupPeriod == 0 ? 0 : epoch % warmupPeriod];
         require(targetProxy != address(0));
         
-        IERC20(HEC).transferFrom(_recipient, targetProxy, _amount);
+        IERC20(HEC).safeTransferFrom(msg.sender, targetProxy, _amount);
 
         return IStakingProxy(targetProxy).stake(_amount, _recipient);
     }
