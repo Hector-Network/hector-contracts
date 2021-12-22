@@ -603,6 +603,9 @@ interface ISHEC {
     function gonsForBalance( uint amount ) external view returns ( uint );
     function balanceForGons( uint gons ) external view returns ( uint );
 }
+interface IBackingCalculator {
+    function treasuryBacking() external view returns(uint _treasuryBacking);
+}
 
 contract HectorBondStakeDepository is Ownable {
 
@@ -647,7 +650,8 @@ contract HectorBondStakeDepository is Ownable {
     uint public totalPrinciple; // total principle bonded through this depository
 
     string internal name_; //name of this bond
-
+    IBackingCalculator public backingCalculator;
+    uint8 public principleDecimals; //principle decimals or pair markdown decimals
 
     /* ======== STRUCTS ======== */
 
@@ -655,7 +659,7 @@ contract HectorBondStakeDepository is Ownable {
     struct Terms {
         uint controlVariable; // scaling variable for price
         uint vestingTerm; // in blocks
-        uint minimumPrice; // vs principle value
+        uint minimumPrice; // vs principle value , 4 decimals 0.15 = 1500
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
@@ -689,8 +693,10 @@ contract HectorBondStakeDepository is Ownable {
         address _HEC,
         address _sHEC,
         address _principle,
+        uint8 _principleDecimals,
         address _treasury, 
         address _DAO, 
+        address _backingCalculator,
         address _bondCalculator
     ) {
         require( _HEC != address(0) );
@@ -699,10 +705,14 @@ contract HectorBondStakeDepository is Ownable {
         sHEC = _sHEC;
         require( _principle != address(0) );
         principle = _principle;
+        require(_principleDecimals!=0);
+        principleDecimals =_principleDecimals;
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _DAO != address(0) );
         DAO = _DAO;
+        require(address(0)!=_backingCalculator);
+        backingCalculator=IBackingCalculator(_backingCalculator);
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
@@ -937,7 +947,15 @@ contract HectorBondStakeDepository is Ownable {
         lastDecay = block.number;
     }
 
+    function setBackingCalculator(address _backingCalculator) external onlyPolicy{
+        require(address(0)!=_backingCalculator);
+        backingCalculator=IBackingCalculator(_backingCalculator);
+    }
 
+    function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
+        require(_principleDecimals!=0);
+        principleDecimals=_principleDecimals;
+    }
 
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -956,7 +974,7 @@ contract HectorBondStakeDepository is Ownable {
      *  @return uint
      */
     function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e16 );
+        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e14 );
     }
 
 
@@ -965,10 +983,21 @@ contract HectorBondStakeDepository is Ownable {
      *  @return price_ uint
      */
     function bondPrice() public view returns ( uint price_ ) {        
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
+        }
+    }
+    function toNativePrice(uint _bph) public view returns (uint _nativeBph){
+        if(isLiquidityBond)
+            _nativeBph=_bph.mul(10**principleDecimals).div(IBondCalculator( bondCalculator ).markdown( principle ));
+        else
+            _nativeBph=_bph;
     }
 
     /**
@@ -976,11 +1005,16 @@ contract HectorBondStakeDepository is Ownable {
      *  @return price_ uint
      */
     function _bondPrice() internal returns ( uint price_ ) {
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e7 );
+        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
             terms.minimumPrice = 0;
+        }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
         }
     }
 
@@ -990,9 +1024,9 @@ contract HectorBondStakeDepository is Ownable {
      */
     function bondPriceInUSD() public view returns ( uint price_ ) {
         if( isLiquidityBond ) {
-            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 100 );
+            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 1e4 );
         } else {
-            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 100 );
+            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 1e4 );
         }
     }
     

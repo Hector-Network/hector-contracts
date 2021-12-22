@@ -601,7 +601,9 @@ interface IStaking {
 interface IStakingHelper {
     function stake( uint _amount, address _recipient ) external;
 }
-
+interface IBackingCalculator {
+    function treasuryBacking() external view returns(uint _treasuryBacking);
+}
 contract HectorBondDepositoryV2 is Ownable {
 
     using FixedPoint for *;
@@ -646,7 +648,8 @@ contract HectorBondDepositoryV2 is Ownable {
     uint public totalPrinciple; // total principle bonded through this depository
     
     string internal name_; //name of this bond
-
+    IBackingCalculator public backingCalculator;
+    uint8 public principleDecimals; //principle decimals or pair markdown decimals
 
     /* ======== STRUCTS ======== */
 
@@ -686,18 +689,24 @@ contract HectorBondDepositoryV2 is Ownable {
         string memory _name,
         address _HEC,
         address _principle,
+        uint8 _principleDecimals,
         address _treasury, 
         address _DAO, 
+        address _backingCalculator,
         address _bondCalculator
     ) {
         require( _HEC != address(0) );
         HEC = _HEC;
         require( _principle != address(0) );
         principle = _principle;
+        require(_principleDecimals!=0);
+        principleDecimals =_principleDecimals;
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _DAO != address(0) );
         DAO = _DAO;
+        require(address(0)!=_backingCalculator);
+        backingCalculator=IBackingCalculator(_backingCalculator);
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
@@ -748,7 +757,7 @@ contract HectorBondDepositoryV2 is Ownable {
      */
     function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyPolicy() {
         if ( _parameter == PARAMETER.VESTING ) { // 0
-            require( _input >= 10000, "Vesting must be longer than 36 hours" );
+            require( _input >= 10000, "Vesting must be longer than 3 hours" );
             terms.vestingTerm = _input;
         } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
             require( _input <= 1000, "Payout cannot be above 1 percent" );
@@ -961,7 +970,15 @@ contract HectorBondDepositoryV2 is Ownable {
         lastDecay = block.number;
     }
 
+    function setBackingCalculator(address _backingCalculator) external onlyPolicy{
+        require(address(0)!=_backingCalculator);
+        backingCalculator=IBackingCalculator(_backingCalculator);
+    }
 
+    function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
+        require(_principleDecimals!=0);
+        principleDecimals=_principleDecimals;
+    }
 
 
     /* ======== VIEW FUNCTIONS ======== */
@@ -996,8 +1013,18 @@ contract HectorBondDepositoryV2 is Ownable {
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
+        }
     }
-
+    function toNativePrice(uint _bph) public view returns (uint _nativeBph){
+        if(isLiquidityBond)
+            _nativeBph=_bph.mul(10**principleDecimals).div(IBondCalculator( bondCalculator ).markdown( principle ));
+        else
+            _nativeBph=_bph;
+    }
     /**
      *  @notice calculate current bond price and remove floor if above
      *  @return price_ uint
@@ -1011,6 +1038,11 @@ contract HectorBondDepositoryV2 is Ownable {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
             terms.minimumPrice = 0;
+        }
+        uint bph=backingCalculator.treasuryBacking();//1e4
+        uint nativeBph=toNativePrice(bph);//1e4
+        if ( price_ < nativeBph ) {
+            price_ = nativeBph;
         }
     }
 
