@@ -1,14 +1,13 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity ^0.7.5;
 
 interface IOwnable {
-  function policy() external view returns (address);
+    function policy() external view returns (address);
 
-  function renounceManagement() external;
-  
-  function pushManagement( address newOwner_ ) external;
-  
-  function pullManagement() external;
+    function renounceManagement() external;
+
+    function pushManagement( address newOwner_ ) external;
+
+    function pullManagement() external;
 }
 
 contract Ownable is IOwnable {
@@ -43,7 +42,7 @@ contract Ownable is IOwnable {
         emit OwnershipPushed( _owner, newOwner_ );
         _newOwner = newOwner_;
     }
-    
+
     function pullManagement() public virtual override {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
@@ -134,7 +133,7 @@ library Address {
     }
 
     function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-      return functionCall(target, data, "Address: low-level call failed");
+        return functionCall(target, data, "Address: low-level call failed");
     }
 
     function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
@@ -261,7 +260,7 @@ abstract contract ERC20 is IERC20 {
 
     // TODO comment actual hash value.
     bytes32 constant private ERC20TOKEN_ERC1820_INTERFACE_ID = keccak256( "ERC20Token" );
-    
+
     mapping (address => uint256) internal _balances;
 
     mapping (address => mapping (address => uint256)) internal _allowances;
@@ -269,9 +268,9 @@ abstract contract ERC20 is IERC20 {
     uint256 internal _totalSupply;
 
     string internal _name;
-    
+
     string internal _symbol;
-    
+
     uint8 internal _decimals;
 
     constructor (string memory name_, string memory symbol_, uint8 decimals_) {
@@ -367,7 +366,7 @@ abstract contract ERC20 is IERC20 {
         emit Approval(owner, spender, amount);
     }
 
-  function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }
+    function _beforeTokenTransfer( address from_, address to_, uint256 amount_ ) internal virtual { }
 }
 
 interface IERC2612Permit {
@@ -445,7 +444,7 @@ abstract contract ERC20Permit is ERC20, IERC2612Permit {
         require(block.timestamp <= deadline, "Permit: expired deadline");
 
         bytes32 hashStruct =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));
+        keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));
 
         bytes32 _hash = keccak256(abi.encodePacked(uint16(0x1901), DOMAIN_SEPARATOR, hashStruct));
 
@@ -584,569 +583,76 @@ library FixedPoint {
     }
 }
 
-interface ITreasury {
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ );
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
-}
-
-interface IBondCalculator {
-    function valuation( address _LP, uint _amount ) external view returns ( uint );
-    function markdown( address _LP ) external view returns ( uint );
-}
-
-interface IStakingManager {
+interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
     function claim( address _recipient ) external;
 }
 
-interface ISHEC {
+interface IsHEC {
     function gonsForBalance( uint amount ) external view returns ( uint );
     function balanceForGons( uint gons ) external view returns ( uint );
 }
-interface IBackingCalculator {
-    function treasuryBacking() external view returns(uint _treasuryBacking);
-}
 
-contract HectorBondStakeDepository is Ownable {
-
+contract StakingProxy is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
+    address public immutable HEC;
+    address public immutable sHEC;
+    address public immutable manager;
+    address public immutable staking;
 
-
-
-    /* ======== EVENTS ======== */
-
-    event BondCreated( uint deposit, uint indexed payout, uint indexed expires, uint indexed priceInUSD );
-    event BondRedeemed( address indexed recipient, uint payout, uint remaining );
-    event BondPriceChanged( uint indexed priceInUSD, uint indexed internalPrice, uint indexed debtRatio );
-    event ControlVariableAdjustment( uint initialBCV, uint newBCV, uint adjustment, bool addition );
-
-
-
-
-    /* ======== STATE VARIABLES ======== */
-
-    address public immutable HEC; // intermediate reward token from treasury
-    address public immutable sHEC; // token given as payment for bond
-    address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints HEC when receives principle
-    address public immutable DAO; // receives profit share from bond
-
-    bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
-    address public immutable bondCalculator; // calculates value of LP tokens
-
-    address public stakingManager; // to stake and claim
-
-    Terms public terms; // stores terms for new bonds
-    Adjust public adjustment; // stores adjustment to BCV data
-
-    mapping( address => Bond ) public _bondInfo; // stores bond information for depositors
-
-    uint public totalDebt; // total value of outstanding bonds; used for pricing
-    uint public lastDecay; // reference block for debt decay
+    struct Claim {
+        uint deposit;
+        uint gons;
+    }
+    mapping(address => Claim) claims;
     
-    uint public totalPrinciple; // total principle bonded through this depository
-
-    string internal name_; //name of this bond
-    IBackingCalculator public backingCalculator;
-    uint8 public principleDecimals; //principle decimals or pair markdown decimals
-
-    /* ======== STRUCTS ======== */
-
-    // Info for creating new bonds
-    struct Terms {
-        uint controlVariable; // scaling variable for price
-        uint vestingTerm; // in blocks
-        uint minimumPrice; // vs principle value , 4 decimals 0.15 = 1500
-        uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-        uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
-        uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-    }
-
-    // Info for bond holder with gons
-    struct Bond {
-        uint gonsPayout; // sHEC gons remaining to be paid
-        uint hecPayout; //hec amount at the moment of bond
-        uint vesting; // Blocks left to vest
-        uint lastBlock; // Last interaction
-        uint pricePaid; // In DAI, for front end viewing
-    }
-
-    // Info for incremental adjustments to control variable 
-    struct Adjust {
-        bool add; // addition or subtraction
-        uint rate; // increment
-        uint target; // BCV when adjustment finished
-        uint buffer; // minimum length (in blocks) between adjustments
-        uint lastBlock; // block when last adjustment made
-    }
-
-
-
-
-    /* ======== INITIALIZATION ======== */
-
-    constructor ( 
-        string memory _name,
-        address _HEC,
-        address _sHEC,
-        address _principle,
-        uint8 _principleDecimals,
-        address _treasury, 
-        address _DAO, 
-        address _backingCalculator,
-        address _bondCalculator
+    constructor(
+        address _hec, // HEC Token contract address
+        address _shec, // sHEC Token contract address
+        address _manager, // Staking Manager contract address 
+        address _staking
     ) {
-        require( _HEC != address(0) );
-        HEC = _HEC;
-        require( _sHEC != address(0) );
-        sHEC = _sHEC;
-        require( _principle != address(0) );
-        principle = _principle;
-        require(_principleDecimals!=0);
-        principleDecimals =_principleDecimals;
-        require( _treasury != address(0) );
-        treasury = _treasury;
-        require( _DAO != address(0) );
-        DAO = _DAO;
-        require(address(0)!=_backingCalculator);
-        backingCalculator=IBackingCalculator(_backingCalculator);
-        // bondCalculator should be address(0) if not LP bond
-        bondCalculator = _bondCalculator;
-        isLiquidityBond = ( _bondCalculator != address(0) );
-        name_ = _name;
-    }
+        require(_hec != address(0));
+        require(_shec != address(0));
+        require(_manager != address(0));
+        require(_staking != address(0));
 
-    /**
-     *  @notice initializes bond parameters
-     *  @param _controlVariable uint
-     *  @param _vestingTerm uint
-     *  @param _minimumPrice uint
-     *  @param _maxPayout uint
-     *  @param _fee uint
-     *  @param _maxDebt uint
-     *  @param _initialDebt uint
-     */
-    function initializeBondTerms( 
-        uint _controlVariable, 
-        uint _vestingTerm,
-        uint _minimumPrice,
-        uint _maxPayout,
-        uint _fee,
-        uint _maxDebt,
-        uint _initialDebt
-    ) external onlyPolicy() {
-        terms = Terms ({
-            controlVariable: _controlVariable,
-            vestingTerm: _vestingTerm,
-            minimumPrice: _minimumPrice,
-            maxPayout: _maxPayout,
-            fee: _fee,
-            maxDebt: _maxDebt
-        });
-        totalDebt = _initialDebt;
-        lastDecay = block.number;
-    }
-
-
-
-    
-    /* ======== POLICY FUNCTIONS ======== */
-
-    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT, MINPRICE }
-    /**
-     *  @notice set parameters for new bonds
-     *  @param _parameter PARAMETER
-     *  @param _input uint
-     */
-    function setBondTerms ( PARAMETER _parameter, uint _input ) external onlyPolicy() {
-        if ( _parameter == PARAMETER.VESTING ) { // 0
-            require( _input >= 10000, "Vesting must be longer than 3 hours" );
-            terms.vestingTerm = _input;
-        } else if ( _parameter == PARAMETER.PAYOUT ) { // 1
-            require( _input <= 1000, "Payout cannot be above 1 percent" );
-            terms.maxPayout = _input;
-        } else if ( _parameter == PARAMETER.FEE ) { // 2
-            require( _input <= 10000, "DAO fee cannot exceed payout" );
-            terms.fee = _input;
-        } else if ( _parameter == PARAMETER.DEBT ) { // 3
-            terms.maxDebt = _input;
-        } else if ( _parameter == PARAMETER.MINPRICE ) { // 4
-            terms.minimumPrice = _input;
-        }
-    }
-
-    /**
-     *  @notice set control variable adjustment
-     *  @param _addition bool
-     *  @param _increment uint
-     *  @param _target uint
-     *  @param _buffer uint
-     */
-    function setAdjustment (
-        bool _addition,
-        uint _increment, 
-        uint _target,
-        uint _buffer 
-    ) external onlyPolicy() {
-        adjustment = Adjust({
-            add: _addition,
-            rate: _increment,
-            target: _target,
-            buffer: _buffer,
-            lastBlock: block.number
-        });
+        HEC = _hec;
+        sHEC = _shec;
+        manager = _manager;
+        staking = _staking;
     }
     
-    /**
-     *  @notice set contract for auto stake
-     *  @param _manager address
-     */
-    function setStakingManager( address _manager) external onlyPolicy() {
-        require( _manager != address(0) );
-        stakingManager = _manager;
-    }
+    function stake(uint _amount, address _recipient) external returns (bool) {
+        require(msg.sender == manager); // only allow calls from the StakingManager
+        require(_recipient != address(0));
+        require(_amount != 0); // why would anyone need to stake 0 HEC?
 
-
-    
-
-    /* ======== USER FUNCTIONS ======== */
-
-    /**
-     *  @notice deposit bond
-     *  @param _amount uint
-     *  @param _maxPrice uint
-     *  @param _depositor address
-     *  @return uint
-     */
-    function deposit( 
-        uint _amount, 
-        uint _maxPrice,
-        address _depositor
-    ) external returns ( uint ) {
-        require( _depositor != address(0), "Invalid address" );
-
-        decayDebt();
-        require( totalDebt <= terms.maxDebt, "Max capacity reached" );
-        
-        uint priceInUSD = bondPriceInUSD(); // Stored in bond info
-        //uint nativePrice = _bondPrice();
-
-        require( _maxPrice >= _bondPrice(), "Slippage limit: more than max price" ); // slippage protection
-
-        uint value = ITreasury( treasury ).valueOf( principle, _amount );
-        uint payout = payoutFor( value ); // payout to bonder is computed
-
-        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 HEC ( underflow protection )
-        require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
-
-        // profits are calculated
-        uint fee = payout.mul( terms.fee ).div( 10000 );
-        uint profit = value.sub( payout ).sub( fee );
-
-        /**
-            principle is transferred in
-            approved and
-            deposited into the treasury, returning (_amount - profit) HEC
-         */
-        IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( principle ).approve( address( treasury ), _amount );
-        ITreasury( treasury ).deposit( _amount, principle, profit );
-        
-        totalPrinciple=totalPrinciple.add(_amount);
-        
-        if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( HEC ).safeTransfer( DAO, fee ); 
-        }
-        
-        // total debt is increased
-        totalDebt = totalDebt.add( value ); 
-        //TODO
-        //uint stakeAmount = totalBond.sub(fee);
-        
-        IERC20( HEC ).approve( stakingManager, payout );
-
-        IStakingManager(stakingManager).stake( payout, address(this) );
-        /* ---------------------------------------------------------- */
-        
-        uint stakeGons=ISHEC(sHEC).gonsForBalance(payout);
-
-        // depositor info is stored
-        _bondInfo[ _depositor ] = Bond({ 
-            gonsPayout: _bondInfo[ _depositor ].gonsPayout.add( stakeGons ),
-            hecPayout: _bondInfo[ _depositor ].hecPayout.add( payout ),
-            vesting: terms.vestingTerm,
-            lastBlock: block.number,
-            pricePaid: priceInUSD
+        Claim memory claimInfo = claims[_recipient];
+        claims[_recipient] = Claim({
+            deposit: claimInfo.deposit.add(_amount),
+            gons: claimInfo.gons.add(IsHEC(sHEC).gonsForBalance(_amount))
         });
 
-        // indexed events are emitted
-        emit BondCreated( _amount, payout, block.number.add( terms.vestingTerm ), priceInUSD );
-        emit BondPriceChanged( bondPriceInUSD(), _bondPrice(), debtRatio() );
-
-        adjust(); // control variable is adjusted
-        return payout; 
-    }
-
-    /** 
-     *  @notice redeem bond for user, keep the parameter bool _stake for compatibility of redeem helper
-     *  @param _recipient address
-     *  @param _stake bool
-     *  @return uint
-     */ 
-    function redeem( address _recipient, bool _stake) external returns ( uint ) {        
-        Bond memory info = _bondInfo[ _recipient ];
-        uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
-
-        require ( percentVested >= 10000 ,"not yet fully vested") ; // if fully vested
-
-        IStakingManager(stakingManager).claim( address(this) );
-                
-        delete _bondInfo[ _recipient ]; // delete user info
-        uint _amount = ISHEC(sHEC).balanceForGons(info.gonsPayout);
-        emit BondRedeemed( _recipient, _amount, 0 ); // emit bond data
-        IERC20( sHEC ).transfer( _recipient, _amount ); // pay user everything due
-        return _amount;
-    }
-
-
-
-    
-    /* ======== INTERNAL HELPER FUNCTIONS ======== */
-
-    /**
-     *  @notice makes incremental adjustment to control variable
-     */
-    function adjust() internal {
-        uint blockCanAdjust = adjustment.lastBlock.add( adjustment.buffer );
-        if( adjustment.rate != 0 && block.number >= blockCanAdjust ) {
-            uint initial = terms.controlVariable;
-            if ( adjustment.add ) {
-                terms.controlVariable = terms.controlVariable.add( adjustment.rate );
-                if ( terms.controlVariable >= adjustment.target ) {
-                    adjustment.rate = 0;
-                }
-            } else {
-                terms.controlVariable = terms.controlVariable.sub( adjustment.rate );
-                if ( terms.controlVariable <= adjustment.target ) {
-                    adjustment.rate = 0;
-                }
-            }
-            adjustment.lastBlock = block.number;
-            emit ControlVariableAdjustment( initial, terms.controlVariable, adjustment.rate, adjustment.add );
-        }
-    }
-
-    /**
-     *  @notice reduce total debt
-     */
-    function decayDebt() internal {
-        totalDebt = totalDebt.sub( debtDecay() );
-        lastDecay = block.number;
-    }
-
-    function setBackingCalculator(address _backingCalculator) external onlyPolicy{
-        require(address(0)!=_backingCalculator);
-        backingCalculator=IBackingCalculator(_backingCalculator);
-    }
-
-    function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
-        require(_principleDecimals!=0);
-        principleDecimals=_principleDecimals;
-    }
-
-
-    /* ======== VIEW FUNCTIONS ======== */
-
-    /**
-     *  @notice determine maximum bond size
-     *  @return uint
-     */
-    function maxPayout() public view returns ( uint ) {
-        return IERC20( HEC ).totalSupply().mul( terms.maxPayout ).div( 100000 );
-    }
-
-    /**
-     *  @notice calculate interest due for new bond
-     *  @param _value uint
-     *  @return uint
-     */
-    function payoutFor( uint _value ) public view returns ( uint ) {
-        return FixedPoint.fraction( _value, bondPrice() ).decode112with18().div( 1e14 );
-    }
-
-
-    /**
-     *  @notice calculate current bond premium
-     *  @return price_ uint
-     */
-    function bondPrice() public view returns ( uint price_ ) {        
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
-        if ( price_ < terms.minimumPrice ) {
-            price_ = terms.minimumPrice;
-        }
-        uint bph=backingCalculator.treasuryBacking();//1e4
-        uint nativeBph=toNativePrice(bph);//1e4
-        if ( price_ < nativeBph ) {
-            price_ = nativeBph;
-        }
-    }
-    function toNativePrice(uint _bph) public view returns (uint _nativeBph){
-        if(isLiquidityBond)
-            _nativeBph=_bph.mul(10**principleDecimals).div(IBondCalculator( bondCalculator ).markdown( principle ));
-        else
-            _nativeBph=_bph;
-    }
-
-    /**
-     *  @notice calculate current bond price and remove floor if above
-     *  @return price_ uint
-     */
-    function _bondPrice() internal returns ( uint price_ ) {
-        price_ = terms.controlVariable.mul( debtRatio() ).add( 1000000000 ).div( 1e5 );
-        if ( price_ < terms.minimumPrice ) {
-            price_ = terms.minimumPrice;        
-        } else if ( terms.minimumPrice != 0 ) {
-            terms.minimumPrice = 0;
-        }
-        uint bph=backingCalculator.treasuryBacking();//1e4
-        uint nativeBph=toNativePrice(bph);//1e4
-        if ( price_ < nativeBph ) {
-            price_ = nativeBph;
-        }
-    }
-
-    /**
-     *  @notice converts bond price to DAI value
-     *  @return price_ uint
-     */
-    function bondPriceInUSD() public view returns ( uint price_ ) {
-        if( isLiquidityBond ) {
-            price_ = bondPrice().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 1e4 );
-        } else {
-            price_ = bondPrice().mul( 10 ** IERC20( principle ).decimals() ).div( 1e4 );
-        }
+        IERC20(HEC).approve(staking, _amount);
+        return IStaking(staking).stake(_amount, address(this));
     }
     
-    /**
-     *  @notice return bond info with latest sHEC balance calculated from gons
-     *  @param _depositor address
-     *  @return payout uint
-     *  @return vesting uint
-     *  @return lastBlock uint
-     *  @return pricePaid uint
-     */
-    function bondInfo(address _depositor) public view returns ( uint payout,uint vesting,uint lastBlock,uint pricePaid ) {
-        Bond memory info = _bondInfo[ _depositor ];
-        payout=ISHEC(sHEC).balanceForGons(info.gonsPayout);
-        vesting=info.vesting;
-        lastBlock=info.lastBlock;
-        pricePaid=info.pricePaid;
-    }
+    function claim(address _recipient) external {
+        require(msg.sender == manager); // only allow calls from the StakingManager
+        require(_recipient != address(0));
 
+        IStaking(staking).claim(address(this));
 
-    /**
-     *  @notice calculate current ratio of debt to HEC supply
-     *  @return debtRatio_ uint
-     */
-    function debtRatio() public view returns ( uint debtRatio_ ) {   
-        uint supply = IERC20( HEC ).totalSupply();
-        debtRatio_ = FixedPoint.fraction( 
-            currentDebt().mul( 1e9 ), 
-            supply
-        ).decode112with18().div( 1e18 );
-    }
-
-    /**
-     *  @notice debt ratio in same terms for reserve or liquidity bonds
-     *  @return uint
-     */
-    function standardizedDebtRatio() external view returns ( uint ) {
-        if ( isLiquidityBond ) {
-            return debtRatio().mul( IBondCalculator( bondCalculator ).markdown( principle ) ).div( 1e9 );
-        } else {
-            return debtRatio();
+        Claim memory claimInfo = claims[ _recipient ];
+        if(claimInfo.gons == 0) {
+            return;
         }
-    }
-
-    /**
-     *  @notice calculate debt factoring in decay
-     *  @return uint
-     */
-    function currentDebt() public view returns ( uint ) {
-        return totalDebt.sub( debtDecay() );
-    }
-
-    /**
-     *  @notice amount to decay total debt by
-     *  @return decay_ uint
-     */
-    function debtDecay() public view returns ( uint decay_ ) {
-        uint blocksSinceLast = block.number.sub( lastDecay );
-        decay_ = totalDebt.mul( blocksSinceLast ).div( terms.vestingTerm );
-        if ( decay_ > totalDebt ) {
-            decay_ = totalDebt;
-        }
-    }
-
-
-    /**
-     *  @notice calculate how far into vesting a depositor is
-     *  @param _depositor address
-     *  @return percentVested_ uint
-     */
-    function percentVestedFor( address _depositor ) public view returns ( uint percentVested_ ) {
-        Bond memory bond = _bondInfo[ _depositor ];
-        uint blocksSinceLast = block.number.sub( bond.lastBlock );
-        uint vesting = bond.vesting;
-
-        if ( vesting > 0 ) {
-            percentVested_ = blocksSinceLast.mul( 10000 ).div( vesting );
-        } else {
-            percentVested_ = 0;
-        }
-    }
-
-    /**
-     *  @notice calculate amount of HEC available for claim by depositor
-     *  @param _depositor address
-     *  @return pendingPayout_ uint
-     */
-    function pendingPayoutFor( address _depositor ) external view returns ( uint pendingPayout_ ) {
-        uint percentVested = percentVestedFor( _depositor );
-        uint payout = ISHEC(sHEC).balanceForGons(_bondInfo[ _depositor ].gonsPayout);
-
-        if ( percentVested >= 10000 ) {
-            pendingPayout_ = payout;
-        } else {
-            pendingPayout_ = 0;
-        }
-    }
-    
-    /**
-     *  @notice show the name of current bond
-     *  @return _name string
-     */
-    function name() public view returns (string memory _name) {
-        return name_;
-    }
-
-
-
-
-    /* ======= AUXILLIARY ======= */
-
-    /**
-     *  @notice allow anyone to send lost tokens (excluding principle or HEC) to the DAO
-     *  @return bool
-     */
-    function recoverLostToken( address _token ) external returns ( bool ) {
-        require( _token != HEC );
-        require( _token != sHEC );
-        require( _token != principle );
-        IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
-        return true;
+        
+        delete claims[_recipient];
+        IERC20(sHEC).transfer(_recipient, IsHEC(sHEC).balanceForGons(claimInfo.gons));
     }
 }
