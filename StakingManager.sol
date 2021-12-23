@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.7.5;
 
 interface IOwnable {
@@ -615,6 +616,7 @@ contract StakingManager is Ownable {
         require(_hec != address(0));
         HEC = _hec;
         epochLength = _epochLength;
+        require(_nextEpochBlock>block.number);
         nextEpochBlock = _nextEpochBlock;
     }
     
@@ -653,6 +655,11 @@ contract StakingManager is Ownable {
         require(proxies.length >= period, "Not enough proxies to support specified period.");
         
         warmupPeriod = period;
+    }
+
+    function setNextEpochBlock(uint _nextEpochBlock) external onlyPolicy() {
+        require(_nextEpochBlock>block.number);
+        nextEpochBlock=_nextEpochBlock;
     }
     
     function stake(uint _amount, address _recipient) external returns (bool) {
