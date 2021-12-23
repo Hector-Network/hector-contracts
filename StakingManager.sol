@@ -668,10 +668,10 @@ contract StakingManager is Ownable {
         require(_amount != 0); // why would anyone need to stake 0 HEC?
 
         if ( nextEpochBlock <= block.number ) {
-            claim(_recipient); // claim any expired warmups before rolling to the next epoch
-
             nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
             epoch++;
+
+            claim(_recipient); // claim any expired warmups before rolling to the next epoch
         }
         
         address targetProxy = proxies[warmupPeriod == 0 ? 0 : epoch % warmupPeriod];
