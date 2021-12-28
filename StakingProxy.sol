@@ -608,7 +608,7 @@ contract StakingProxy is Ownable {
         uint deposit;
         uint gons;
     }
-    mapping(address => Claim) claims;
+    mapping(address => Claim) public claims;
     
     constructor(
         address _hec, // HEC Token contract address
