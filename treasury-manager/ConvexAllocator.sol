@@ -736,7 +736,7 @@ contract ConvexAllocator is Ownable {
         accountingFor( token, balance, value, false );
 
         IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
-        treasury.deposit( balance, token, value ); // deposit using value as profit so no OHM is minted
+        treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
     }
 
     /**
