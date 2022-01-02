@@ -588,7 +588,8 @@ contract AnyswapEthereumAllocator is Ownable {
         address underlying;
         address anyswapERC20;
         address ethereumAddress;
-        uint deployed;
+        uint sent;
+        uint received;
         uint limit;
         uint newLimit;
         uint limitChangeTimelockEnd;
@@ -600,19 +601,20 @@ contract AnyswapEthereumAllocator is Ownable {
 
     ITreasury public immutable treasury; // Treasury
     IAnyswapRouter public immutable anyswapRouter; // Treasury
-    address public rewardPool;
+    //address public rewardPool;
     string public name;
     uint constant ETHEREUM_CHAINID=1;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
 
-    uint public totalValueDeployed; // total RFV deployed into lending pool
+    uint public totalValueSent; // total RFV sent out from treasury to bridge
+    uint public totalValueReceived; // total RFV deposit back to treasury
 
     uint public immutable timelockInBlocks; // timelock to raise deployment limit
 
-    address[] rewardTokens;
+    //address[] rewardTokens;
 
-    mapping(address => uint) public totalRewards;
+    //mapping(address => uint) public totalRewards;
 
     bool public enableSendback;
     
@@ -623,7 +625,7 @@ contract AnyswapEthereumAllocator is Ownable {
         string memory name_,
         address _treasury,
         address _anyswapRouter,
-        address _rewardPool,
+        //address _rewardPool,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
@@ -632,8 +634,8 @@ contract AnyswapEthereumAllocator is Ownable {
         require( _anyswapRouter != address(0) );
         anyswapRouter = IAnyswapRouter( _anyswapRouter );
         
-        require( _rewardPool != address(0) );
-        rewardPool = _rewardPool;
+        //require( _rewardPool != address(0) );
+        //rewardPool = _rewardPool;
 
         timelockInBlocks = _timelockInBlocks;
 
@@ -649,6 +651,7 @@ contract AnyswapEthereumAllocator is Ownable {
     /**
      *  @notice claims accrued rewards
      */
+     /*
     function harvest() public {
 
         for( uint i = 0; i < rewardTokens.length; i++ ) {
@@ -659,6 +662,7 @@ contract AnyswapEthereumAllocator is Ownable {
             }
         }
     }
+    */
 
 
 
@@ -670,7 +674,7 @@ contract AnyswapEthereumAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      */
-    function deposit( address token, uint amount ) public onlyPolicy() {
+    function bridgeOut( address token, uint amount ) public onlyPolicy() {
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
@@ -692,16 +696,16 @@ contract AnyswapEthereumAllocator is Ownable {
         IERC20(_token).safeTransfer(policy(),amount);
     }
 
-    function setRewardPool(address _rewardPool) external onlyPolicy {
-        require( _rewardPool != address(0) );
-        rewardPool = _rewardPool;
-    }
+    //function setRewardPool(address _rewardPool) external onlyPolicy {
+    //    require( _rewardPool != address(0) );
+    //    rewardPool = _rewardPool;
+    //}
 
     /**
      *  @notice deposit balance of certain token back into treasury
      *  @param token address
      */
-    function withdraw( address token ) public onlyPolicy() {
+    function depositBack( address token ) public onlyPolicy() {
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
 
         // account for withdrawal
@@ -724,13 +728,14 @@ contract AnyswapEthereumAllocator is Ownable {
         require(anyswapERC20Token!=address(0),"invalid anyswap erc20 token");
         address token=AnyswapV1ERC20(anyswapERC20Token).underlying();
         require( token != address(0) && principleToken==token,"principle token not matched with anyswap ERC20 underlying token");
-        require( tokenInfo[ token ].deployed == 0 ); 
+        require( tokenInfo[ token ].sent <= tokenInfo[token].received );
 
         tokenInfo[ token ] = tokenData({
             underlying: token,
             anyswapERC20: anyswapERC20Token,
             ethereumAddress: ethereumAddress,
-            deployed: 0,
+            sent: 0,
+            received: 0,
             limit: max,
             newLimit: 0,
             limitChangeTimelockEnd: 0
@@ -741,6 +746,7 @@ contract AnyswapEthereumAllocator is Ownable {
      *  @notice add new reward token to be harvested
      *  @param token address
      */
+     /*
     function addRewardToken( address token ) external onlyPolicy() {
         require( IERC20( token ).totalSupply() > 0, "Invalid address" );
         require( token != address(0) );
@@ -749,6 +755,7 @@ contract AnyswapEthereumAllocator is Ownable {
         }
         rewardTokens.push( token );
     }
+    */
 
     /**
      *  @notice lowers max can be deployed for asset (no timelock)
@@ -757,7 +764,7 @@ contract AnyswapEthereumAllocator is Ownable {
      */
     function lowerLimit( address token, uint newMax ) external onlyPolicy() {
         require( newMax < tokenInfo[ token ].limit );
-        require( newMax > tokenInfo[ token ].deployed ); // cannot set limit below what has been deployed already
+        require( newMax.add(tokenInfo[ token ].received) > tokenInfo[ token ].sent ); // cannot set limit below what has been deployed already
         tokenInfo[ token ].limit = newMax;
         tokenInfo[ token ].newLimit = 0;
         tokenInfo[ token ].limitChangeTimelockEnd = 0;
@@ -799,24 +806,16 @@ contract AnyswapEthereumAllocator is Ownable {
      */
     function accountingFor( address token, uint amount, uint value, bool add ) internal {
         if( add ) {
-            tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
+            tokenInfo[ token ].sent = tokenInfo[ token ].sent.add( amount ); // track amount bridged out
         
-            totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
+            totalValueSent = totalValueSent.add( value ); // track total value bridged out
             
         } else {
-            // track amount allocated into pool
-            if ( amount < tokenInfo[ token ].deployed ) {
-                tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.sub( amount ); 
-            } else {
-                tokenInfo[ token ].deployed = 0;
-            }
+            // track amount back to treasury
+            tokenInfo[ token ].received = tokenInfo[ token ].received.add( amount );
             
-            // track total value allocated into pools
-            if ( value < totalValueDeployed ) {
-                totalValueDeployed = totalValueDeployed.sub( value );
-            } else {
-                totalValueDeployed = 0;
-            }
+            // track total value back to treasury
+            totalValueReceived=totalValueReceived.add(value);
         }
     }
 
@@ -829,8 +828,8 @@ contract AnyswapEthereumAllocator is Ownable {
      *  @param amount uint
      */
     function exceedsLimit( address token, uint amount ) public view returns ( bool ) {
-        uint willBeDeployed = tokenInfo[ token ].deployed.add( amount );
+        uint willBeDeployed = tokenInfo[ token ].sent.add( amount );
 
-        return ( willBeDeployed > tokenInfo[ token ].limit );
+        return ( willBeDeployed > tokenInfo[ token ].limit.add(tokenInfo[ token ].received) );
     }
 }
