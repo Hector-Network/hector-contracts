@@ -319,7 +319,7 @@ contract StakingManager is Ownable {
     using SafeMath for uint;
 
     address public immutable HEC;
-    address public immutable stakingContract;
+    address public immutable staking;
     
     uint public epoch = 0;
 
@@ -328,12 +328,12 @@ contract StakingManager is Ownable {
     
     constructor(
         address _hec,
-        address _stakingContract
+        address _staking
     ) {
         require(_hec != address(0));
         HEC = _hec;
-        require(_stakingContract != address(0));
-        stakingContract = _stakingContract;
+        require(_staking != address(0));
+        staking = _staking;
     }
     
     function addProxy(address _proxy) external onlyPolicy() {
@@ -403,6 +403,6 @@ contract StakingManager is Ownable {
     }
 
     function getStakingEpoch() view public returns(uint stakingEpoch){
-        (,stakingEpoch,,)=IStaking(stakingContract).epoch();
+        (,stakingEpoch,,)=IStaking(staking).epoch();
     }
 }
