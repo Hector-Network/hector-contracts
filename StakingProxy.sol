@@ -587,11 +587,20 @@ library FixedPoint {
 interface IStaking {
     function stake( uint _amount, address _recipient ) external returns ( bool );
     function claim( address _recipient ) external;
+    function epoch() external view returns (
+        uint length,
+        uint number,
+        uint endBlock,
+        uint distribute);
 }
 
 interface IsHEC {
     function gonsForBalance( uint amount ) external view returns ( uint );
     function balanceForGons( uint gons ) external view returns ( uint );
+}
+
+interface IStakingManager{
+    function warmupPeriod() external view returns (uint);
 }
 
 contract StakingProxy is Ownable {
@@ -603,6 +612,7 @@ contract StakingProxy is Ownable {
     address public immutable sHEC;
     address public immutable manager;
     address public immutable staking;
+    uint public lastStakedEpoch;
 
     struct Claim {
         uint deposit;
@@ -631,7 +641,7 @@ contract StakingProxy is Ownable {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
-
+        lastStakedEpoch=getStakingEpoch();
         Claim memory claimInfo = claims[_recipient];
         claims[_recipient] = Claim({
             deposit: claimInfo.deposit.add(_amount),
@@ -646,6 +656,8 @@ contract StakingProxy is Ownable {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
 
+        if(getStakingEpoch()<lastStakedEpoch+IStakingManager(staking).warmupPeriod()) return;
+
         IStaking(staking).claim(address(this));
 
         Claim memory claimInfo = claims[ _recipient ];
@@ -655,5 +667,8 @@ contract StakingProxy is Ownable {
         
         delete claims[_recipient];
         IERC20(sHEC).transfer(_recipient, IsHEC(sHEC).balanceForGons(claimInfo.gons));
+    }
+    function getStakingEpoch() view public returns(uint stakingEpoch){
+        (,stakingEpoch,,)=IStaking(staking).epoch();
     }
 }
