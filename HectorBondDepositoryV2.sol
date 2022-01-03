@@ -650,6 +650,7 @@ contract HectorBondDepositoryV2 is Ownable {
     string internal name_; //name of this bond
     IBackingCalculator public backingCalculator;
     uint8 public principleDecimals; //principle decimals or pair markdown decimals
+    uint8 public premium;//percent , 20%=20
 
     /* ======== STRUCTS ======== */
 
@@ -711,6 +712,7 @@ contract HectorBondDepositoryV2 is Ownable {
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
         name_ = _name;
+        premium=20;
     }
 
     /**
@@ -1015,8 +1017,9 @@ contract HectorBondDepositoryV2 is Ownable {
         }
         uint bph=backingCalculator.treasuryBacking();//1e4
         uint nativeBph=toNativePrice(bph);//1e4
-        if ( price_ < nativeBph ) {
-            price_ = nativeBph;
+        uint priceFloor=nativeBph.mul(uint(100).add(premium)).div(100);
+        if ( price_ < priceFloor ) {
+            price_ = priceFloor;
         }
     }
     function toNativePrice(uint _bph) public view returns (uint _nativeBph){
@@ -1041,9 +1044,14 @@ contract HectorBondDepositoryV2 is Ownable {
         }
         uint bph=backingCalculator.treasuryBacking();//1e4
         uint nativeBph=toNativePrice(bph);//1e4
-        if ( price_ < nativeBph ) {
-            price_ = nativeBph;
+        uint priceFloor=nativeBph.mul(uint(100).add(premium)).div(100);
+        if ( price_ < priceFloor ) {
+            price_ = priceFloor;
         }
+    }
+
+    function setPremium(uint8 _premium) external onlyPolicy{
+        premium=_premium;
     }
 
     /**
