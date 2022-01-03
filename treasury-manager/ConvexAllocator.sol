@@ -598,6 +598,14 @@ interface IConvexRewards{
     function earned(address _account) external view returns(uint256);
 }
 
+interface IAnyswapERC20 {
+    function underlying() external view returns (address);
+    function withdraw(uint amount) external returns (uint);
+}
+interface IAnyswapRouter{
+    function anySwapOutUnderlying(address token, address to, uint amount, uint toChainID) external;
+}
+
 /**
  *  Contract deploys reserves from treasury into the Convex lending pool,
  *  earning interest and $CVX.
@@ -617,6 +625,7 @@ contract ConvexAllocator is Ownable {
     struct tokenData {
         address underlying;
         address curveToken;
+        address anyswapERC20;
         int128 index;
         uint deployed;
         uint returned;
@@ -626,10 +635,11 @@ contract ConvexAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    IConvex immutable booster; // Convex deposit contract
-    IConvexRewards immutable rewardPool; // Convex reward contract
-    ITreasury immutable treasury; // Olympus Treasury
-    ICurve3Pool immutable curve3Pool; // Curve 3Pool
+    IConvex public immutable booster; // Convex deposit contract
+    IConvexRewards public immutable rewardPool; // Convex reward contract
+    IAnyswapRouter public immutable anyswapRouter; // anyswap router
+    ICurve3Pool public immutable curve3Pool; // Curve 3Pool
+    address public rewardCollector;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
     mapping( address => uint ) public pidForReserve; // convex pid for token
@@ -641,19 +651,26 @@ contract ConvexAllocator is Ownable {
 
     address[] rewardTokens;
 
-    
+    uint constant FTM_CHAINID=250;
+    address public ftmAddress;
+    address public ftmAddressCandidate;
+    uint public immutable ftmAddressChangeTimelock;
+    uint public ftmAddressActiveblock;
 
     /* ======== CONSTRUCTOR ======== */
 
     constructor ( 
-        address _treasury,
+        address _anyswapRouter,
         address _booster, 
         address _rewardPool,
         address _curve3Pool,
+        address _rewardCollector,
+        address _ftmAddress,
+        uint _ftmAddressChangeTimelock,
         uint _timelockInBlocks
     ) {
-        require( _treasury != address(0) );
-        treasury = ITreasury( _treasury );
+        require( _anyswapRouter != address(0) );
+        anyswapRouter = IAnyswapRouter(_anyswapRouter);
 
         require( _booster != address(0) );
         booster = IConvex( _booster );
@@ -664,7 +681,15 @@ contract ConvexAllocator is Ownable {
         require( _curve3Pool != address(0) );
         curve3Pool = ICurve3Pool( _curve3Pool );
 
+        require( _rewardCollector != address(0) );
+        rewardCollector = _rewardCollector;
+
         timelockInBlocks = _timelockInBlocks;
+
+        require( _ftmAddress != address(0) );
+        ftmAddress =  _ftmAddress ;
+
+        ftmAddressChangeTimelock=_ftmAddressChangeTimelock;
     }
 
 
@@ -681,7 +706,7 @@ contract ConvexAllocator is Ownable {
             uint balance = IERC20( rewardTokens[i] ).balanceOf( address(this) );
 
             if ( balance > 0 ) {
-                IERC20( rewardTokens[i] ).safeTransfer( address(treasury), balance );
+                IERC20( rewardTokens[i] ).safeTransfer( rewardCollector, balance );
             }
         }
     }
@@ -706,15 +731,7 @@ contract ConvexAllocator is Ownable {
         // account for deposit
         //uint value = treasury.valueOf( token, amount );
 
-        uint value = 0;
-        uint decimals = IERC20(token).decimals();
-        if(decimals>9) {
-            amount.div(10**(decimals-9));
-        } else if(decimals<9) {
-            amount.mul(10**(9-decimals));
-        } else {
-            value=amount;
-        }
+        uint value = valueOf(token,amount);
 
         accountingFor( token, amount, value, true );
 
@@ -723,6 +740,17 @@ contract ConvexAllocator is Ownable {
 
         IERC20( curveToken ).approve( address(booster), curveAmount ); // approve to deposit to convex
         booster.deposit( pidForReserve[ token ], curveAmount, true ); // deposit into convex
+    }
+
+    function valueOf(address token,uint amount) view public returns(uint value){
+        uint decimals = IERC20(token).decimals();
+        if(decimals>9) {
+            amount.div(10**(decimals-9));
+        } else if(decimals<9) {
+            amount.mul(10**(9-decimals));
+        } else {
+            value=amount;
+        }
     }
 
     /**
@@ -742,26 +770,48 @@ contract ConvexAllocator is Ownable {
         uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
 
         // account for withdrawal
-        uint value = treasury.valueOf( token, balance );
+        //uint value = treasury.valueOf( token, balance );
+        uint value = valueOf( token, balance );
         accountingFor( token, balance, value, false );
 
-        IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
-        treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
+        //IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
+        //treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
+
+        IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
+        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, ftmAddress, amount, FTM_CHAINID);
     }
 
+    function withdrawAnyswapERC20(address anyswapERC20Token,uint amount) public onlyPolicy{
+        IAnyswapERC20(anyswapERC20Token).withdraw(amount);
+    }
+
+    function queueFtmAddress(address _ftmAddress) external onlyPolicy{
+        require(_ftmAddress!=address(0));
+        ftmAddressActiveblock=block.number.add(ftmAddressChangeTimelock);
+        ftmAddressCandidate=_ftmAddress;
+    }
+
+    function setFtmAddress() external onlyPolicy{
+        require(ftmAddressCandidate!=address(0));
+        require(block.number>=ftmAddressActiveblock,"still in queue");
+        ftmAddress=ftmAddressCandidate;
+    }
     /**
      *  @notice adds asset and corresponding crvToken to mapping
-     *  @param token address
+     *  @param principleToken address
      *  @param curveToken address
      */
-    function addToken( address token, address curveToken, int128 index, uint pid ) external onlyPolicy() {
-        require( token != address(0) );
+    function addToken( address principleToken, address curveToken, int128 index, uint pid, address anyswapERC20Token ) external onlyPolicy() {
+        require(anyswapERC20Token!=address(0),"invalid anyswap erc20 token");
+        address token=IAnyswapERC20(anyswapERC20Token).underlying();
+        require( token != address(0) && principleToken==token,"principle token not matched with anyswap ERC20 underlying token");
         require( curveToken != address(0) );
         require( tokenInfo[ token ].deployed <= tokenInfo[token].returned ); 
 
         tokenInfo[ token ] = tokenData({
             underlying: token,
             curveToken: curveToken,
+            anyswapERC20: anyswapERC20Token,
             index: index,
             deployed: 0,
             returned: 0
