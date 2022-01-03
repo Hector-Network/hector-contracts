@@ -562,8 +562,9 @@ interface ITreasury {
     function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
 }
 
-interface AnyswapV1ERC20 {
+interface IAnyswapERC20 {
     function underlying() external view returns (address);
+    function withdraw(uint amount) external returns (uint);
 }
 interface IAnyswapRouter{
     function anySwapOutUnderlying(address token, address to, uint amount, uint toChainID) external;
@@ -587,7 +588,6 @@ contract AnyswapEthereumAllocator is Ownable {
     struct tokenData {
         address underlying;
         address anyswapERC20;
-        address ethereumAddress;
         uint sent;
         uint received;
         uint limit;
@@ -604,6 +604,10 @@ contract AnyswapEthereumAllocator is Ownable {
     //address public rewardPool;
     string public name;
     uint constant ETHEREUM_CHAINID=1;
+    address public ethereumAddress;
+    address public ethereumAddressCandidate;
+    uint public immutable ethAddressChangeTimelock;
+    uint public ethereumAddressActiveblock;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
 
@@ -626,6 +630,8 @@ contract AnyswapEthereumAllocator is Ownable {
         address _treasury,
         address _anyswapRouter,
         //address _rewardPool,
+        address _ethereumAddress,
+        uint _ethAddressChangeTimelock,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
@@ -638,6 +644,11 @@ contract AnyswapEthereumAllocator is Ownable {
         //rewardPool = _rewardPool;
 
         timelockInBlocks = _timelockInBlocks;
+
+        require( _ethereumAddress != address(0) );
+        ethereumAddress =  _ethereumAddress ;
+
+        ethAddressChangeTimelock=_ethAddressChangeTimelock;
 
         enableSendback = true;
 
@@ -679,27 +690,12 @@ contract AnyswapEthereumAllocator is Ownable {
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
         IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
-        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, tokenInfo[token].ethereumAddress, amount, ETHEREUM_CHAINID);
+        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, ethereumAddress, amount, ETHEREUM_CHAINID);
 
         // account for deposit
         uint value = treasury.valueOf( token, amount );
         accountingFor( token, amount, value, true );
     }
-
-    function disableSendback() external onlyPolicy{
-        enableSendback=false;
-    }
-
-    function sendBack(address _token) external onlyPolicy {
-        require(enableSendback==true,"send back token is disabled");
-        uint amount = IERC20(_token).balanceOf(address(this));
-        IERC20(_token).safeTransfer(policy(),amount);
-    }
-
-    //function setRewardPool(address _rewardPool) external onlyPolicy {
-    //    require( _rewardPool != address(0) );
-    //    rewardPool = _rewardPool;
-    //}
 
     /**
      *  @notice deposit balance of certain token back into treasury
@@ -716,24 +712,53 @@ contract AnyswapEthereumAllocator is Ownable {
         treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
     }
 
+    function withdrawAnyswapERC20(address anyswapERC20Token,uint amount) public onlyPolicy{
+        IAnyswapERC20(anyswapERC20Token).withdraw(amount);
+    }
+
+    function disableSendback() external onlyPolicy{
+        enableSendback=false;
+    }
+
+    function sendBack(address _token) external onlyPolicy {
+        require(enableSendback==true,"send back token is disabled");
+        uint amount = IERC20(_token).balanceOf(address(this));
+        IERC20(_token).safeTransfer(policy(),amount);
+    }
+
+    function queueEthereumAddress(address _ethereumAddress) external onlyPolicy{
+        require(_ethereumAddress!=address(0));
+        ethereumAddressActiveblock=block.number.add(ethAddressChangeTimelock);
+        ethereumAddressCandidate=_ethereumAddress;
+    }
+
+    function setEthereumAddress() external onlyPolicy{
+        require(ethereumAddressCandidate!=address(0));
+        require(block.number>=ethereumAddressActiveblock,"still in queue");
+        ethereumAddress=ethereumAddressCandidate;
+    }
+
+    //function setRewardPool(address _rewardPool) external onlyPolicy {
+    //    require( _rewardPool != address(0) );
+    //    rewardPool = _rewardPool;
+    //}
+
     /**
      *  @notice adds asset and corresponding anyswapERC20Token to mapping
      *  @param principleToken address
      *  @param anyswapERC20Token address
-     *  @param ethereumAddress address
      *  @param max uint
      */
-    function addToken( address principleToken, address anyswapERC20Token, address ethereumAddress, uint max ) external onlyPolicy() {
+    function addToken( address principleToken, address anyswapERC20Token, uint max ) external onlyPolicy() {
         
         require(anyswapERC20Token!=address(0),"invalid anyswap erc20 token");
-        address token=AnyswapV1ERC20(anyswapERC20Token).underlying();
+        address token=IAnyswapERC20(anyswapERC20Token).underlying();
         require( token != address(0) && principleToken==token,"principle token not matched with anyswap ERC20 underlying token");
         require( tokenInfo[ token ].sent <= tokenInfo[token].received );
 
         tokenInfo[ token ] = tokenData({
             underlying: token,
             anyswapERC20: anyswapERC20Token,
-            ethereumAddress: ethereumAddress,
             sent: 0,
             received: 0,
             limit: max,
@@ -832,4 +857,5 @@ contract AnyswapEthereumAllocator is Ownable {
 
         return ( willBeDeployed > tokenInfo[ token ].limit.add(tokenInfo[ token ].received) );
     }
+
 }
