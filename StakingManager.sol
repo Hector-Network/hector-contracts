@@ -594,15 +594,22 @@ interface IStakingProxy {
     function claim( address _recipient ) external;
 }
 
+interface IStaking{
+    function epoch() external view returns (
+        uint length,
+        uint number,
+        uint endBlock,
+        uint distribute);
+}
+
 contract StakingManager is Ownable {
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
     address public immutable HEC;
+    address public immutable stakingContract;
     
-    uint public epochLength;
-    uint public nextEpochBlock;
     uint public epoch = 0;
 
     uint public warmupPeriod = 0;
@@ -610,16 +617,13 @@ contract StakingManager is Ownable {
     
     constructor(
         address _hec,
-        uint _epochLength, 
-        uint _nextEpochBlock
+        address _stakingContract
     ) {
         require(_hec != address(0));
         HEC = _hec;
-        epochLength = _epochLength;
-        require(_nextEpochBlock>block.number);
-        nextEpochBlock = _nextEpochBlock;
+        require(_stakingContract != address(0));
+        stakingContract = _stakingContract;
     }
-    
     
     function addProxy(address _proxy) external onlyPolicy() {
         require(_proxy != address(0));
@@ -656,20 +660,14 @@ contract StakingManager is Ownable {
         
         warmupPeriod = period;
     }
-
-    function setNextEpochBlock(uint _nextEpochBlock) external onlyPolicy() {
-        require(_nextEpochBlock>block.number);
-        nextEpochBlock=_nextEpochBlock;
-    }
     
     function stake(uint _amount, address _recipient) external returns (bool) {
         require(proxies.length > 0, "No proxies defined.");
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
-
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
-            epoch++;
+        uint stakingEpoch=getStakingEpoch();
+        if ( epoch < stakingEpoch) {
+            epoch = stakingEpoch; // set next epoch block
 
             claim(_recipient); // claim any expired warmups before rolling to the next epoch
         }
@@ -691,10 +689,9 @@ contract StakingManager is Ownable {
             
             IStakingProxy(proxies[i]).claim(_recipient);
         }
-        
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add( epochLength ); // set next epoch block
-            epoch++;
-        }
+    }
+
+    function getStakingEpoch() view public returns(uint stakingEpoch){
+        (,stakingEpoch,,)=IStaking(stakingContract).epoch();
     }
 }
