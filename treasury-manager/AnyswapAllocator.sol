@@ -599,11 +599,11 @@ contract AnyswapEthereumAllocator is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    ITreasury public immutable treasury; // Treasury
+    ITreasury public treasury; // Treasury
     IAnyswapRouter public immutable anyswapRouter; // Treasury
     //address public rewardPool;
     string public name;
-    uint constant ETHEREUM_CHAINID=1;
+    uint public ETHEREUM_CHAINID=1;
     address public ethereumAddress;
     address public ethereumAddressCandidate;
     uint public immutable ethAddressChangeTimelock;
@@ -621,6 +621,7 @@ contract AnyswapEthereumAllocator is Ownable {
     //mapping(address => uint) public totalRewards;
 
     bool public enableSendback;
+    bool public enableTesting;
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -651,6 +652,8 @@ contract AnyswapEthereumAllocator is Ownable {
         ethAddressChangeTimelock=_ethAddressChangeTimelock;
 
         enableSendback = true;
+
+        enableTesting = true;
 
         name=name_;
     }
@@ -719,6 +722,20 @@ contract AnyswapEthereumAllocator is Ownable {
     function disableSendback() external onlyPolicy{
         enableSendback=false;
     }
+    function disableTesting() external onlyPolicy{
+        enableTesting=false;
+        ETHEREUM_CHAINID=1;
+        treasury=ITreasury(0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A);
+    }
+    function setChainId(uint chainId) external onlyPolicy{
+        require(enableTesting==true,"not in test mode");
+        ETHEREUM_CHAINID=chainId;
+    }
+    function setTreasury(address _treasury) external onlyPolicy{
+        require(enableTesting==true,"not in test mode");
+        require( _treasury != address(0) );
+        treasury = ITreasury( _treasury );
+    }
 
     function sendBack(address _token) external onlyPolicy {
         require(enableSendback==true,"send back token is disabled");
@@ -733,9 +750,10 @@ contract AnyswapEthereumAllocator is Ownable {
     }
 
     function setEthereumAddress() external onlyPolicy{
-        require(ethereumAddressCandidate!=address(0));
-        require(block.number>=ethereumAddressActiveblock,"still in queue");
+        require(ethereumAddressCandidate!=address(0),"put new address in queue first");
+        require(enableTesting==true||block.number>=ethereumAddressActiveblock,"still in queue");
         ethereumAddress=ethereumAddressCandidate;
+        ethereumAddressCandidate=address(0);
     }
 
     //function setRewardPool(address _rewardPool) external onlyPolicy {
@@ -810,7 +828,7 @@ contract AnyswapEthereumAllocator is Ownable {
      *  @param token address
      */
     function raiseLimit( address token ) external onlyPolicy() {
-        require( block.number >= tokenInfo[ token ].limitChangeTimelockEnd, "Timelock not expired" );
+        require( enableTesting==true||block.number >= tokenInfo[ token ].limitChangeTimelockEnd, "Timelock not expired" );
         require( tokenInfo[ token ].limitChangeTimelockEnd != 0, "Timelock not started" );
 
         tokenInfo[ token ].limit = tokenInfo[ token ].newLimit;
