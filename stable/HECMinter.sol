@@ -262,6 +262,7 @@ interface IERC20 {
         external
         returns (bool);
     function burnFrom(address account_, uint256 amount_) external;
+    function burn(uint256 amount_) external;
 }
 
 /**
@@ -478,13 +479,16 @@ contract HECMinter is IHECMinter,Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
     address public HUGSMinter;
-    address public treasury=0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
-    address public constant HEC=0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
+    address public treasury=0x243bE5DF259a4a8c14dD6eED87129aF01bc8f03a;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
+    address public constant HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
     uint public limit;
     uint public minted;
     uint public burnt;
-    address public testVault;
     constructor(uint _limit){
+        limit=_limit;
+    }
+    function setLimit(uint _limit) external onlyOwner{
+        require(_limit>limit);
         limit=_limit;
     }
     function setHUGSMinter(address _HUGSMinter) external onlyOwner(){
@@ -507,6 +511,7 @@ contract HECMinter is IHECMinter,Ownable{
         ITreasury(treasury).mintRewards(account,amount);
     }
     function burnFrom(address account, uint256 amount) internal{
-        IERC20(HEC).burnFrom(account,amount);
+        IERC20(HEC).transferFrom(account,address(this),amount);
+        IERC20(HEC).burn(amount);
     }
 }
