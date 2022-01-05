@@ -1,0 +1,20 @@
+main steps for investment:
+
+ON FTM
+1. invoke treasury.manage() to get stable out
+2. invoke anyswapRouter.anySwapOutUnderlying() to send stable to our convex investment contract on ETH chain 
+
+ON ETH
+3. invoke curve3Pool.add_liquidity() to deposit stable into curve liquidity pool and get LP token
+4. invoke convexBooster.deposit() to stake curve LP token in convex
+
+
+main steps for withdrawal:
+
+on ETH
+1. convexRewardPool.withdrawAndUnwrap() to get curve LP token back from convex
+2. curve3Pool.remove_liquidity_one_coin() to get stable back from curve pool
+3. anyswapRouter.anySwapOutUnderlying() to send stable to our investment contract on FTM chain
+
+on FTM
+1. treasury.deposit() to put all stables back into treasury
