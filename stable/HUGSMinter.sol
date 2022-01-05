@@ -513,6 +513,18 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         routers[dai]=spooky;
         routers[usdc]=spirit;
     }
+    function setHec(address _hec) external onlyOwner(){
+        require(_hec!=address(0));
+        hec=IERC20(_hec);
+    }
+    function setHUGS(address _hugs) external onlyOwner(){
+        require(_hugs!=address(0));
+        HUGS=IERC20(_hugs);
+    }
+    function setHECMinter(address _HECMinter) external onlyOwner(){
+        require(_HECMinter!=address(0));
+        HECMinter=IHECMinter(_HECMinter);
+    }
     function collectFee() external onlyOwner(){
         if(dai.balanceOf(address(this))>1e18)dai.transfer(owner(),dai.balanceOf(address(this)));
         if(usdc.balanceOf(address(this))>1e6)usdc.transfer(owner(),usdc.balanceOf(address(this)));
