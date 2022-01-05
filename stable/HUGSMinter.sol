@@ -415,6 +415,7 @@ interface IERC20 {
         returns (bool);
     function mint(address account_, uint256 amount_) external;
     function decimals() external view returns (uint8);
+    function burnFrom(address account_, uint256 amount_) external;
 }
 interface IOwnable {
     function owner() external view returns (address);
@@ -477,6 +478,7 @@ interface IUniswapRouter{
         address to,
         uint256 deadline
     ) external returns (uint256[] memory amounts);
+    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 interface IHUGSMinter{
     function mintWithDai(uint amount) external;
@@ -515,13 +517,13 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         if(dai.balanceOf(address(this))>1e18)dai.transfer(owner(),dai.balanceOf(address(this)));
         if(usdc.balanceOf(address(this))>1e6)usdc.transfer(owner(),usdc.balanceOf(address(this)));
     }
-    function to18(IERC20 token,uint amount) view public returns(uint){
-        if(token.decimals()==18)return amount;
-        else if(token.decimals()<18){
-            return amount.mul(10**(18-token.decimals()));
-        }else{
-            return amount.div(10**(token.decimals()-18));
-        }
+
+    function convertDecimal(IERC20 from,IERC20 to, uint amount) view public returns(uint){
+        uint8 fromDec=from.decimals();
+        uint8 toDec=to.decimals();
+        if(fromDec==toDec) return amount;
+        else if(fromDec>toDec) return amount.div(10**(fromDec-toDec));
+        else return amount.mul(10**(toDec-fromDec));
     }
 
     function mintWithStable(IERC20 token,uint _amount) internal returns(uint){
@@ -529,8 +531,7 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         token.safeTransferFrom(msg.sender,address(this),_amount);
         uint amount=_amount.mul(998).div(1000);
         if(_amount>amount){
-            uint fee=_amount.sub(amount);
-            totalMintFee=totalMintFee.add(to18(token,fee));
+            totalMintFee=totalMintFee.add(convertDecimal(token,HUGS,_amount.sub(amount)));
         }
         token.approve(address(routers[token]),amount);
         address[] memory path=new address[](2);
@@ -546,8 +547,8 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         require(amountOuts[1]>0,"invalid hec amount from swap");
         hec.approve(address(HECMinter),amountOuts[1]);
         HECMinter.burnHEC(amountOuts[1]);
-        HUGS.mint(msg.sender,to18(dai,amount));
-        return to18(dai,amount);
+        HUGS.mint(msg.sender,convertDecimal(dai,HUGS,amount));
+        return convertDecimal(dai,HUGS,amount);
     }
 
     function mintWithDai(uint amount) override external{
@@ -558,12 +559,35 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         mintWithStable(usdc,amount);
     }
 
-    function redeemToStable(uint amount) internal returns(uint){
-
+    function redeemToStable(uint amount,IERC20 token) internal returns(uint){
+        require(address(routers[token])!=address(0),"unknown stable token");
+        HUGS.burnFrom(msg.sender,amount);
+        uint amountOut=convertDecimal(HUGS,token,amount);
+        address[] memory path=new address[](2);
+        path[0]=address(hec);
+        path[1]=address(token);
+        uint[] memory amounts=routers[token].getAmountsIn(amountOut, path);
+        HECMinter.mintHEC(amounts[0]);
+        hec.approve(address(routers[token]),amounts[0]);
+        uint[] memory amountOuts=routers[token].swapExactTokensForTokens(
+            amounts[0],
+            1,
+            path,
+            address(this),
+            block.timestamp
+        );
+        amountOut=amountOuts[1].mul(998).div(1000);
+        if(amountOuts[1]>amountOut){
+            totalBurnFee=totalBurnFee.add(convertDecimal(token,HUGS,amountOuts[1].sub(amountOut)));
+        }
+        token.transfer(msg.sender,amountOut);
+        return amountOut;
     }
 
     function redeemToDai(uint amount) override external{
+        redeemToStable(amount,dai);
     }
     function redeemToUsdc(uint amount) override external{
+        redeemToStable(amount,usdc);
     }
 }
