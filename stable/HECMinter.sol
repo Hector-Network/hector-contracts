@@ -480,14 +480,22 @@ contract HECMinter is IHECMinter,Ownable{
     using SafeMath for uint;
     address public HUGSMinter;
     address public treasury=0x243bE5DF259a4a8c14dD6eED87129aF01bc8f03a;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
-    address public constant HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
+    address public HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
     uint public limit;
     uint public minted;
     uint public burnt;
     constructor(uint _limit){
         limit=_limit;
     }
-    function setLimit(uint _limit) external onlyOwner{
+    function setHec(address _HEC) external onlyOwner(){
+        require(_HEC!=address(0));
+        HEC=_HEC;
+    }
+    function setTrasury(address _treasury) external onlyOwner(){
+        require(_treasury!=address(0));
+        treasury=_treasury;
+    }
+    function setLimit(uint _limit) external onlyOwner(){
         //require(_limit>limit);
         limit=_limit;
     }
