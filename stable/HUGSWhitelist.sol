@@ -116,16 +116,23 @@ contract Ownable is IOwnable {
         _owner = _newOwner;
     }
 }
-contract HUGSWhitelist is Ownable{
+interface IHUGSMintStrategy{
+    function tryMint(address recipient,uint amount) external returns(bool);
+}
+contract HUGSWhitelist is IHUGSMintStrategy,Ownable{
     using SafeMath for uint;
     mapping(address=>uint) public minted;
-    uint public constant limitPerAccount=5000*1e18+1;
-    uint public constant numberLimit=400;
+    uint public limitPerAccount=5000*1e18+1;
+    uint public numberLimit=400;
     uint public totalNumber;
     address public HUGSMinter;
     function setHUGSMinter(address _HUGSMinter) external onlyOwner(){
         require(_HUGSMinter!=address(0),"invalid HUGSMinter address");
         HUGSMinter=_HUGSMinter;
+    }
+    function setLimit(uint _numberLimit,uint _limitPerAccount) external onlyOwner(){
+        numberLimit=_numberLimit;
+        limitPerAccount=_limitPerAccount;
     }
     function add(address wallet) external onlyOwner(){
         require(totalNumber<numberLimit,"too many wallets");
@@ -139,11 +146,12 @@ contract HUGSWhitelist is Ownable{
         delete minted[wallet];
         totalNumber=totalNumber.sub(1);
     }
-    function tryMint(address wallet,uint amount) external{
+    function tryMint(address wallet,uint amount) override external returns(bool){
         require(amount>0,"amount must be positive");
         require(msg.sender==HUGSMinter&&HUGSMinter!=address(0),"only HUGSMinter can tryMint");
         require(minted[wallet]!=0,"wallet not found");
         require(minted[wallet].add(amount)<=limitPerAccount,"per account limit exceeds");
         minted[wallet]=minted[wallet].add(amount);
+        return true;
     }
 }
