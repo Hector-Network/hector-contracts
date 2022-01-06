@@ -18,3 +18,29 @@ on ETH
 
 on FTM
 1. treasury.deposit() to put all stables back into treasury
+
+
+
+Anyswap chainid : eth:1 ftm:250 bsc:56
+Anyswap routerV4: 0x1CcCA1cE62c62F7Be95d4A67722a8fDbed6EEcb4
+Convex booster : 0xF403C135812408BFbE8713b5A23a04b3D48AAE31
+Convex pools:
+id 40=>mim+3crv
+  lptoken   address :  0x5a6A4D54456819380173272A5E8E9B9904BdF41B
+  token   address :  0xabB54222c2b77158CC975a2b715a3d703c256F05
+  gauge   address :  0xd8b712d29381748dB89c36BCa0138d7c75866ddF
+  crvRewards   address :  0xFd5AbF66b003881b88567EB9Ed9c651F14Dc4771
+  stash   address :  0xEd3D937A12fEed5298827B3adf05caaFfb0efDda
+  shutdown   bool :  false
+id 32=> frax+3crv
+  lptoken   address :  0xd632f22692FaC7611d2AA1C0D552930D43CAEd3B
+  token   address :  0xbE0F6478E0E4894CFb14f32855603A083A57c7dA
+  gauge   address :  0x72E158d38dbd50A483501c24f792bDAAA3e7D55C
+  crvRewards   address :  0xB900EF131301B307dB5eFcbed9DBb50A3e209B2e
+  stash   address :  0x10a63847e6cdD2b07e0a22D1f30eB037a72eB790
+  shutdown   bool :  false
+Curve 3pool: 0xa79828df1850e8a3a3064576f380d90aecdd3359
+Use curve 3pool deposit function for factory pool
+https://etherscan.io/tx/0x6454ff5c7f846c89c749426e7c022f6cad704cdcca6e4b4303cf0c80c27d70b2
+https://etherscan.io/tx/0xddb6110337fb5b837c5944a09bc76ef722a257cc7bab8369176b4f432868af91
+
