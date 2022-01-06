@@ -511,7 +511,7 @@ contract HECMinter is IHECMinter,Ownable{
     }
     function burnHEC(uint amount) override external{
         require(HUGSMinter!=address(0)&&msg.sender==HUGSMinter,"only HUGS minter can burn HEC this way");
-        require(burnt.add(amount)<=minted,"exceed burn limit");
+        //require(burnt.add(amount)<=minted,"exceed burn limit");//for HUGS to work, burn happens first
         burnt=burnt.add(amount);
         burnFrom(msg.sender,amount);
     }
