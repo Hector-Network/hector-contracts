@@ -140,7 +140,8 @@ contract HUGSWhitelist is Ownable{
         totalNumber=totalNumber.sub(1);
     }
     function tryMint(address wallet,uint amount) external{
-        require(msg.sender==HUGSMinter&&HUGSMinter!=address(0),"oonly HUGSMinter can tryMint");
+        require(amount>0,"amount must be positive");
+        require(msg.sender==HUGSMinter&&HUGSMinter!=address(0),"only HUGSMinter can tryMint");
         require(minted[wallet]!=0,"wallet not found");
         require(minted[wallet].add(amount)<=limitPerAccount,"per account limit exceeds");
         minted[wallet]=minted[wallet].add(amount);
