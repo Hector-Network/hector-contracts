@@ -488,7 +488,7 @@ contract HECMinter is IHECMinter,Ownable{
         limit=_limit;
     }
     function setLimit(uint _limit) external onlyOwner{
-        require(_limit>limit);
+        //require(_limit>limit);
         limit=_limit;
     }
     function setHUGSMinter(address _HUGSMinter) external onlyOwner(){
