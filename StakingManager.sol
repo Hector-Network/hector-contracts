@@ -312,6 +312,7 @@ interface IStaking{
         uint number,
         uint endBlock,
         uint distribute);
+    function rebase() external;
 }
 
 contract StakingManager is Ownable {
@@ -376,6 +377,7 @@ contract StakingManager is Ownable {
         require(proxies.length > 0, "No proxies defined.");
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
+        IStaking(staking).rebase();
         uint stakingEpoch=getStakingEpoch();
         if ( epoch < stakingEpoch) {
             epoch = stakingEpoch; // set next epoch block
