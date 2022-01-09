@@ -150,7 +150,7 @@ contract StakingGateway{
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         (_optimalHugsAmount,_optimalDaiAmount,_optimalUsdcAmount)=calOptimal(amount);
     }
-    function calOptimal(uint amount) public view returns(uint _optimalHugs,uint _optimalDai,uint optimalUsdc){
+    function calOptimal(uint amount) public view returns(uint _optimalHugs,uint _optimalDai,uint _optimalUsdc){
         uint hugs=hugsPool.balances(0);//1e18
         uint daiusdc=hugsPool.balances(1);//1e18
         uint dai=daiusdc.mul(c2pool.balances(0)).div(c2pool.totalSupply());//1e18
@@ -158,14 +158,15 @@ contract StakingGateway{
         uint ntotal=hugs.add(dai).add(usdc).add(amount);
         uint nhugs=ntotal.div(2);
         uint ndai=ntotal.div(4);
-        uint nusdc=ntotal.sub(nhugs).sub(ndai);
-        if(nhugs>=amount.add(hugs))_optimalHugs=amount;
+        //uint nusdc=ntotal.sub(nhugs).sub(ndai);
+        if(nhugs>=amount.add(hugs)) _optimalHugs=amount;
         else if(nhugs<=hugs) _optimalHugs=0;
         else _optimalHugs=nhugs.sub(hugs);
-        if(ndai>=amount.add(dai))_optimalDai=amount;
+        if(ndai>=amount.add(dai)) _optimalDai=amount;
         else if(ndai<=dai) _optimalDai=0;
         else _optimalDai=ndai.sub(dai);
-        
+        if(amount>=_optimalHugs.add(_optimalDai)) _optimalUsdc=amount.sub(_optimalHugs).sub(_optimalDai);
+        else _optimalUsdc=0;
     }
     function calBonusOrSlipage(uint hugsAmount,uint daiAmount,uint usdcAmount) external view returns(uint percentage,bool isBonus){
 
