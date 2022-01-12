@@ -76,10 +76,12 @@ interface AggregatorV3Interface {
     );
 }
 interface ICurvePool{
-    function get_virtual_price() view external returns(uint);
-    function calc_token_amount(uint[2] memory _amounts, bool _is_deposit) view external returns(uint);
-    function balances(uint i) view external returns(uint);
+    function get_virtual_price() external view returns(uint);
+    function calc_token_amount(uint[2] memory _amounts, bool _is_deposit) external view returns(uint);
+    function balances(uint i) external view returns(uint);
     function totalSupply() external view returns (uint);
+    function calc_withdraw_one_coin(uint256 _token_amount, int128 i) external view returns(uint);
+    function balanceOf(address account) external view returns (uint);
 }
 interface IStakingRewards {
     // Views
@@ -118,19 +120,10 @@ interface IStakingRewards {
 }
 contract StakingGateway{
     using SafeMath for uint;
-    IStakingRewards stakingRewards;//0x51a251e04753C4382071D9daA00fA3F165E824Fb
-    ICurvePool hugsPool;//0xDC371bB71dE3a8E50683E7eb596690Db9D0365Cc
-    ICurvePool c2pool;//0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40
-    constructor(
-        address _stakingRewards,
-        address _hugsPool,
-        address _c2pool
-    ){
-        require(_stakingRewards!=address(0)&&_hugsPool!=address(0)&&_c2pool!=address(0));
-        stakingRewards=IStakingRewards(_stakingRewards);
-        hugsPool=ICurvePool(_hugsPool);
-        c2pool=ICurvePool(_c2pool);
-    }
+    IStakingRewards public constant stakingRewards=IStakingRewards(0x51a251e04753C4382071D9daA00fA3F165E824Fb);
+    ICurvePool public constant hugsPool=ICurvePool(0xDC371bB71dE3a8E50683E7eb596690Db9D0365Cc);
+    ICurvePool public constant c2pool=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
+
     function getStakingInfo(address wallet,uint amount) external view returns(
         uint _tvl,//1e18
         uint _apr,//1e8
@@ -149,8 +142,22 @@ contract StakingGateway{
         _finish = stakingRewards.periodFinish();
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         (_optimalHugsAmount,_optimalDaiAmount,_optimalUsdcAmount)=calOptimal(amount);
+        (_hugsWithdrawAmount,_daiWithdrawAmount,_usdcWithdrawAmount,_earnedRewardAmount)=calWithdrawAndEarned(wallet);
+    }
+    function calWithdrawAndEarned(address wallet) public view returns(
+        uint _hugsWithdrawAmount,
+        uint _daiWithdrawAmount,
+        uint _usdcWithdrawAmount,
+        uint _earnedRewardAmount){
+        uint bal=stakingRewards.balanceOf(wallet);
+        _hugsWithdrawAmount=hugsPool.calc_withdraw_one_coin(bal,0);
+        uint daiusdc=hugsPool.calc_withdraw_one_coin(bal,1);
+        _daiWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,0);
+        _usdcWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,1);
+        _earnedRewardAmount=stakingRewards.earned(wallet);
     }
     function calOptimal(uint amount) public view returns(uint _optimalHugs,uint _optimalDai,uint _optimalUsdc){
+        if(amount==0)return(0,0,0);
         uint hugs=hugsPool.balances(0);//1e18
         uint daiusdc=hugsPool.balances(1);//1e18
         uint dai=daiusdc.mul(c2pool.balances(0)).div(c2pool.totalSupply());//1e18
@@ -168,8 +175,19 @@ contract StakingGateway{
         if(amount>=_optimalHugs.add(_optimalDai)) _optimalUsdc=amount.sub(_optimalHugs).sub(_optimalDai);
         else _optimalUsdc=0;
     }
-    function calBonusOrSlipage(uint hugsAmount,uint daiAmount,uint usdcAmount) external view returns(uint percentage,bool isBonus){
-
+    function calPoolToken(uint hugsAmount,uint daiAmount,uint usdcAmount) public view returns(uint poolTokenAmount){
+        uint[2] memory tokens;
+        tokens[0]=daiAmount;
+        tokens[1]=usdcAmount;
+        uint daiusdcAmount=c2pool.calc_token_amount(tokens,true);
+        tokens[0]=hugsAmount;
+        tokens[1]=daiusdcAmount;
+        poolTokenAmount=hugsPool.calc_token_amount(tokens,true);
+    }
+    //percentage 1e8 100%=1=1e8
+    function calBonusOrSlipage(uint hugsAmount,uint daiAmount,uint usdcAmount) external view returns(uint percentage){
+        uint lpAmount=calPoolToken(hugsAmount,daiAmount,usdcAmount);
+        percentage=lpAmount.mul(hugsPool.get_virtual_price()).div(1e10).div(hugsAmount.add(daiAmount).add(usdcAmount.mul(1e12)));//1e8
     }
     function assetPrice() public view returns (uint) {
         ( , int price, , , ) = AggregatorV3Interface(0xf4766552D15AE4d256Ad41B6cf2933482B0680dc).latestRoundData();
