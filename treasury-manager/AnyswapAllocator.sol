@@ -603,7 +603,8 @@ contract AnyswapEthereumAllocator is Ownable {
     IAnyswapRouter public immutable anyswapRouter; // Treasury
     //address public rewardPool;
     string public name;
-    uint public ETHEREUM_CHAINID=1;
+    uint public chainId=1;
+    uint public chainIdCandidate;
     address public ethereumAddress;
     address public ethereumAddressCandidate;
     uint public immutable ethAddressChangeTimelock;
@@ -693,7 +694,7 @@ contract AnyswapEthereumAllocator is Ownable {
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
         IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
-        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, ethereumAddress, amount, ETHEREUM_CHAINID);
+        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, ethereumAddress, amount, chainId);
 
         // account for deposit
         uint value = treasury.valueOf( token, amount );
@@ -724,12 +725,7 @@ contract AnyswapEthereumAllocator is Ownable {
     }
     function disableTesting() external onlyPolicy{
         enableTesting=false;
-        ETHEREUM_CHAINID=1;
         treasury=ITreasury(0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A);
-    }
-    function setChainId(uint chainId) external onlyPolicy{
-        require(enableTesting==true,"not in test mode");
-        ETHEREUM_CHAINID=chainId;
     }
     function setTreasury(address _treasury) external onlyPolicy{
         require(enableTesting==true,"not in test mode");
@@ -743,17 +739,20 @@ contract AnyswapEthereumAllocator is Ownable {
         IERC20(_token).safeTransfer(policy(),amount);
     }
 
-    function queueEthereumAddress(address _ethereumAddress) external onlyPolicy{
-        require(_ethereumAddress!=address(0));
+    function queueEthereumAddress(uint _chainId,address _ethereumAddress) external onlyPolicy{
+        require(_ethereumAddress!=address(0)&&_chainId!=0,"invalid chainid or eth address");
         ethereumAddressActiveblock=block.number.add(ethAddressChangeTimelock);
         ethereumAddressCandidate=_ethereumAddress;
+        chainIdCandidate=_chainId;
     }
 
     function setEthereumAddress() external onlyPolicy{
-        require(ethereumAddressCandidate!=address(0),"put new address in queue first");
+        require(ethereumAddressCandidate!=address(0)&&chainIdCandidate!=0,"put new address in queue first");
         require(enableTesting==true||block.number>=ethereumAddressActiveblock,"still in queue");
         ethereumAddress=ethereumAddressCandidate;
         ethereumAddressCandidate=address(0);
+        chainId=chainIdCandidate;
+        chainIdCandidate=0;
     }
 
     //function setRewardPool(address _rewardPool) external onlyPolicy {
