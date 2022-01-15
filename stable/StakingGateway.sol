@@ -150,8 +150,10 @@ contract StakingGateway{
         uint _usdcWithdrawAmount,
         uint _earnedRewardAmount){
         uint bal=stakingRewards.balanceOf(wallet);
+        if(bal==0)return (0,0,0,stakingRewards.earned(wallet));
         _hugsWithdrawAmount=hugsPool.calc_withdraw_one_coin(bal,0);
         uint daiusdc=hugsPool.calc_withdraw_one_coin(bal,1);
+        if(daiusdc==0)return (_usdcWithdrawAmount,0,0,stakingRewards.earned(wallet));
         _daiWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,0);
         _usdcWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,1);
         _earnedRewardAmount=stakingRewards.earned(wallet);
