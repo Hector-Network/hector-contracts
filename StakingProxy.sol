@@ -352,8 +352,14 @@ contract StakingProxy is Ownable {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
-        lastStakedEpoch=getStakingEpoch();
         Claim memory claimInfo = claims[_recipient];
+
+        uint stakingEpoch = getStakingEpoch();
+        if(claimInfo.expiry <= stakingEpoch) {
+            claim(_recipient);
+        }
+
+        lastStakedEpoch=stakingEpoch;
         claims[_recipient] = Claim({
             deposit: claimInfo.deposit.add(_amount),
             gons: claimInfo.gons.add(IsHEC(sHEC).gonsForBalance(_amount)),
@@ -364,7 +370,7 @@ contract StakingProxy is Ownable {
         return IStaking(staking).stake(_amount, address(this));
     }
     
-    function claim(address _recipient) external {
+    function claim(address _recipient) public {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
 
