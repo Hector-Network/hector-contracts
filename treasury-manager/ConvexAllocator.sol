@@ -636,9 +636,9 @@ contract ConvexAllocator is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     IConvex public immutable booster; // Convex deposit contract
-    IConvexRewards public immutable rewardPool; // Convex reward contract
+    IConvexRewards public rewardPool; // Convex reward contract
     IAnyswapRouter public immutable anyswapRouter; // anyswap router
-    ICurve3Pool public immutable curve3Pool; // Curve 3Pool
+    ICurve3Pool public curve3Pool; // Curve 3Pool
     address public rewardCollector;
 
     mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
@@ -662,9 +662,9 @@ contract ConvexAllocator is Ownable {
     constructor ( 
         address _anyswapRouter,
         address _booster, 
-        address _rewardPool,
-        address _curve3Pool,
-        address _rewardCollector,
+        // address _rewardPool,
+        // address _curve3Pool,
+        // address _rewardCollector,
         address _ftmAddress,
         uint _ftmAddressChangeTimelock,
         uint _timelockInBlocks
@@ -675,14 +675,14 @@ contract ConvexAllocator is Ownable {
         require( _booster != address(0) );
         booster = IConvex( _booster );
 
-        require( _rewardPool != address(0) );
-        rewardPool = IConvexRewards( _rewardPool );
+        // require( _rewardPool != address(0) );
+        // rewardPool = IConvexRewards( _rewardPool );
 
-        require( _curve3Pool != address(0) );
-        curve3Pool = ICurve3Pool( _curve3Pool );
+        // require( _curve3Pool != address(0) );
+        // curve3Pool = ICurve3Pool( _curve3Pool );
 
-        require( _rewardCollector != address(0) );
-        rewardCollector = _rewardCollector;
+        // require( _rewardCollector != address(0) );
+        // rewardCollector = _rewardCollector;
 
         timelockInBlocks = _timelockInBlocks;
 
@@ -724,6 +724,8 @@ contract ConvexAllocator is Ownable {
      *  @param minAmount uint
      */
     function deposit( address token, uint amount, uint[4] calldata amounts, uint minAmount ) public onlyPolicy() {
+        require( curve3Pool != ICurve3Pool(0), "Invalid curv3pool address" );
+        
         address curveToken = tokenInfo[ token ].curveToken;
 
         //treasury.manage( token, amount ); // retrieve amount of asset from treasury
@@ -818,6 +820,27 @@ contract ConvexAllocator is Ownable {
         });
 
         pidForReserve[ token ] = pid;
+    }
+
+    function testcurvePool() external {
+        curve3Pool = ICurve3Pool(address(0));
+        require( curve3Pool != ICurve3Pool(0), "Invalid curv3pool address" );
+    }
+
+    /**
+     *  @notice initialize active pools: reward pool, curve pool and reward collector
+     *  @param _rewardPool address
+     *  @param _curve3Pool address
+     *  @param _rewardCollector address
+     */
+    function addPoolData(address _rewardPool, address _curve3Pool, address _rewardCollector) external onlyPolicy() {
+        require( _rewardPool != address(0), "Invalid reward pool address" );
+        require( _curve3Pool != address(0), "Invalid curv3pool address" );
+        require( _rewardCollector != address(0), "Invalid reward collector address" );
+
+        rewardPool = IConvexRewards( _rewardPool );        
+        curve3Pool = ICurve3Pool( _curve3Pool );        
+        rewardCollector = _rewardCollector;
     }
 
     /**
