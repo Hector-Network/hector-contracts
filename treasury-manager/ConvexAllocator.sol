@@ -762,6 +762,17 @@ interface ICurve3Pool {
 
 //main Convex contract(booster.sol) basic interface
 interface IConvex {
+    function poolInfo(uint256 pid)
+        external
+        returns (
+            address lptoken,
+            address token,
+            address gauge,
+            address crvRewards,
+            address stash,
+            bool shutdown
+        );
+
     //deposit into convex, receive a tokenized deposit.  parameter to stake immediately
     function deposit(
         uint256 _pid,
@@ -869,7 +880,7 @@ contract ConvexAllocator is Ownable {
         address _booster,
         // address _rewardPool,
         // address _curve3Pool,
-        // address _rewardCollector,
+        address _rewardCollector,
         address _ftmAddress,
         uint256 _ftmAddressChangeTimelock,
         uint256 _timelockInBlocks
@@ -886,8 +897,8 @@ contract ConvexAllocator is Ownable {
         // require( _curve3Pool != address(0) );
         // curve3Pool = ICurve3Pool( _curve3Pool );
 
-        // require( _rewardCollector != address(0) );
-        // rewardCollector = _rewardCollector;
+        require(_rewardCollector != address(0));
+        rewardCollector = _rewardCollector;
 
         timelockInBlocks = _timelockInBlocks;
 
@@ -927,11 +938,14 @@ contract ConvexAllocator is Ownable {
         address token,
         uint256 amount,
         uint256[4] calldata amounts,
-        uint256 minAmount
+        uint256 minAmount,
+        uint256 pid,
+        address curveToken
     ) public onlyPolicy {
         require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
+        (, address _curveToken, , , , ) = booster.poolInfo(pid);
 
-        address curveToken = tokenInfo[token].curveToken;
+        require(_curveToken == curveToken, "Invalid curve token address");
 
         //treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
@@ -950,7 +964,7 @@ contract ConvexAllocator is Ownable {
         ); // deposit into curve
 
         IERC20(curveToken).approve(address(booster), curveAmount); // approve to deposit to convex
-        booster.deposit(pidForReserve[token], curveAmount, true); // deposit into convex
+        booster.deposit(pid, curveAmount, true); // deposit into convex
     }
 
     function valueOf(address token, uint256 amount)
@@ -977,14 +991,16 @@ contract ConvexAllocator is Ownable {
     function withdraw(
         address token,
         uint256 amount,
-        uint256 minAmount
+        uint256 minAmount,
+        uint256 pid,
+        address curveToken
     ) public onlyPolicy {
         require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
-        require(rewardPool != IConvexRewards(0), "Invalid rewardPool address");
+        (, address _curveToken, , , , ) = booster.poolInfo(pid);
+
+        require(_curveToken == curveToken, "Invalid curve token address");
 
         rewardPool.withdrawAndUnwrap(amount, false); // withdraw to curve token
-
-        address curveToken = tokenInfo[token].curveToken;
 
         IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
         curve3Pool.remove_liquidity_one_coin(
@@ -1035,13 +1051,10 @@ contract ConvexAllocator is Ownable {
     /**
      *  @notice adds asset and corresponding crvToken to mapping
      *  @param principleToken address
-     *  @param curveToken address
      */
     function addToken(
         address principleToken,
-        address curveToken,
         int128 index,
-        uint256 pid,
         address anyswapERC20Token
     ) external onlyPolicy {
         require(anyswapERC20Token != address(0), "invalid anyswap erc20 token");
@@ -1050,42 +1063,35 @@ contract ConvexAllocator is Ownable {
             token != address(0) && principleToken == token,
             "principle token not matched with anyswap ERC20 underlying token"
         );
-        require(curveToken != address(0));
+
         require(tokenInfo[token].deployed <= tokenInfo[token].returned);
 
         tokenInfo[token] = tokenData({
             underlying: token,
-            curveToken: curveToken,
+            curveToken: address(0),
             anyswapERC20: anyswapERC20Token,
             index: index,
             deployed: 0,
             returned: 0
         });
 
-        pidForReserve[token] = pid;
+        //pidForReserve[ token ] = pid;
     }
 
     /**
      *  @notice initialize active pools: reward pool, curve pool and reward collector
      *  @param _rewardPool address
      *  @param _curve3Pool address
-     *  @param _rewardCollector address
      */
-    function addPoolData(
-        address _rewardPool,
-        address _curve3Pool,
-        address _rewardCollector
-    ) external onlyPolicy {
+    function addPoolData(address _rewardPool, address _curve3Pool)
+        external
+        onlyPolicy
+    {
         require(_rewardPool != address(0), "Invalid reward pool address");
         require(_curve3Pool != address(0), "Invalid curv3pool address");
-        require(
-            _rewardCollector != address(0),
-            "Invalid reward collector address"
-        );
 
         rewardPool = IConvexRewards(_rewardPool);
         curve3Pool = ICurve3Pool(_curve3Pool);
-        rewardCollector = _rewardCollector;
     }
 
     /**
