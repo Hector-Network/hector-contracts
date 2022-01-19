@@ -943,9 +943,9 @@ contract ConvexAllocator is Ownable {
         address curveToken
     ) public onlyPolicy {
         require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
-        (, address _curveToken, , , , ) = booster.poolInfo(pid);
+        (address _lptoken, , , , , ) = booster.poolInfo(pid);
 
-        require(_curveToken == curveToken, "Invalid curve token address");
+        require(_lptoken == curveToken, "Invalid curve token address");
 
         //treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
@@ -996,11 +996,12 @@ contract ConvexAllocator is Ownable {
         address curveToken
     ) public onlyPolicy {
         require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
-        (, address _curveToken, , , , ) = booster.poolInfo(pid);
+        (address _lptoken, , , address _crvRewards, , ) = booster.poolInfo(pid);
 
-        require(_curveToken == curveToken, "Invalid curve token address");
+        require(_lptoken == curveToken, "Invalid curve token address");
+        require(_crvRewards != address(0), "Invalid reward pool address");
 
-        rewardPool.withdrawAndUnwrap(amount, false); // withdraw to curve token
+        IConvexRewards(_crvRewards).withdrawAndUnwrap(amount, false); // withdraw to curve token
 
         IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
         curve3Pool.remove_liquidity_one_coin(
@@ -1070,7 +1071,7 @@ contract ConvexAllocator is Ownable {
             underlying: token,
             curveToken: address(0),
             anyswapERC20: anyswapERC20Token,
-            index: index,
+            index: index, //order of token in the Curve pool
             deployed: 0,
             returned: 0
         });
