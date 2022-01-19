@@ -842,23 +842,28 @@ contract ConvexAllocator is Ownable {
 
     struct tokenData {
         address underlying;
-        address curveToken;
         address anyswapERC20;
         int128 index;
         uint256 deployed;
         uint256 returned;
     }
 
+    struct rewardPid {
+        address rewardPool;
+        uint256 pid;
+    }
+
     /* ======== STATE VARIABLES ======== */
 
     IConvex public immutable booster; // Convex deposit contract
-    IConvexRewards public rewardPool; // Convex reward contract
+    //IConvexRewards public rewardPool; // Convex reward contract
     IAnyswapRouter public immutable anyswapRouter; // anyswap router
     ICurve3Pool public curve3Pool; // Curve 3Pool
     address public rewardCollector;
 
     mapping(address => tokenData) public tokenInfo; // info for deposited tokens
-    mapping(address => uint256) public pidForReserve; // convex pid for token
+    //mapping(address => uint) public pidForReserve; // convex pid for reward pool
+    rewardPid[] pidForReserve;
 
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
     uint256 public totalValueReturned;
@@ -868,6 +873,7 @@ contract ConvexAllocator is Ownable {
     address[] rewardTokens;
 
     uint256 constant FTM_CHAINID = 250;
+    uint256 constant INDEX_NOT_FOUND = 999999;
     address public ftmAddress;
     address public ftmAddressCandidate;
     uint256 public immutable ftmAddressChangeTimelock;
@@ -879,7 +885,7 @@ contract ConvexAllocator is Ownable {
         address _anyswapRouter,
         address _booster,
         // address _rewardPool,
-        // address _curve3Pool,
+        address _curve3Pool,
         address _rewardCollector,
         address _ftmAddress,
         uint256 _ftmAddressChangeTimelock,
@@ -894,8 +900,8 @@ contract ConvexAllocator is Ownable {
         // require( _rewardPool != address(0) );
         // rewardPool = IConvexRewards( _rewardPool );
 
-        // require( _curve3Pool != address(0) );
-        // curve3Pool = ICurve3Pool( _curve3Pool );
+        require(_curve3Pool != address(0));
+        curve3Pool = ICurve3Pool(_curve3Pool);
 
         require(_rewardCollector != address(0));
         rewardCollector = _rewardCollector;
@@ -914,7 +920,14 @@ contract ConvexAllocator is Ownable {
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
     function harvest() public {
-        rewardPool.getReward();
+        //claim rewards for all crvTokens
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            address rewardPool = pidForReserve[i].rewardPool;
+            require(rewardPool != address(0), "Invalid reward pool address");
+
+            //Claim rewards
+            IConvexRewards(rewardPool).getReward();
+        }
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             uint256 balance = IERC20(rewardTokens[i]).balanceOf(address(this));
@@ -943,9 +956,12 @@ contract ConvexAllocator is Ownable {
         address curveToken
     ) public onlyPolicy {
         require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
-        (address _lptoken, , , , , ) = booster.poolInfo(pid);
+        (address _lptoken, , , address _crvRewards, , ) = booster.poolInfo(pid);
 
         require(_lptoken == curveToken, "Invalid curve token address");
+
+        //Update pidForReserve
+        _addPidRewardItem(_crvRewards, pid);
 
         //treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
@@ -982,6 +998,48 @@ contract ConvexAllocator is Ownable {
         }
     }
 
+    function _addPidRewardItem(address _rewardPool, uint256 pid) internal {
+        if (pidForReserve.length == 0)
+            pidForReserve.push(rewardPid(_rewardPool, pid));
+        else {
+            //check for duplication
+            for (uint256 i = 0; i < pidForReserve.length; i++) {
+                if (
+                    pidForReserve[i].rewardPool != _rewardPool &&
+                    pidForReserve[i].pid != pid
+                ) {
+                    pidForReserve.push(rewardPid(_rewardPool, pid));
+                }
+            }
+        }
+    }
+
+    function _removePidRewardItem(address _rewardPool, uint256 pid) internal {
+        uint256 index = INDEX_NOT_FOUND;
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            if (
+                pidForReserve[i].rewardPool == _rewardPool &&
+                pidForReserve[i].pid == pid
+            ) {
+                index = i;
+            }
+        }
+
+        //resize array
+        if (index != INDEX_NOT_FOUND) {
+            _removeArrayGap(index);
+        }
+    }
+
+    function _removeArrayGap(uint256 _index) internal {
+        require(_index < pidForReserve.length, "index out of bound");
+
+        for (uint256 i = _index; i < pidForReserve.length - 1; i++) {
+            pidForReserve[i] = pidForReserve[i + 1];
+        }
+        pidForReserve.pop();
+    }
+
     /**
      *  @notice withdraws crvToken from convex, withdraws from lending pool, then deposits asset into treasury
      *  @param token address
@@ -1007,7 +1065,7 @@ contract ConvexAllocator is Ownable {
         curve3Pool.remove_liquidity_one_coin(
             curveToken,
             amount,
-            tokenInfo[token].index,
+            tokenInfo[token].index, //order of token in the Curve pool
             minAmount
         ); // withdraw from curve
 
@@ -1069,30 +1127,11 @@ contract ConvexAllocator is Ownable {
 
         tokenInfo[token] = tokenData({
             underlying: token,
-            curveToken: address(0),
             anyswapERC20: anyswapERC20Token,
             index: index, //order of token in the Curve pool
             deployed: 0,
             returned: 0
         });
-
-        //pidForReserve[ token ] = pid;
-    }
-
-    /**
-     *  @notice initialize active pools: reward pool, curve pool and reward collector
-     *  @param _rewardPool address
-     *  @param _curve3Pool address
-     */
-    function addPoolData(address _rewardPool, address _curve3Pool)
-        external
-        onlyPolicy
-    {
-        require(_rewardPool != address(0), "Invalid reward pool address");
-        require(_curve3Pool != address(0), "Invalid curv3pool address");
-
-        rewardPool = IConvexRewards(_rewardPool);
-        curve3Pool = ICurve3Pool(_curve3Pool);
     }
 
     /**
@@ -1140,6 +1179,16 @@ contract ConvexAllocator is Ownable {
      *  @return uint
      */
     function rewardsPending() public view returns (uint256) {
-        return rewardPool.earned(address(this));
+        uint256 rewardAmount;
+
+        //query all pending rewards
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            address rewardPool = pidForReserve[i].rewardPool;
+            require(rewardPool != address(0), "Invalid reward pool address");
+
+            rewardAmount += IConvexRewards(rewardPool).earned(address(this));
+        }
+
+        return rewardAmount;
     }
 }
