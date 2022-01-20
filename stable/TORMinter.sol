@@ -499,7 +499,7 @@ contract TORMinter is ITORMinter,Ownable{
 
     IERC20 dai=IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
     IERC20 usdc=IERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
-    IERC20 hec=IERC20(0x79f29359E6633120c86Ba0349551e134d13fc487);//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
+    IERC20 public hec=IERC20(0x79f29359E6633120c86Ba0349551e134d13fc487);//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
     IERC20 TOR;
     IHECMinter HECMinter;
     uint public totalMintFee;
@@ -508,7 +508,7 @@ contract TORMinter is ITORMinter,Ownable{
     uint public totalBurnt;
     uint public totalHecMinted;
     uint public totalHecBurnt;
-    ITORMintStrategy strategy;
+    ITORMintStrategy public strategy;
     mapping(IERC20=>IUniswapRouter) routers;
 
     constructor(address _HECMinter, address _TOR){
@@ -536,8 +536,8 @@ contract TORMinter is ITORMinter,Ownable{
         strategy=ITORMintStrategy(_strategy);
     }
     function collectFee() external onlyOwner(){
-        if(dai.balanceOf(address(this))>1e18)dai.transfer(owner(),dai.balanceOf(address(this)));
-        if(usdc.balanceOf(address(this))>1e6)usdc.transfer(owner(),usdc.balanceOf(address(this)));
+        if(dai.balanceOf(address(this))>0)dai.transfer(owner(),dai.balanceOf(address(this)));
+        if(usdc.balanceOf(address(this))>0)usdc.transfer(owner(),usdc.balanceOf(address(this)));
     }
 
     function convertDecimal(IERC20 from,IERC20 to, uint amount) view public returns(uint){
