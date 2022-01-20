@@ -946,6 +946,8 @@ contract ConvexAllocator is Ownable {
      *  @param amount uint
      *  @param amounts uint[]
      *  @param minAmount uint
+     *  @param pid uint
+     *  @param curveToken address
      */
     function deposit(
         address token,
@@ -1045,11 +1047,15 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
+     *  @param tokenIndexInPool int128
+     *  @param pid uint
+     *  @param curveToken address
      */
     function withdraw(
         address token,
         uint256 amount,
         uint256 minAmount,
+        int128 tokenIndexInPool,
         uint256 pid,
         address curveToken
     ) public onlyPolicy {
@@ -1065,7 +1071,7 @@ contract ConvexAllocator is Ownable {
         curve3Pool.remove_liquidity_one_coin(
             curveToken,
             amount,
-            tokenInfo[token].index, //order of token in the Curve pool
+            tokenIndexInPool, //order of token in the Curve pool
             minAmount
         ); // withdraw from curve
 
