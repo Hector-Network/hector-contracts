@@ -883,11 +883,11 @@ contract Mintable is Ownable {
 
 }
 
-contract HUGS is ERC20Permit, Mintable {
+contract TOR is ERC20Permit, Mintable {
 
     using SafeMath for uint256;
 
-    constructor() ERC20("HUGS", "HUGS", 18) {
+    constructor() ERC20("TOR", "TOR", 18) {
     }
 
     function mint(address account_, uint256 amount_) external onlyMinter() {
