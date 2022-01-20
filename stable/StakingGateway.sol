@@ -121,7 +121,7 @@ interface IStakingRewards {
 contract StakingGateway{
     using SafeMath for uint;
     IStakingRewards public constant stakingRewards=IStakingRewards(0x51a251e04753C4382071D9daA00fA3F165E824Fb);
-    ICurvePool public constant hugsPool=ICurvePool(0xDC371bB71dE3a8E50683E7eb596690Db9D0365Cc);
+    ICurvePool public constant torPool=ICurvePool(0xDC371bB71dE3a8E50683E7eb596690Db9D0365Cc);
     ICurvePool public constant c2pool=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
 
     function getStakingInfo(address wallet,uint amount) external view returns(
@@ -129,67 +129,67 @@ contract StakingGateway{
         uint _apr,//1e8
         uint _begin,
         uint _finish,
-        uint _optimalHugsAmount,
+        uint _optimalTorAmount,
         uint _optimalDaiAmount,
         uint _optimalUsdcAmount,
-        uint _hugsWithdrawAmount,
+        uint _torWithdrawAmount,
         uint _daiWithdrawAmount,
         uint _usdcWithdrawAmount,
         uint _earnedRewardAmount
     ){
-        _tvl = stakingRewards.totalSupply().mul(hugsPool.get_virtual_price()).div(1e18);
+        _tvl = stakingRewards.totalSupply().mul(torPool.get_virtual_price()).div(1e18);
         _apr = stakingRewards.rewardRate().mul(31536000).mul(assetPrice()).div(_tvl);
         _finish = stakingRewards.periodFinish();
         _begin =_finish.sub(stakingRewards.rewardsDuration());
-        (_optimalHugsAmount,_optimalDaiAmount,_optimalUsdcAmount)=calOptimal(amount);
-        (_hugsWithdrawAmount,_daiWithdrawAmount,_usdcWithdrawAmount,_earnedRewardAmount)=calWithdrawAndEarned(wallet);
+        (_optimalTorAmount,_optimalDaiAmount,_optimalUsdcAmount)=calOptimal(amount);
+        (_torWithdrawAmount,_daiWithdrawAmount,_usdcWithdrawAmount,_earnedRewardAmount)=calWithdrawAndEarned(wallet);
     }
     function calWithdrawAndEarned(address wallet) public view returns(
-        uint _hugsWithdrawAmount,
+        uint _torWithdrawAmount,
         uint _daiWithdrawAmount,
         uint _usdcWithdrawAmount,
         uint _earnedRewardAmount){
         uint bal=stakingRewards.balanceOf(wallet);
         if(bal==0)return (0,0,0,stakingRewards.earned(wallet));
-        _hugsWithdrawAmount=hugsPool.calc_withdraw_one_coin(bal,0);
-        uint daiusdc=hugsPool.calc_withdraw_one_coin(bal,1);
+        _torWithdrawAmount=torPool.calc_withdraw_one_coin(bal,0);
+        uint daiusdc=torPool.calc_withdraw_one_coin(bal,1);
         if(daiusdc==0)return (_usdcWithdrawAmount,0,0,stakingRewards.earned(wallet));
         _daiWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,0);
         _usdcWithdrawAmount=c2pool.calc_withdraw_one_coin(daiusdc,1);
         _earnedRewardAmount=stakingRewards.earned(wallet);
     }
-    function calOptimal(uint amount) public view returns(uint _optimalHugs,uint _optimalDai,uint _optimalUsdc){
+    function calOptimal(uint amount) public view returns(uint _optimalTor,uint _optimalDai,uint _optimalUsdc){
         if(amount==0)return(0,0,0);
-        uint hugs=hugsPool.balances(0);//1e18
-        uint daiusdc=hugsPool.balances(1);//1e18
+        uint tor=torPool.balances(0);//1e18
+        uint daiusdc=torPool.balances(1);//1e18
         uint dai=daiusdc.mul(c2pool.balances(0)).div(c2pool.totalSupply());//1e18
         uint usdc=daiusdc.mul(c2pool.balances(1)).div(c2pool.totalSupply()).mul(1e12);//1e18
-        uint ntotal=hugs.add(dai).add(usdc).add(amount);
-        uint nhugs=ntotal.div(2);
+        uint ntotal=tor.add(dai).add(usdc).add(amount);
+        uint ntor=ntotal.div(2);
         uint ndai=ntotal.div(4);
-        //uint nusdc=ntotal.sub(nhugs).sub(ndai);
-        if(nhugs>=amount.add(hugs)) _optimalHugs=amount;
-        else if(nhugs<=hugs) _optimalHugs=0;
-        else _optimalHugs=nhugs.sub(hugs);
+        //uint nusdc=ntotal.sub(ntor).sub(ndai);
+        if(ntor>=amount.add(tor)) _optimalTor=amount;
+        else if(ntor<=tor) _optimalTor=0;
+        else _optimalTor=ntor.sub(tor);
         if(ndai>=amount.add(dai)) _optimalDai=amount;
         else if(ndai<=dai) _optimalDai=0;
         else _optimalDai=ndai.sub(dai);
-        if(amount>=_optimalHugs.add(_optimalDai)) _optimalUsdc=amount.sub(_optimalHugs).sub(_optimalDai);
+        if(amount>=_optimalTor.add(_optimalDai)) _optimalUsdc=amount.sub(_optimalTor).sub(_optimalDai);
         else _optimalUsdc=0;
     }
-    function calPoolToken(uint hugsAmount,uint daiAmount,uint usdcAmount) public view returns(uint poolTokenAmount){
+    function calPoolToken(uint torAmount,uint daiAmount,uint usdcAmount) public view returns(uint poolTokenAmount){
         uint[2] memory tokens;
         tokens[0]=daiAmount;
         tokens[1]=usdcAmount;
         uint daiusdcAmount=c2pool.calc_token_amount(tokens,true);
-        tokens[0]=hugsAmount;
+        tokens[0]=torAmount;
         tokens[1]=daiusdcAmount;
-        poolTokenAmount=hugsPool.calc_token_amount(tokens,true);
+        poolTokenAmount=torPool.calc_token_amount(tokens,true);
     }
     //percentage 1e8 100%=1=1e8
-    function calBonusOrSlipage(uint hugsAmount,uint daiAmount,uint usdcAmount) external view returns(uint percentage){
-        uint lpAmount=calPoolToken(hugsAmount,daiAmount,usdcAmount);
-        percentage=lpAmount.mul(hugsPool.get_virtual_price()).div(1e10).div(hugsAmount.add(daiAmount).add(usdcAmount.mul(1e12)));//1e8
+    function calBonusOrSlipage(uint torAmount,uint daiAmount,uint usdcAmount) external view returns(uint percentage){
+        uint lpAmount=calPoolToken(torAmount,daiAmount,usdcAmount);
+        percentage=lpAmount.mul(torPool.get_virtual_price()).div(1e10).div(torAmount.add(daiAmount).add(usdcAmount.mul(1e12)));//1e8
     }
     function assetPrice() public view returns (uint) {
         ( , int price, , , ) = AggregatorV3Interface(0xf4766552D15AE4d256Ad41B6cf2933482B0680dc).latestRoundData();
