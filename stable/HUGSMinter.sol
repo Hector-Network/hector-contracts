@@ -582,7 +582,7 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         mintWithStable(dai,amount);
     }
     
-    function mintWithUsdc(uint amount) override external onlyOwner(){
+    function mintWithUsdc(uint amount) override external{
         mintWithStable(usdc,amount);
     }
 
