@@ -843,7 +843,6 @@ contract ConvexAllocator is Ownable {
     struct tokenData {
         address underlying;
         address anyswapERC20;
-        int128 index;
         uint256 deployed;
         uint256 returned;
     }
@@ -1117,11 +1116,10 @@ contract ConvexAllocator is Ownable {
      *  @notice adds asset and corresponding crvToken to mapping
      *  @param principleToken address
      */
-    function addToken(
-        address principleToken,
-        int128 index,
-        address anyswapERC20Token
-    ) external onlyPolicy {
+    function addToken(address principleToken, address anyswapERC20Token)
+        external
+        onlyPolicy
+    {
         require(anyswapERC20Token != address(0), "invalid anyswap erc20 token");
         address token = IAnyswapERC20(anyswapERC20Token).underlying();
         require(
@@ -1134,7 +1132,6 @@ contract ConvexAllocator is Ownable {
         tokenInfo[token] = tokenData({
             underlying: token,
             anyswapERC20: anyswapERC20Token,
-            index: index, //order of token in the Curve pool
             deployed: 0,
             returned: 0
         });
