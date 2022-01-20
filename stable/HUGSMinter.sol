@@ -480,7 +480,7 @@ interface IUniswapRouter{
     ) external returns (uint256[] memory amounts);
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
-interface IHUGSMinter{
+interface ITORMinter{
     function mintWithDai(uint amount) external;
     function mintWithUsdc(uint amount) external;
     function redeemToDai(uint amount) external;
@@ -490,17 +490,17 @@ interface IHECMinter{
     function mintHEC(uint amount) external;
     function burnHEC(uint amount) external;
 }
-interface IHUGSMintStrategy{
+interface ITORMintStrategy{
     function tryMint(address recipient,uint amount) external returns(bool);
 }
-contract HUGSMinter is IHUGSMinter,Ownable{
+contract TORMinter is ITORMinter,Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
 
     IERC20 dai=IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
     IERC20 usdc=IERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
     IERC20 hec=IERC20(0x79f29359E6633120c86Ba0349551e134d13fc487);//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
-    IERC20 HUGS;
+    IERC20 TOR;
     IHECMinter HECMinter;
     uint public totalMintFee;
     uint public totalBurnFee;
@@ -508,14 +508,14 @@ contract HUGSMinter is IHUGSMinter,Ownable{
     uint public totalBurnt;
     uint public totalHecMinted;
     uint public totalHecBurnt;
-    IHUGSMintStrategy strategy;
+    ITORMintStrategy strategy;
     mapping(IERC20=>IUniswapRouter) routers;
 
-    constructor(address _HECMinter, address _HUGS){
+    constructor(address _HECMinter, address _TOR){
         require(_HECMinter!=address(0));
         HECMinter=IHECMinter(_HECMinter);
-        require(_HUGS!=address(0));
-        HUGS=IERC20(_HUGS);
+        require(_TOR!=address(0));
+        TOR=IERC20(_TOR);
         routers[dai]=IUniswapRouter(0xF491e7B69E4244ad4002BC14e878a34207E38c29); //dai=>spooky
         routers[usdc]=IUniswapRouter(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52); //usdc=>spirit
     }
@@ -523,9 +523,9 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         require(_hec!=address(0));
         hec=IERC20(_hec);
     }
-    function setHUGS(address _hugs) external onlyOwner(){
-        require(_hugs!=address(0));
-        HUGS=IERC20(_hugs);
+    function setTOR(address _TOR) external onlyOwner(){
+        require(_TOR!=address(0));
+        TOR=IERC20(_TOR);
     }
     function setHECMinter(address _HECMinter) external onlyOwner(){
         require(_HECMinter!=address(0));
@@ -533,7 +533,7 @@ contract HUGSMinter is IHUGSMinter,Ownable{
     }
     function setMintStrategy(address _strategy) external onlyOwner(){
         require(_strategy!=address(0));
-        strategy=IHUGSMintStrategy(_strategy);
+        strategy=ITORMintStrategy(_strategy);
     }
     function collectFee() external onlyOwner(){
         if(dai.balanceOf(address(this))>1e18)dai.transfer(owner(),dai.balanceOf(address(this)));
@@ -554,7 +554,7 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         token.safeTransferFrom(msg.sender,address(this),_amount);
         uint amount=_amount.mul(998).div(1000);
         if(_amount>amount){
-            totalMintFee=totalMintFee.add(convertDecimal(token,HUGS,_amount.sub(amount)));
+            totalMintFee=totalMintFee.add(convertDecimal(token,TOR,_amount.sub(amount)));
         }
         token.approve(address(routers[token]),amount);
         address[] memory path=new address[](2);
@@ -571,11 +571,11 @@ contract HUGSMinter is IHUGSMinter,Ownable{
         hec.approve(address(HECMinter),amountOuts[1]);
         HECMinter.burnHEC(amountOuts[1]);
         totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
-        uint hugs2mint=convertDecimal(token,HUGS,amount);
-        require(strategy.tryMint(msg.sender,hugs2mint)==true,"mint not allowed by strategy");
-        HUGS.mint(msg.sender,hugs2mint);
-        totalMinted=totalMinted.add(hugs2mint);
-        return hugs2mint;
+        uint tor2mint=convertDecimal(token,TOR,amount);
+        require(strategy.tryMint(msg.sender,tor2mint)==true,"mint not allowed by strategy");
+        TOR.mint(msg.sender,tor2mint);
+        totalMinted=totalMinted.add(tor2mint);
+        return tor2mint;
     }
 
     function mintWithDai(uint amount) override external{
@@ -589,9 +589,9 @@ contract HUGSMinter is IHUGSMinter,Ownable{
     function redeemToStable(uint amount,IERC20 token) internal returns(uint){
         require(address(routers[token])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
-        HUGS.burnFrom(msg.sender,amount);
+        TOR.burnFrom(msg.sender,amount);
         totalBurnt=totalBurnt.add(amount);
-        uint amountOut=convertDecimal(HUGS,token,amount).mul(998).div(1000);
+        uint amountOut=convertDecimal(TOR,token,amount).mul(998).div(1000);
         address[] memory path=new address[](2);
         path[0]=address(hec);
         path[1]=address(token);
@@ -607,8 +607,8 @@ contract HUGSMinter is IHUGSMinter,Ownable{
             block.timestamp
         );
         amountOut=amountOuts[1];
-        if(amount>convertDecimal(token,HUGS,amountOut)){
-            totalBurnFee=totalBurnFee.add(amount.sub(convertDecimal(token,HUGS,amountOut)));
+        if(amount>convertDecimal(token,TOR,amountOut)){
+            totalBurnFee=totalBurnFee.add(amount.sub(convertDecimal(token,TOR,amountOut)));
         }
         token.transfer(msg.sender,amountOut);
         return amountOut;
