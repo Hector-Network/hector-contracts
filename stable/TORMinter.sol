@@ -511,6 +511,10 @@ contract TORMinter is ITORMinter,Ownable{
     ITORMintStrategy public strategy;
     mapping(IERC20=>IUniswapRouter) routers;
 
+    uint public mintFeeBasisPoints=20;
+    uint public redeemFeeBasisPoints=20;
+    uint constant UNIT_ONE_IN_BPS=10000;
+
     constructor(address _HECMinter, address _TOR){
         require(_HECMinter!=address(0));
         HECMinter=IHECMinter(_HECMinter);
@@ -535,32 +539,46 @@ contract TORMinter is ITORMinter,Ownable{
         require(_strategy!=address(0));
         strategy=ITORMintStrategy(_strategy);
     }
+    function setMintFee(uint _mintFeeBasisPoints) external onlyOwner(){
+        require(_mintFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
+        mintFeeBasisPoints=_mintFeeBasisPoints;
+    }
+    function setRedeemFee(uint _redeemFeeBasisPoints) external onlyOwner(){
+        require(_redeemFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
+        redeemFeeBasisPoints=_redeemFeeBasisPoints;
+    }
+    function setDaiLpSwapRouter(address _swapRouter) external onlyOwner(){
+        routers[dai]=IUniswapRouter(_swapRouter);
+    }
+    function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
+        routers[usdc]=IUniswapRouter(_swapRouter);
+    }
     function collectFee() external onlyOwner(){
         if(dai.balanceOf(address(this))>0)dai.transfer(owner(),dai.balanceOf(address(this)));
         if(usdc.balanceOf(address(this))>0)usdc.transfer(owner(),usdc.balanceOf(address(this)));
     }
 
-    function convertDecimal(IERC20 from,IERC20 to, uint amount) view public returns(uint){
+    function convertDecimal(IERC20 from,IERC20 to, uint fromAmount) view public returns(uint toAmount){
         uint8 fromDec=from.decimals();
         uint8 toDec=to.decimals();
-        if(fromDec==toDec) return amount;
-        else if(fromDec>toDec) return amount.div(10**(fromDec-toDec));
-        else return amount.mul(10**(toDec-fromDec));
+        if(fromDec==toDec) toAmount=fromAmount;
+        else if(fromDec>toDec) toAmount=fromAmount.div(10**(fromDec-toDec));
+        else toAmount=fromAmount.mul(10**(toDec-fromDec));
     }
 
-    function mintWithStable(IERC20 token,uint _amount) internal returns(uint){
-        require(address(routers[token])!=address(0),"unknown stable token");
+    function mintWithStable(IERC20 _stableToken,uint _stableAmount) internal returns(uint){
+        require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"mint for EOA only");
-        token.safeTransferFrom(msg.sender,address(this),_amount);
-        uint amount=_amount.mul(998).div(1000);
-        if(_amount>amount){
-            totalMintFee=totalMintFee.add(convertDecimal(token,TOR,_amount.sub(amount)));
+        _stableToken.safeTransferFrom(msg.sender,address(this),_stableAmount);
+        uint amount=_stableAmount.mul(UNIT_ONE_IN_BPS.sub(mintFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
+        if(_stableAmount>amount){
+            totalMintFee=totalMintFee.add(convertDecimal(_stableToken,TOR,_stableAmount.sub(amount)));
         }
-        token.approve(address(routers[token]),amount);
+        _stableToken.approve(address(routers[_stableToken]),amount);
         address[] memory path=new address[](2);
-        path[0]=address(token);
+        path[0]=address(_stableToken);
         path[1]=address(hec);
-        uint[] memory amountOuts=routers[token].swapExactTokensForTokens(
+        uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
             amount,
             1,
             path,
@@ -571,35 +589,35 @@ contract TORMinter is ITORMinter,Ownable{
         hec.approve(address(HECMinter),amountOuts[1]);
         HECMinter.burnHEC(amountOuts[1]);
         totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
-        uint tor2mint=convertDecimal(token,TOR,amount);
+        uint tor2mint=convertDecimal(_stableToken,TOR,amount);
         require(strategy.tryMint(msg.sender,tor2mint)==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
         totalMinted=totalMinted.add(tor2mint);
         return tor2mint;
     }
 
-    function mintWithDai(uint amount) override external{
-        mintWithStable(dai,amount);
+    function mintWithDai(uint _daiAmount) override external{
+        mintWithStable(dai,_daiAmount);
     }
     
-    function mintWithUsdc(uint amount) override external{
-        mintWithStable(usdc,amount);
+    function mintWithUsdc(uint _usdcAmount) override external{
+        mintWithStable(usdc,_usdcAmount);
     }
 
-    function redeemToStable(uint amount,IERC20 token) internal returns(uint){
-        require(address(routers[token])!=address(0),"unknown stable token");
+    function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint){
+        require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
-        TOR.burnFrom(msg.sender,amount);
-        totalBurnt=totalBurnt.add(amount);
-        uint amountOut=convertDecimal(TOR,token,amount).mul(998).div(1000);
+        TOR.burnFrom(msg.sender,_torAmount);
+        totalBurnt=totalBurnt.add(_torAmount);
+        uint amountOut=convertDecimal(TOR,_stableToken,_torAmount).mul(UNIT_ONE_IN_BPS.sub(redeemFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
         address[] memory path=new address[](2);
         path[0]=address(hec);
-        path[1]=address(token);
-        uint[] memory amounts=routers[token].getAmountsIn(amountOut, path);
+        path[1]=address(_stableToken);
+        uint[] memory amounts=routers[_stableToken].getAmountsIn(amountOut, path);
         HECMinter.mintHEC(amounts[0]);
         totalHecMinted=totalHecMinted.add(amounts[0]);
-        hec.approve(address(routers[token]),amounts[0]);
-        uint[] memory amountOuts=routers[token].swapExactTokensForTokens(
+        hec.approve(address(routers[_stableToken]),amounts[0]);
+        uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
             amounts[0],
             1,
             path,
@@ -607,17 +625,17 @@ contract TORMinter is ITORMinter,Ownable{
             block.timestamp
         );
         amountOut=amountOuts[1];
-        if(amount>convertDecimal(token,TOR,amountOut)){
-            totalBurnFee=totalBurnFee.add(amount.sub(convertDecimal(token,TOR,amountOut)));
+        if(_torAmount>convertDecimal(_stableToken,TOR,amountOut)){
+            totalBurnFee=totalBurnFee.add(_torAmount.sub(convertDecimal(_stableToken,TOR,amountOut)));
         }
-        token.transfer(msg.sender,amountOut);
+        _stableToken.transfer(msg.sender,amountOut);
         return amountOut;
     }
 
-    function redeemToDai(uint amount) override external onlyOwner(){
-        redeemToStable(amount,dai);
+    function redeemToDai(uint _torAmount) override external onlyOwner(){
+        redeemToStable(_torAmount,dai);
     }
-    function redeemToUsdc(uint amount) override external onlyOwner(){
-        redeemToStable(amount,usdc);
+    function redeemToUsdc(uint _torAmount) override external onlyOwner(){
+        redeemToStable(_torAmount,usdc);
     }
 }
