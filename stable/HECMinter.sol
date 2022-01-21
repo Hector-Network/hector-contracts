@@ -478,7 +478,7 @@ interface ITreasury{
 contract HECMinter is IHECMinter,Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
-    address public HUGSMinter;
+    address public TORMinter;
     address public treasury=0x243bE5DF259a4a8c14dD6eED87129aF01bc8f03a;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
     address public HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
     uint public limit;
@@ -499,19 +499,20 @@ contract HECMinter is IHECMinter,Ownable{
         //require(_limit>limit);
         limit=_limit;
     }
-    function setHUGSMinter(address _HUGSMinter) external onlyOwner(){
-        require(_HUGSMinter!=address(0));
-        HUGSMinter=_HUGSMinter;
+    function setTORMinter(address _TORMinter) external onlyOwner(){
+        require(_TORMinter!=address(0));
+        TORMinter=_TORMinter;
     }
     function mintHEC(uint amount) override external{
-        require(HUGSMinter!=address(0)&&msg.sender==HUGSMinter,"only HUGS minter can mint HEC this way");
+        require(TORMinter!=address(0)&&msg.sender==TORMinter,"only TOR minter can mint HEC this way");
+        require(amount>0,"invalid amount");
         require(minted.add(amount)<=limit.add(burnt),"exceed mint limit");
         minted=minted.add(amount);
         mintTo(msg.sender,amount);
     }
     function burnHEC(uint amount) override external{
-        require(HUGSMinter!=address(0)&&msg.sender==HUGSMinter,"only HUGS minter can burn HEC this way");
-        //require(burnt.add(amount)<=minted,"exceed burn limit");//for HUGS to work, burn happens first
+        require(TORMinter!=address(0)&&msg.sender==TORMinter,"only TOR minter can burn HEC this way");
+        require(amount>0,"invalid amount");
         burnt=burnt.add(amount);
         burnFrom(msg.sender,amount);
     }
