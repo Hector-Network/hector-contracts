@@ -120,9 +120,14 @@ interface IStakingRewards {
 }
 contract StakingGateway{
     using SafeMath for uint;
-    IStakingRewards public constant stakingRewards=IStakingRewards(0x51a251e04753C4382071D9daA00fA3F165E824Fb);
-    ICurvePool public constant torPool=ICurvePool(0xDC371bB71dE3a8E50683E7eb596690Db9D0365Cc);
-    ICurvePool public constant c2pool=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
+    IStakingRewards public stakingRewards=IStakingRewards(0x61B71689684800f73eBb67378fc2e1527fbDC3b3);
+    ICurvePool public torPool=ICurvePool(0x24699312CB27C26Cfc669459D670559E5E44EE60);
+    ICurvePool public c2pool=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
+    address public owner;
+
+    constructor(){
+        owner=msg.sender;
+    }
 
     function getStakingInfo(address wallet,uint amount) external view returns(
         uint _tvl,//1e18
@@ -143,6 +148,18 @@ contract StakingGateway{
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         (_optimalTorAmount,_optimalDaiAmount,_optimalUsdcAmount)=calOptimal(amount);
         (_torWithdrawAmount,_daiWithdrawAmount,_usdcWithdrawAmount,_earnedRewardAmount)=calWithdrawAndEarned(wallet);
+    }
+    function setStakingRewards(address _stakingRewards) external{
+        require(msg.sender==owner,"not owner");
+        stakingRewards=IStakingRewards(_stakingRewards);
+    }
+    function setTorPool(address _torPool) external{
+        require(msg.sender==owner,"not owner");
+        torPool=ICurvePool(_torPool);
+    }
+    function setOwner(address _owner) external{
+        require(msg.sender==owner,"not owner");
+        owner=_owner;
     }
     function calWithdrawAndEarned(address wallet) public view returns(
         uint _torWithdrawAmount,
