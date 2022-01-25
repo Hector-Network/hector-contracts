@@ -1084,11 +1084,11 @@ contract ConvexAllocator is Ownable {
         //IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
         //treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
 
-        IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
+        IERC20(token).approve(address(anyswapRouter), balance); // approve anyswap router to spend tokens
         anyswapRouter.anySwapOutUnderlying(
             tokenInfo[token].anyswapERC20,
             ftmAddress,
-            amount,
+            balance,
             FTM_CHAINID
         );
     }
