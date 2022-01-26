@@ -1106,7 +1106,7 @@ contract ConvexAllocator is Ownable {
         ftmAddressCandidate = _ftmAddress;
     }
 
-    function setFtmAddress(uint256 _chainId) external onlyPolicy {
+    function setFtmAddress() external onlyPolicy {
         require(
             ftmAddressCandidate != address(0),
             "put new address in queue first"
