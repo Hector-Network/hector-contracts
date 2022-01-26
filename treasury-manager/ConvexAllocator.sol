@@ -871,7 +871,8 @@ contract ConvexAllocator is Ownable {
 
     address[] rewardTokens;
 
-    uint256 public chainID = 250;
+    uint256 public chainId = 250;
+    uint256 public chainIdCandidate;
     uint256 constant INDEX_NOT_FOUND = 999999;
     address public ftmAddress;
     address public ftmAddressCandidate;
@@ -1089,7 +1090,7 @@ contract ConvexAllocator is Ownable {
             tokenInfo[token].anyswapERC20,
             ftmAddress,
             balance,
-            chainID
+            chainId
         );
     }
 
@@ -1100,25 +1101,31 @@ contract ConvexAllocator is Ownable {
         IAnyswapERC20(anyswapERC20Token).withdraw(amount);
     }
 
-    function queueFtmAddress(address _ftmAddress) external onlyPolicy {
-        require(_ftmAddress != address(0));
+    function queueFtmAddress(uint256 _chainId, address _ftmAddress)
+        external
+        onlyPolicy
+    {
+        require(
+            _ftmAddress != address(0) && _chainId != 0,
+            "invalid chainid or address"
+        );
         ftmAddressActiveblock = block.number.add(ftmAddressChangeTimelock);
         ftmAddressCandidate = _ftmAddress;
+        chainIdCandidate = _chainId;
     }
 
     function setFtmAddress() external onlyPolicy {
         require(
-            ftmAddressCandidate != address(0),
+            ftmAddressCandidate != address(0) && chainIdCandidate != 0,
             "put new address in queue first"
         );
         require(block.number >= ftmAddressActiveblock, "still in queue");
 
         ftmAddress = ftmAddressCandidate;
         ftmAddressCandidate = address(0);
-    }
 
-    function setChainId(uint256 _chainId) external onlyPolicy {
-        chainID = _chainId;
+        chainId = chainIdCandidate;
+        chainIdCandidate = 0;
     }
 
     /**
