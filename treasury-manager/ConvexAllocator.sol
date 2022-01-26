@@ -1009,6 +1009,7 @@ contract ConvexAllocator is Ownable {
         external
         onlyPolicy
     {
+        require(_rewardPool != address(0), "Invalid reward");
         _addPidRewardItem(_rewardPool, pid);
     }
 
