@@ -862,7 +862,7 @@ contract ConvexAllocator is Ownable {
 
     mapping(address => tokenData) public tokenInfo; // info for deposited tokens
     //mapping(address => uint) public pidForReserve; // convex pid for reward pool
-    rewardPid[] pidForReserve;
+    rewardPid[] public pidForReserve;
 
     uint256 public totalValueDeployed; // total RFV deployed into lending pool
     uint256 public totalValueReturned;
@@ -998,6 +998,30 @@ contract ConvexAllocator is Ownable {
         } else {
             value = amount;
         }
+    }
+
+    /**
+     *  @notice adds Convex reward pool/pid pair
+     *  @param _rewardPool address
+     *  @param pid uint256
+     */
+    function addPidRewardItem(address _rewardPool, uint256 pid)
+        external
+        onlyPolicy
+    {
+        _addPidRewardItem(_rewardPool, pid);
+    }
+
+    /**
+     *  @notice removes Convex reward pool/pid pair
+     *  @param _rewardPool address
+     *  @param pid uint256
+     */
+    function removePidRewardItem(address _rewardPool, uint256 pid)
+        external
+        onlyPolicy
+    {
+        _removePidRewardItem(_rewardPool, pid);
     }
 
     function _addPidRewardItem(address _rewardPool, uint256 pid) internal {
