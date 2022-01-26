@@ -1100,20 +1100,25 @@ contract ConvexAllocator is Ownable {
         IAnyswapERC20(anyswapERC20Token).withdraw(amount);
     }
 
-    function queueFtmAddress(address _ftmAddress, uint256 _chainId)
-        external
-        onlyPolicy
-    {
+    function queueFtmAddress(address _ftmAddress) external onlyPolicy {
         require(_ftmAddress != address(0));
         ftmAddressActiveblock = block.number.add(ftmAddressChangeTimelock);
         ftmAddressCandidate = _ftmAddress;
-        chainID = _chainId;
     }
 
-    function setFtmAddress() external onlyPolicy {
-        require(ftmAddressCandidate != address(0));
+    function setFtmAddress(uint256 _chainId) external onlyPolicy {
+        require(
+            ftmAddressCandidate != address(0),
+            "put new address in queue first"
+        );
         require(block.number >= ftmAddressActiveblock, "still in queue");
+
         ftmAddress = ftmAddressCandidate;
+        ftmAddressCandidate = address(0);
+    }
+
+    function setChainId(uint256 _chainId) external onlyPolicy {
+        chainID = _chainId;
     }
 
     /**
