@@ -322,7 +322,6 @@ contract StakingProxy is Ownable {
     address public immutable sHEC;
     address public immutable manager;
     address public immutable staking;
-    uint public lastStakedEpoch;
 
     struct Claim {
         uint deposit;
@@ -352,18 +351,14 @@ contract StakingProxy is Ownable {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
         require(_amount != 0); // why would anyone need to stake 0 HEC?
+
+        claim(_recipient);
+        
         Claim memory claimInfo = claims[_recipient];
-
-        uint stakingEpoch = getStakingEpoch();
-        if(claimInfo.expiry <= stakingEpoch) {
-            claim(_recipient);
-        }
-
-        lastStakedEpoch=stakingEpoch;
         claims[_recipient] = Claim({
             deposit: claimInfo.deposit.add(_amount),
             gons: claimInfo.gons.add(IsHEC(sHEC).gonsForBalance(_amount)),
-            expiry: lastStakedEpoch.add( IStakingManager(staking).warmupPeriod() )
+            expiry: getStakingEpoch().add( IStakingManager(staking).warmupPeriod() )
         });
 
         IERC20(HEC).approve(staking, _amount);
@@ -374,9 +369,8 @@ contract StakingProxy is Ownable {
         require(msg.sender == manager); // only allow calls from the StakingManager
         require(_recipient != address(0));
 
-        if(getStakingEpoch()>=lastStakedEpoch+IStakingManager(staking).warmupPeriod()){
-            IStaking(staking).claim(address(this));
-        }
+        IStaking(staking).claim(address(this));
+
         Claim memory claimInfo = claims[ _recipient ];
         if(claimInfo.gons == 0||claimInfo.expiry>getStakingEpoch()) {
             return;
