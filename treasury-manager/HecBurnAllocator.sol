@@ -594,9 +594,6 @@ interface ICurvePool{
     function get_dy(int128 i, int128 j, uint _dx) external view returns(uint);
     function exchange(int128 i, int128 j, uint _dx, uint _min_dy) external returns(uint);
 }
-interface IBackingCalculator{
-    function backing() external view returns (uint lpBacking, uint treasuryBacking);
-}
 
 /**
  *  Contract deploys reserves from treasury and send to ethereum allocator contract through anysway router,
@@ -652,8 +649,6 @@ contract HecBurnAllocator is Ownable {
     address public immutable spirit=0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52;
     
     ICurvePool constant daiUsdc=ICurvePool(0x27E611FD27b276ACbd5Ffd632E5eAEBEC9761E40);
-    address public backingCalculator;
-    uint public premium;
     
 
     /* ======== CONSTRUCTOR ======== */
@@ -661,14 +656,10 @@ contract HecBurnAllocator is Ownable {
     constructor ( 
         string memory name_,
         address _treasury,
-        address _backingCalculator,
         uint _timelockInBlocks
     ) {
         require( _treasury != address(0) );
         treasury = ITreasury( _treasury );
-
-        require(_backingCalculator!=address(0));
-        backingCalculator=_backingCalculator;
         
         timelockInBlocks = _timelockInBlocks;
 
@@ -692,7 +683,6 @@ contract HecBurnAllocator is Ownable {
         require(token==dai||token==usdc,"only support buyback with usdc or dai");
         require( !exceedsLimit( token, amount ),"deposit amount exceed limit" ); // ensure deposit is within bounds
         require(!exceedsTransactionLimit(token,amount),"transaction amount too large");
-        require(priceMeetCriteria()==true,"price doesn't meet buy back criteria");
         treasury.manage( token, amount ); // retrieve amount of asset from treasury
         uint daiAmount;
         if(token==usdc){
@@ -874,16 +864,6 @@ contract HecBurnAllocator is Ownable {
         return stableSpent>tokenInfo[token].transactionLimit;
     }
 
-    function setPremium(uint _premium) external onlyPolicy{
-        require(_premium<11,"price premium must be in range of 0 to 10");
-        premium=_premium;
-    }
-
-    function priceMeetCriteria() public view returns (bool){
-        //backingPerHec decimals = 4, 101.23$ = 1012300, 75.8321$ = 758321
-        (uint lpBacking, uint treasuryBacking) = IBackingCalculator(backingCalculator).backing();
-        return treasuryBacking>lpBacking.mul(premium.add(100)).div(100);
-    }
     function hecStableAmount( IPair _pair ) public view returns ( uint hecReserve,uint stableReserve){
         ( uint reserve0, uint reserve1, ) =  _pair .getReserves();
         if ( _pair.token0() == hec ) {

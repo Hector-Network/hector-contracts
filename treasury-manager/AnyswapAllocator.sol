@@ -786,6 +786,7 @@ contract AnyswapEthereumAllocator is Ownable {
     string public name;
     uint256 public chainId = 1;
     uint256 public chainIdCandidate;
+
     address public ethereumAddress;
     address public ethereumAddressCandidate;
     uint256 public immutable ethAddressChangeTimelock;
