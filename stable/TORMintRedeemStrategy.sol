@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at FtmScan.com on 2022-01-21
-*/
-
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity 0.7.5;
 library SafeMath {
