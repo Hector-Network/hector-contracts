@@ -29,7 +29,9 @@ library Address {
 
         uint256 size;
         // solhint-disable-next-line no-inline-assembly
-        assembly { size := extcodesize(account) }
+        assembly {
+            size := extcodesize(account)
+        }
         return size > 0;
     }
 
@@ -50,11 +52,17 @@ library Address {
      * https://solidity.readthedocs.io/en/v0.5.11/security-considerations.html#use-the-checks-effects-interactions-pattern[checks-effects-interactions pattern].
      */
     function sendValue(address payable recipient, uint256 amount) internal {
-        require(address(this).balance >= amount, "Address: insufficient balance");
+        require(
+            address(this).balance >= amount,
+            "Address: insufficient balance"
+        );
 
         // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = recipient.call{ value: amount }("");
-        require(success, "Address: unable to send value, recipient may have reverted");
+        (bool success, ) = recipient.call{value: amount}("");
+        require(
+            success,
+            "Address: unable to send value, recipient may have reverted"
+        );
     }
 
     /**
@@ -75,8 +83,11 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(address target, bytes memory data) internal returns (bytes memory) {
-      return functionCall(target, data, "Address: low-level call failed");
+    function functionCall(address target, bytes memory data)
+        internal
+        returns (bytes memory)
+    {
+        return functionCall(target, data, "Address: low-level call failed");
     }
 
     /**
@@ -85,7 +96,11 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
         return _functionCallWithValue(target, data, 0, errorMessage);
     }
 
@@ -100,8 +115,18 @@ library Address {
      *
      * _Available since v3.1._
      */
-    function functionCallWithValue(address target, bytes memory data, uint256 value) internal returns (bytes memory) {
-        return functionCallWithValue(target, data, value, "Address: low-level call with value failed");
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value
+    ) internal returns (bytes memory) {
+        return
+            functionCallWithValue(
+                target,
+                data,
+                value,
+                "Address: low-level call with value failed"
+            );
     }
 
     /**
@@ -114,20 +139,37 @@ library Address {
     //     require(address(this).balance >= value, "Address: insufficient balance for call");
     //     return _functionCallWithValue(target, data, value, errorMessage);
     // }
-    function functionCallWithValue(address target, bytes memory data, uint256 value, string memory errorMessage) internal returns (bytes memory) {
-        require(address(this).balance >= value, "Address: insufficient balance for call");
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(
+            address(this).balance >= value,
+            "Address: insufficient balance for call"
+        );
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{ value: value }(data);
+        (bool success, bytes memory returndata) = target.call{value: value}(
+            data
+        );
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
-    function _functionCallWithValue(address target, bytes memory data, uint256 weiValue, string memory errorMessage) private returns (bytes memory) {
+    function _functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 weiValue,
+        string memory errorMessage
+    ) private returns (bytes memory) {
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{ value: weiValue }(data);
+        (bool success, bytes memory returndata) = target.call{value: weiValue}(
+            data
+        );
         if (success) {
             return returndata;
         } else {
@@ -146,14 +188,23 @@ library Address {
         }
     }
 
-  /**
+    /**
      * @dev Same as {xref-Address-functionCall-address-bytes-}[`functionCall`],
      * but performing a static call.
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data) internal view returns (bytes memory) {
-        return functionStaticCall(target, data, "Address: low-level static call failed");
+    function functionStaticCall(address target, bytes memory data)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return
+            functionStaticCall(
+                target,
+                data,
+                "Address: low-level static call failed"
+            );
     }
 
     /**
@@ -162,7 +213,11 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionStaticCall(address target, bytes memory data, string memory errorMessage) internal view returns (bytes memory) {
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
         require(isContract(target), "Address: static call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -176,8 +231,16 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionDelegateCall(address target, bytes memory data) internal returns (bytes memory) {
-        return functionDelegateCall(target, data, "Address: low-level delegate call failed");
+    function functionDelegateCall(address target, bytes memory data)
+        internal
+        returns (bytes memory)
+    {
+        return
+            functionDelegateCall(
+                target,
+                data,
+                "Address: low-level delegate call failed"
+            );
     }
 
     /**
@@ -186,7 +249,11 @@ library Address {
      *
      * _Available since v3.3._
      */
-    function functionDelegateCall(address target, bytes memory data, string memory errorMessage) internal returns (bytes memory) {
+    function functionDelegateCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
         require(isContract(target), "Address: delegate call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
@@ -194,7 +261,11 @@ library Address {
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
-    function _verifyCallResult(bool success, bytes memory returndata, string memory errorMessage) private pure returns(bytes memory) {
+    function _verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) private pure returns (bytes memory) {
         if (success) {
             return returndata;
         } else {
@@ -213,21 +284,24 @@ library Address {
         }
     }
 
-    function addressToString(address _address) internal pure returns(string memory) {
+    function addressToString(address _address)
+        internal
+        pure
+        returns (string memory)
+    {
         bytes32 _bytes = bytes32(uint256(_address));
         bytes memory HEX = "0123456789abcdef";
         bytes memory _addr = new bytes(42);
 
-        _addr[0] = '0';
-        _addr[1] = 'x';
+        _addr[0] = "0";
+        _addr[1] = "x";
 
-        for(uint256 i = 0; i < 20; i++) {
-            _addr[2+i*2] = HEX[uint8(_bytes[i + 12] >> 4)];
-            _addr[3+i*2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
+        for (uint256 i = 0; i < 20; i++) {
+            _addr[2 + i * 2] = HEX[uint8(_bytes[i + 12] >> 4)];
+            _addr[3 + i * 2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
         }
 
         return string(_addr);
-
     }
 }
 
@@ -273,7 +347,11 @@ library SafeMath {
      *
      * - Subtraction cannot overflow.
      */
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b <= a, errorMessage);
         uint256 c = a - b;
 
@@ -332,7 +410,11 @@ library SafeMath {
      *
      * - The divisor cannot be zero.
      */
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b > 0, errorMessage);
         uint256 c = a / b;
         // assert(a == b * c + a % b); // There is no case in which this doesn't hold
@@ -368,7 +450,11 @@ library SafeMath {
      *
      * - The divisor cannot be zero.
      */
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
         require(b != 0, errorMessage);
         return a % b;
     }
@@ -378,12 +464,27 @@ library SafeERC20 {
     using SafeMath for uint256;
     using Address for address;
 
-    function safeTransfer(IERC20 token, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transfer.selector, to, value));
+    function safeTransfer(
+        IERC20 token,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(
+            token,
+            abi.encodeWithSelector(token.transfer.selector, to, value)
+        );
     }
 
-    function safeTransferFrom(IERC20 token, address from, address to, uint256 value) internal {
-        _callOptionalReturn(token, abi.encodeWithSelector(token.transferFrom.selector, from, to, value));
+    function safeTransferFrom(
+        IERC20 token,
+        address from,
+        address to,
+        uint256 value
+    ) internal {
+        _callOptionalReturn(
+            token,
+            abi.encodeWithSelector(token.transferFrom.selector, from, to, value)
+        );
     }
 
     /**
@@ -393,25 +494,60 @@ library SafeERC20 {
      * Whenever possible, use {safeIncreaseAllowance} and
      * {safeDecreaseAllowance} instead.
      */
-    function safeApprove(IERC20 token, address spender, uint256 value) internal {
+    function safeApprove(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
         // safeApprove should only be called when setting an initial allowance,
         // or when resetting it to zero. To increase and decrease it, use
         // 'safeIncreaseAllowance' and 'safeDecreaseAllowance'
         // solhint-disable-next-line max-line-length
-        require((value == 0) || (token.allowance(address(this), spender) == 0),
+        require(
+            (value == 0) || (token.allowance(address(this), spender) == 0),
             "SafeERC20: approve from non-zero to non-zero allowance"
         );
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, value));
+        _callOptionalReturn(
+            token,
+            abi.encodeWithSelector(token.approve.selector, spender, value)
+        );
     }
 
-    function safeIncreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).add(value);
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    function safeIncreaseAllowance(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).add(
+            value
+        );
+        _callOptionalReturn(
+            token,
+            abi.encodeWithSelector(
+                token.approve.selector,
+                spender,
+                newAllowance
+            )
+        );
     }
 
-    function safeDecreaseAllowance(IERC20 token, address spender, uint256 value) internal {
-        uint256 newAllowance = token.allowance(address(this), spender).sub(value, "SafeERC20: decreased allowance below zero");
-        _callOptionalReturn(token, abi.encodeWithSelector(token.approve.selector, spender, newAllowance));
+    function safeDecreaseAllowance(
+        IERC20 token,
+        address spender,
+        uint256 value
+    ) internal {
+        uint256 newAllowance = token.allowance(address(this), spender).sub(
+            value,
+            "SafeERC20: decreased allowance below zero"
+        );
+        _callOptionalReturn(
+            token,
+            abi.encodeWithSelector(
+                token.approve.selector,
+                spender,
+                newAllowance
+            )
+        );
     }
 
     /**
@@ -425,10 +561,17 @@ library SafeERC20 {
         // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
         // the target address contains contract code and also asserts for success in the low-level call.
 
-        bytes memory returndata = address(token).functionCall(data, "SafeERC20: low-level call failed");
-        if (returndata.length > 0) { // Return data is optional
+        bytes memory returndata = address(token).functionCall(
+            data,
+            "SafeERC20: low-level call failed"
+        );
+        if (returndata.length > 0) {
+            // Return data is optional
             // solhint-disable-next-line max-line-length
-            require(abi.decode(returndata, (bool)), "SafeERC20: ERC20 operation did not succeed");
+            require(
+                abi.decode(returndata, (bool)),
+                "SafeERC20: ERC20 operation did not succeed"
+            );
         }
     }
 }
@@ -454,7 +597,9 @@ interface IERC20 {
      *
      * Emits a {Transfer} event.
      */
-    function transfer(address recipient, uint256 amount) external returns (bool);
+    function transfer(address recipient, uint256 amount)
+        external
+        returns (bool);
 
     /**
      * @dev Returns the remaining number of tokens that `spender` will be
@@ -463,7 +608,10 @@ interface IERC20 {
      *
      * This value changes when {approve} or {transferFrom} are called.
      */
-    function allowance(address owner, address spender) external view returns (uint256);
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the caller's tokens.
@@ -490,7 +638,11 @@ interface IERC20 {
      *
      * Emits a {Transfer} event.
      */
-    function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
 
     function decimals() external view returns (uint8);
 
@@ -506,30 +658,39 @@ interface IERC20 {
      * @dev Emitted when the allowance of a `spender` for an `owner` is set by
      * a call to {approve}. `value` is the new allowance.
      */
-    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Approval(
+        address indexed owner,
+        address indexed spender,
+        uint256 value
+    );
 }
 
 interface IOwnable {
-  function policy() external view returns (address);
+    function policy() external view returns (address);
 
-  function renounceManagement() external;
-  
-  function pushManagement( address newOwner_ ) external;
-  
-  function pullManagement() external;
+    function renounceManagement() external;
+
+    function pushManagement(address newOwner_) external;
+
+    function pullManagement() external;
 }
 
 contract Ownable is IOwnable {
-
     address internal _owner;
     address internal _newOwner;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPushed(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+    event OwnershipPulled(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
-    constructor () {
+    constructor() {
         _owner = msg.sender;
-        emit OwnershipPushed( address(0), _owner );
+        emit OwnershipPushed(address(0), _owner);
     }
 
     function policy() public view override returns (address) {
@@ -537,73 +698,133 @@ contract Ownable is IOwnable {
     }
 
     modifier onlyPolicy() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        require(_owner == msg.sender, "Ownable: caller is not the owner");
         _;
     }
 
-    function renounceManagement() public virtual override onlyPolicy() {
-        emit OwnershipPushed( _owner, address(0) );
+    function renounceManagement() public virtual override onlyPolicy {
+        emit OwnershipPushed(_owner, address(0));
         _owner = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyPolicy() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
+    function pushManagement(address newOwner_)
+        public
+        virtual
+        override
+        onlyPolicy
+    {
+        require(
+            newOwner_ != address(0),
+            "Ownable: new owner is the zero address"
+        );
+        emit OwnershipPushed(_owner, newOwner_);
         _newOwner = newOwner_;
     }
-    
+
     function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
+        require(msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled(_owner, _newOwner);
         _owner = _newOwner;
     }
 }
 
 interface ITreasury {
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( uint send_ );
-    function manage( address _token, uint _amount ) external;
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
+    function deposit(
+        uint256 _amount,
+        address _token,
+        uint256 _profit
+    ) external returns (uint256 send_);
+
+    function manage(address _token, uint256 _amount) external;
+
+    function valueOf(address _token, uint256 _amount)
+        external
+        view
+        returns (uint256 value_);
 }
 
 interface ICurve3Pool {
     // add liquidity (frax) to receive back FRAX3CRV-f
-    function add_liquidity(address _pool, uint256[4] memory _deposit_amounts, uint256 _min_mint_amount) external returns(uint256);
+    function add_liquidity(
+        address _pool,
+        uint256[4] memory _deposit_amounts,
+        uint256 _min_mint_amount
+    ) external returns (uint256);
+
     // remove liquidity (FRAX3CRV-f) to recieve back Frax
-    function remove_liquidity_one_coin(address _pool, uint256 _burn_amount, int128 i, uint256 _min_amount) external returns(uint256);
+    function remove_liquidity_one_coin(
+        address _pool,
+        uint256 _burn_amount,
+        int128 i,
+        uint256 _min_amount
+    ) external returns (uint256);
 }
 
 //main Convex contract(booster.sol) basic interface
-interface IConvex{
+interface IConvex {
+    function poolInfo(uint256 pid)
+        external
+        returns (
+            address lptoken,
+            address token,
+            address gauge,
+            address crvRewards,
+            address stash,
+            bool shutdown
+        );
+
     //deposit into convex, receive a tokenized deposit.  parameter to stake immediately
-    function deposit(uint256 _pid, uint256 _amount, bool _stake) external returns(bool);
+    function deposit(
+        uint256 _pid,
+        uint256 _amount,
+        bool _stake
+    ) external returns (bool);
+
     //burn a tokenized deposit to receive curve lp tokens back
-    function withdraw(uint256 _pid, uint256 _amount) external returns(bool);
+    function withdraw(uint256 _pid, uint256 _amount) external returns (bool);
 }
 
 //sample convex reward contracts interface
-interface IConvexRewards{
+interface IConvexRewards {
     //get balance of an address
-    function balanceOf(address _account) external returns(uint256);
+    function balanceOf(address _account) external returns (uint256);
+
     //withdraw to a convex tokenized deposit
-    function withdraw(uint256 _amount, bool _claim) external returns(bool);
+    function withdraw(uint256 _amount, bool _claim) external returns (bool);
+
     //withdraw directly to curve LP token
-    function withdrawAndUnwrap(uint256 _amount, bool _claim) external returns(bool);
+    function withdrawAndUnwrap(uint256 _amount, bool _claim)
+        external
+        returns (bool);
+
     //claim rewards
-    function getReward() external returns(bool);
+    function getReward() external returns (bool);
+
     //stake a convex tokenized deposit
-    function stake(uint256 _amount) external returns(bool);
+    function stake(uint256 _amount) external returns (bool);
+
     //stake a convex tokenized deposit for another address(transfering ownership)
-    function stakeFor(address _account,uint256 _amount) external returns(bool);
+    function stakeFor(address _account, uint256 _amount)
+        external
+        returns (bool);
+
     //get rewards for an address
-    function earned(address _account) external view returns(uint256);
+    function earned(address _account) external view returns (uint256);
 }
 
 interface IAnyswapERC20 {
     function underlying() external view returns (address);
-    function withdraw(uint amount) external returns (uint);
+
+    function withdraw(uint256 amount) external returns (uint256);
 }
-interface IAnyswapRouter{
-    function anySwapOutUnderlying(address token, address to, uint amount, uint toChainID) external;
+
+interface IAnyswapRouter {
+    function anySwapOutUnderlying(
+        address token,
+        address to,
+        uint256 amount,
+        uint256 toChainID
+    ) external;
 }
 
 /**
@@ -612,87 +833,86 @@ interface IAnyswapRouter{
  */
 
 contract ConvexAllocator is Ownable {
-
     /* ======== DEPENDENCIES ======== */
 
     using SafeERC20 for IERC20;
-    using SafeMath for uint;
-
-
+    using SafeMath for uint256;
 
     /* ======== STRUCTS ======== */
 
     struct tokenData {
         address underlying;
-        address curveToken;
         address anyswapERC20;
-        int128 index;
-        uint deployed;
-        uint returned;
+        uint256 deployed;
+        uint256 returned;
     }
 
-
+    struct rewardPid {
+        address rewardPool;
+        uint256 pid;
+    }
 
     /* ======== STATE VARIABLES ======== */
 
     IConvex public immutable booster; // Convex deposit contract
-    IConvexRewards public immutable rewardPool; // Convex reward contract
+    //IConvexRewards public rewardPool; // Convex reward contract
     IAnyswapRouter public immutable anyswapRouter; // anyswap router
-    ICurve3Pool public immutable curve3Pool; // Curve 3Pool
+    ICurve3Pool public curve3Pool; // Curve 3Pool
     address public rewardCollector;
 
-    mapping( address => tokenData ) public tokenInfo; // info for deposited tokens
-    mapping( address => uint ) public pidForReserve; // convex pid for token
+    mapping(address => tokenData) public tokenInfo; // info for deposited tokens
+    //mapping(address => uint) public pidForReserve; // convex pid for reward pool
+    rewardPid[] public pidForReserve;
 
-    uint public totalValueDeployed; // total RFV deployed into lending pool
-    uint public totalValueReturned;
+    uint256 public totalValueDeployed; // total RFV deployed into lending pool
+    uint256 public totalValueReturned;
 
-    uint public immutable timelockInBlocks; // timelock to raise deployment limit
+    uint256 public immutable timelockInBlocks; // timelock to raise deployment limit
 
     address[] rewardTokens;
 
-    uint constant FTM_CHAINID=250;
+    uint256 public chainId = 250;
+    uint256 public chainIdCandidate;
+    uint256 constant INDEX_NOT_FOUND = 999999;
     address public ftmAddress;
     address public ftmAddressCandidate;
-    uint public immutable ftmAddressChangeTimelock;
-    uint public ftmAddressActiveblock;
+    uint256 public immutable ftmAddressChangeTimelock;
+    uint256 public ftmAddressActiveblock;
 
     /* ======== CONSTRUCTOR ======== */
 
-    constructor ( 
+    constructor(
         address _anyswapRouter,
-        address _booster, 
-        address _rewardPool,
+        address _booster,
+        // address _rewardPool,
         address _curve3Pool,
         address _rewardCollector,
         address _ftmAddress,
-        uint _ftmAddressChangeTimelock,
-        uint _timelockInBlocks
+        uint256 _ftmAddressChangeTimelock,
+        uint256 _timelockInBlocks
     ) {
-        require( _anyswapRouter != address(0) );
+        require(_anyswapRouter != address(0));
         anyswapRouter = IAnyswapRouter(_anyswapRouter);
 
-        require( _booster != address(0) );
-        booster = IConvex( _booster );
+        require(_booster != address(0));
+        booster = IConvex(_booster);
 
-        require( _rewardPool != address(0) );
-        rewardPool = IConvexRewards( _rewardPool );
+        // require( _rewardPool != address(0) );
+        // rewardPool = IConvexRewards( _rewardPool );
 
-        require( _curve3Pool != address(0) );
-        curve3Pool = ICurve3Pool( _curve3Pool );
+        require(_curve3Pool != address(0));
+        curve3Pool = ICurve3Pool(_curve3Pool);
 
-        require( _rewardCollector != address(0) );
+        require(_rewardCollector != address(0));
         rewardCollector = _rewardCollector;
 
         timelockInBlocks = _timelockInBlocks;
 
-        require( _ftmAddress != address(0) );
-        ftmAddress =  _ftmAddress ;
+        require(_ftmAddress != address(0));
+        ftmAddress = _ftmAddress;
 
-        ftmAddressChangeTimelock=_ftmAddressChangeTimelock;
+        ftmAddressChangeTimelock = _ftmAddressChangeTimelock;
     }
-
-
 
     /* ======== OPEN FUNCTIONS ======== */
 
@@ -700,19 +920,23 @@ contract ConvexAllocator is Ownable {
      *  @notice claims accrued CVX rewards for all tracked crvTokens
      */
     function harvest() public {
-        rewardPool.getReward();
+        //claim rewards for all crvTokens
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            address rewardPool = pidForReserve[i].rewardPool;
+            require(rewardPool != address(0), "Invalid reward pool address");
 
-        for( uint i = 0; i < rewardTokens.length; i++ ) {
-            uint balance = IERC20( rewardTokens[i] ).balanceOf( address(this) );
+            //Claim rewards
+            IConvexRewards(rewardPool).getReward();
+        }
 
-            if ( balance > 0 ) {
-                IERC20( rewardTokens[i] ).safeTransfer( rewardCollector, balance );
+        for (uint256 i = 0; i < rewardTokens.length; i++) {
+            uint256 balance = IERC20(rewardTokens[i]).balanceOf(address(this));
+
+            if (balance > 0) {
+                IERC20(rewardTokens[i]).safeTransfer(rewardCollector, balance);
             }
         }
     }
-
-
-
 
     /* ======== POLICY FUNCTIONS ======== */
 
@@ -722,35 +946,125 @@ contract ConvexAllocator is Ownable {
      *  @param amount uint
      *  @param amounts uint[]
      *  @param minAmount uint
+     *  @param pid uint
+     *  @param curveToken address
      */
-    function deposit( address token, uint amount, uint[4] calldata amounts, uint minAmount ) public onlyPolicy() {
-        address curveToken = tokenInfo[ token ].curveToken;
+    function deposit(
+        address token,
+        uint256 amount,
+        uint256[4] calldata amounts,
+        uint256 minAmount,
+        uint256 pid,
+        address curveToken
+    ) public onlyPolicy {
+        require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
+        (address _lptoken, , , address _crvRewards, , ) = booster.poolInfo(pid);
+
+        require(_lptoken == curveToken, "Invalid curve token address");
+
+        //Update pidForReserve
+        _addPidRewardItem(_crvRewards, pid);
 
         //treasury.manage( token, amount ); // retrieve amount of asset from treasury
 
         // account for deposit
         //uint value = treasury.valueOf( token, amount );
 
-        uint value = valueOf(token,amount);
+        uint256 value = valueOf(token, amount);
 
-        accountingFor( token, amount, value, true );
+        accountingFor(token, amount, value, true);
 
         IERC20(token).approve(address(curve3Pool), amount); // approve curve pool to spend tokens
-        uint curveAmount = curve3Pool.add_liquidity(curveToken, amounts, minAmount); // deposit into curve
+        uint256 curveAmount = curve3Pool.add_liquidity(
+            curveToken,
+            amounts,
+            minAmount
+        ); // deposit into curve
 
-        IERC20( curveToken ).approve( address(booster), curveAmount ); // approve to deposit to convex
-        booster.deposit( pidForReserve[ token ], curveAmount, true ); // deposit into convex
+        IERC20(curveToken).approve(address(booster), curveAmount); // approve to deposit to convex
+        booster.deposit(pid, curveAmount, true); // deposit into convex
     }
 
-    function valueOf(address token,uint amount) view public returns(uint value){
-        uint decimals = IERC20(token).decimals();
-        if(decimals>9) {
-            amount.div(10**(decimals-9));
-        } else if(decimals<9) {
-            amount.mul(10**(9-decimals));
+    function valueOf(address token, uint256 amount)
+        public
+        view
+        returns (uint256 value)
+    {
+        uint256 decimals = IERC20(token).decimals();
+        if (decimals > 9) {
+            amount.div(10**(decimals - 9));
+        } else if (decimals < 9) {
+            amount.mul(10**(9 - decimals));
         } else {
-            value=amount;
+            value = amount;
         }
+    }
+
+    /**
+     *  @notice adds Convex reward pool/pid pair
+     *  @param _rewardPool address
+     *  @param pid uint256
+     */
+    function addPidRewardItem(address _rewardPool, uint256 pid)
+        external
+        onlyPolicy
+    {
+        require(_rewardPool != address(0), "Invalid reward");
+        _addPidRewardItem(_rewardPool, pid);
+    }
+
+    /**
+     *  @notice removes Convex reward pool/pid pair
+     *  @param _rewardPool address
+     *  @param pid uint256
+     */
+    function removePidRewardItem(address _rewardPool, uint256 pid)
+        external
+        onlyPolicy
+    {
+        _removePidRewardItem(_rewardPool, pid);
+    }
+
+    function _addPidRewardItem(address _rewardPool, uint256 pid) internal {
+        if (pidForReserve.length == 0)
+            pidForReserve.push(rewardPid(_rewardPool, pid));
+        else {
+            //check for duplication
+            for (uint256 i = 0; i < pidForReserve.length; i++) {
+                if (
+                    pidForReserve[i].rewardPool != _rewardPool &&
+                    pidForReserve[i].pid != pid
+                ) {
+                    pidForReserve.push(rewardPid(_rewardPool, pid));
+                }
+            }
+        }
+    }
+
+    function _removePidRewardItem(address _rewardPool, uint256 pid) internal {
+        uint256 index = INDEX_NOT_FOUND;
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            if (
+                pidForReserve[i].rewardPool == _rewardPool &&
+                pidForReserve[i].pid == pid
+            ) {
+                index = i;
+            }
+        }
+
+        //resize array
+        if (index != INDEX_NOT_FOUND) {
+            _removeArrayGap(index);
+        }
+    }
+
+    function _removeArrayGap(uint256 _index) internal {
+        require(_index < pidForReserve.length, "index out of bound");
+
+        for (uint256 i = _index; i < pidForReserve.length - 1; i++) {
+            pidForReserve[i] = pidForReserve[i + 1];
+        }
+        pidForReserve.pop();
     }
 
     /**
@@ -758,79 +1072,134 @@ contract ConvexAllocator is Ownable {
      *  @param token address
      *  @param amount uint
      *  @param minAmount uint
+     *  @param tokenIndexInPool int128
+     *  @param pid uint
+     *  @param curveToken address
      */
-    function withdraw( address token, uint amount, uint minAmount ) public onlyPolicy() {
-        rewardPool.withdrawAndUnwrap( amount, false ); // withdraw to curve token
+    function withdraw(
+        address token,
+        uint256 amount,
+        uint256 minAmount,
+        int128 tokenIndexInPool,
+        uint256 pid,
+        address curveToken
+    ) public onlyPolicy {
+        require(curve3Pool != ICurve3Pool(0), "Invalid curv3pool address");
+        (address _lptoken, , , address _crvRewards, , ) = booster.poolInfo(pid);
 
-        address curveToken = tokenInfo[ token ].curveToken;
+        require(_lptoken == curveToken, "Invalid curve token address");
+        require(_crvRewards != address(0), "Invalid reward pool address");
+
+        IConvexRewards(_crvRewards).withdrawAndUnwrap(amount, false); // withdraw to curve token
 
         IERC20(curveToken).approve(address(curve3Pool), amount); // approve 3Pool to spend curveToken
-        curve3Pool.remove_liquidity_one_coin(curveToken, amount, tokenInfo[ token ].index, minAmount); // withdraw from curve
+        curve3Pool.remove_liquidity_one_coin(
+            curveToken,
+            amount,
+            tokenIndexInPool, //order of token in the Curve pool
+            minAmount
+        ); // withdraw from curve
 
-        uint balance = IERC20( token ).balanceOf( address(this) ); // balance of asset withdrawn
+        uint256 balance = IERC20(token).balanceOf(address(this)); // balance of asset withdrawn
 
         // account for withdrawal
         //uint value = treasury.valueOf( token, balance );
-        uint value = valueOf( token, balance );
-        accountingFor( token, balance, value, false );
+        uint256 value = valueOf(token, balance);
+        accountingFor(token, balance, value, false);
 
         //IERC20( token ).approve( address( treasury ), balance ); // approve to deposit asset into treasury
         //treasury.deposit( balance, token, value ); // deposit using value as profit so no HEC is minted
 
-        IERC20(token).approve(address(anyswapRouter), amount); // approve anyswap router to spend tokens
-        anyswapRouter.anySwapOutUnderlying(tokenInfo[token].anyswapERC20, ftmAddress, amount, FTM_CHAINID);
+        IERC20(token).approve(address(anyswapRouter), balance); // approve anyswap router to spend tokens
+        anyswapRouter.anySwapOutUnderlying(
+            tokenInfo[token].anyswapERC20,
+            ftmAddress,
+            balance,
+            chainId
+        );
     }
 
-    function withdrawAnyswapERC20(address anyswapERC20Token,uint amount) public onlyPolicy{
+    function withdrawAnyswapERC20(address anyswapERC20Token, uint256 amount)
+        public
+        onlyPolicy
+    {
         IAnyswapERC20(anyswapERC20Token).withdraw(amount);
     }
 
-    function queueFtmAddress(address _ftmAddress) external onlyPolicy{
-        require(_ftmAddress!=address(0));
-        ftmAddressActiveblock=block.number.add(ftmAddressChangeTimelock);
-        ftmAddressCandidate=_ftmAddress;
+    function queueFtmAddress(uint256 _chainId, address _ftmAddress)
+        external
+        onlyPolicy
+    {
+        require(
+            _ftmAddress != address(0) && _chainId != 0,
+            "invalid chainid or address"
+        );
+        ftmAddressActiveblock = block.number.add(ftmAddressChangeTimelock);
+        ftmAddressCandidate = _ftmAddress;
+        chainIdCandidate = _chainId;
     }
 
-    function setFtmAddress() external onlyPolicy{
-        require(ftmAddressCandidate!=address(0));
-        require(block.number>=ftmAddressActiveblock,"still in queue");
-        ftmAddress=ftmAddressCandidate;
+    function setFtmAddress() external onlyPolicy {
+        require(
+            ftmAddressCandidate != address(0) && chainIdCandidate != 0,
+            "put new address in queue first"
+        );
+        require(block.number >= ftmAddressActiveblock, "still in queue");
+
+        ftmAddress = ftmAddressCandidate;
+        ftmAddressCandidate = address(0);
+
+        chainId = chainIdCandidate;
+        chainIdCandidate = 0;
     }
+
+    /**
+     *  @notice sets reward collector address
+     *  @param _rewardCollector address
+     */
+    function setRewardCollector(address _rewardCollector) external onlyPolicy {
+        require(
+            _rewardCollector != address(0) &&
+                rewardCollector != _rewardCollector,
+            ""
+        );
+        rewardCollector = _rewardCollector;
+    }
+
     /**
      *  @notice adds asset and corresponding crvToken to mapping
      *  @param principleToken address
-     *  @param curveToken address
      */
-    function addToken( address principleToken, address curveToken, int128 index, uint pid, address anyswapERC20Token ) external onlyPolicy() {
-        require(anyswapERC20Token!=address(0),"invalid anyswap erc20 token");
-        address token=IAnyswapERC20(anyswapERC20Token).underlying();
-        require( token != address(0) && principleToken==token,"principle token not matched with anyswap ERC20 underlying token");
-        require( curveToken != address(0) );
-        require( tokenInfo[ token ].deployed <= tokenInfo[token].returned ); 
+    function addToken(address principleToken, address anyswapERC20Token)
+        external
+        onlyPolicy
+    {
+        require(anyswapERC20Token != address(0), "invalid anyswap erc20 token");
+        address token = IAnyswapERC20(anyswapERC20Token).underlying();
+        require(
+            token != address(0) && principleToken == token,
+            "principle token not matched with anyswap ERC20 underlying token"
+        );
 
-        tokenInfo[ token ] = tokenData({
+        require(tokenInfo[token].deployed <= tokenInfo[token].returned);
+
+        tokenInfo[token] = tokenData({
             underlying: token,
-            curveToken: curveToken,
             anyswapERC20: anyswapERC20Token,
-            index: index,
             deployed: 0,
             returned: 0
         });
-
-        pidForReserve[ token ] = pid;
     }
 
     /**
      *  @notice add new reward token to be harvested
      *  @param token address
      */
-    function addRewardToken( address token ) external onlyPolicy() {
-        require( IERC20( token ).totalSupply() > 0, "Invalid address" );
-        require( token != address(0) );
-        rewardTokens.push( token );
+    function addRewardToken(address token) external onlyPolicy {
+        require(IERC20(token).totalSupply() > 0, "Invalid address");
+        require(token != address(0));
+        rewardTokens.push(token);
     }
-
-
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
@@ -841,21 +1210,24 @@ contract ConvexAllocator is Ownable {
      *  @param value uint
      *  @param add bool
      */
-    function accountingFor( address token, uint amount, uint value, bool add ) internal {
-        if( add ) {
-            tokenInfo[ token ].deployed = tokenInfo[ token ].deployed.add( amount ); // track amount allocated into pool
-        
-            totalValueDeployed = totalValueDeployed.add( value ); // track total value allocated into pools
-            
+    function accountingFor(
+        address token,
+        uint256 amount,
+        uint256 value,
+        bool add
+    ) internal {
+        if (add) {
+            tokenInfo[token].deployed = tokenInfo[token].deployed.add(amount); // track amount allocated into pool
+
+            totalValueDeployed = totalValueDeployed.add(value); // track total value allocated into pools
         } else {
             // track amount allocated into pool
-            tokenInfo[ token ].returned = tokenInfo[ token ].returned.add( amount );
+            tokenInfo[token].returned = tokenInfo[token].returned.add(amount);
 
             // track total value allocated into pools
-            totalValueReturned = totalValueReturned.add( value );
+            totalValueReturned = totalValueReturned.add(value);
         }
     }
-
 
     /* ======== VIEW FUNCTIONS ======== */
 
@@ -863,7 +1235,17 @@ contract ConvexAllocator is Ownable {
      *  @notice query all pending rewards
      *  @return uint
      */
-    function rewardsPending() public view returns ( uint ) {
-        return rewardPool.earned( address(this) );
+    function rewardsPending() public view returns (uint256) {
+        uint256 rewardAmount;
+
+        //query all pending rewards
+        for (uint256 i = 0; i < pidForReserve.length; i++) {
+            address rewardPool = pidForReserve[i].rewardPool;
+            require(rewardPool != address(0), "Invalid reward pool address");
+
+            rewardAmount += IConvexRewards(rewardPool).earned(address(this));
+        }
+
+        return rewardAmount;
     }
 }
