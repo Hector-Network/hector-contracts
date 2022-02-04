@@ -157,6 +157,30 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         require(_TORMinter!=address(0),"invalid TORMinter address");
         TORMinter=_TORMinter;
     }
+    function setReserveCeilingPercentage(uint _reserveCeilingPercentage) external onlyOwner(){
+        require(_reserveCeilingPercentage!=0);
+        reserveCeilingPercentage=_reserveCeilingPercentage;
+    }
+    function setReserveFloorPercentage(uint _reserveFloorPercentage) external onlyOwner(){
+        require(_reserveFloorPercentage!=0);
+        reserveFloorPercentage=_reserveFloorPercentage;
+    }
+    function setMintPriceFloor(uint _mintPriceFloor) external onlyOwner(){
+        require(_mintPriceFloor!=0);
+        mintPriceFloor=_mintPriceFloor;
+    }
+    function setRedeemPriceCeiling(uint _redeemPriceCeiling) external onlyOwner(){
+        require(_redeemPriceCeiling!=0);
+        redeemPriceCeiling=_redeemPriceCeiling;
+    }
+    function setMintRate(uint _mintRate) external onlyOwner(){
+        require(_mintRate!=0);
+        mintRate=_mintRate;
+    }
+    function setRedeemRate(uint _redeemRate) external onlyOwner(){
+        require(_redeemRate!=0);
+        redeemRate=_redeemRate;
+    }
     function tryMint(address wallet,uint torAmount,address stableToken) override external returns(bool){
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
@@ -182,14 +206,17 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     function priceAboveFloor(uint torAmount,address stableToken) public view returns(bool){
         return torPriceHelper.getBuyPrice(torAmount,stableToken)>mintPriceFloor;
     }
-    function enoughMintBuffer(uint torAmount) public returns(bool){
-        mintBuffer=mintBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastMintTimestamp()).mul(mintRate));
+    function enoughMintBuffer(uint torAmount) internal returns(bool){
+        mintBuffer=getCurrentMintBuffer();
         if(mintBuffer>=torAmount){
             mintBuffer=mintBuffer.sub(torAmount);
             return true;
         }else{
             return false;
         }
+    }
+    function getCurrentMintBuffer() public view returns(uint){
+        return mintBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastMintTimestamp()).mul(mintRate));
     }
     function higherThanReserveFloorAfterRedeem(uint torAmount) public view returns (bool){
         (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
@@ -198,13 +225,16 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     function priceBelowCeiling(uint torAmount,address stableToken) public view returns(bool){
         return torPriceHelper.getSellPrice(torAmount,stableToken)<redeemPriceCeiling;
     }
-    function enoughRedeemBuffer(uint torAmount) public returns(bool){
-        redeemBuffer=redeemBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastRedeemTimestamp()).mul(redeemRate));
+    function enoughRedeemBuffer(uint torAmount) internal returns(bool){
+        redeemBuffer=getCurrentRedeemBuffer();
         if(redeemBuffer>=torAmount){
             redeemBuffer=redeemBuffer.sub(torAmount);
             return true;
         }else{
             return false;
         }
+    }
+    function getCurrentRedeemBuffer() public view returns(uint){
+        return redeemBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastRedeemTimestamp()).mul(redeemRate));
     }
 }
