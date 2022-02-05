@@ -121,6 +121,20 @@ interface IERC20 {
     function balanceOf(address owner) external view returns(uint);
     function totalSupply() external view returns(uint);
 }
+interface Investment{
+    function totalValueDeployed() external view returns (uint);
+}
+contract CurveGaugeInvestment is IERC20{
+    function balanceOf(address owner) override external view returns(uint){
+        return owner==0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A?totalSupply():0;
+    }
+    function decimals() override external pure returns(uint8){
+        return 9;
+    }
+    function totalSupply() override public view returns(uint){
+        return Investment(0x344456Df952FA32Be9C860c4EB23385384C4ef7A).totalValueDeployed();
+    }
+}
 interface ITORReserveHelper{
     function getTorReserveAndSupply() view external returns(uint reserve,uint totalSupply);//reserve 1e18,totalSupply 1e18
 }
@@ -128,6 +142,13 @@ contract TORReserveHelper is Ownable,ITORReserveHelper{
     using SafeMath for uint;
 
     address[] public treasuryStables;
+
+    constructor(){
+        treasuryStables.push(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);//dai
+        treasuryStables.push(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);//usdc
+        treasuryStables.push(0xdc301622e621166BD8E82f2cA0A26c13Ad0BE355);//frax
+        treasuryStables.push(0x0CDB14c00A52E9185526ec4C96De21cB5c1a06Aa);//curve guage investment
+    }
 
     function toE18(uint amount, uint8 decimals) public pure returns (uint){
         if(decimals==18)return amount;
