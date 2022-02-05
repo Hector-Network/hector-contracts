@@ -197,7 +197,7 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     }
     function lowerThanReserveCeilingAfterMint(uint torAmount) public view returns (bool){
         (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
-        return torAmount.add(totalSupply)<reserve.mul(reserveCeilingPercentage).div(10000);
+        return totalSupply.add(torAmount)<reserve.mul(reserveCeilingPercentage).div(10000);
     }
     function curvePercentageBelowCeiling(uint torAmount) public view returns(bool){
         return torCurveHelper.getPoolPercentageWithMint(torAmount)<=mintPercentageCeiling;
