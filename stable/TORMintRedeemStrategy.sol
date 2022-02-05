@@ -123,9 +123,9 @@ interface ITORMintStrategy{
 interface ITORReserveHelper{
     function getTorReserveAndSupply() view external returns(uint reserve,uint totalSupply);//reserve 1e18,totalSupply 1e18
 }
-interface ITORPriceHelper{
-    function getBuyPrice(uint stableAmount,address stableToken) view external returns(uint price);//price 1e18, 1$=1e18
-    function getSellPrice(uint torAmount,address stableToken) view external returns(uint price);//price 1e18, 1$=1e18
+interface ITORCurveHelper{
+    function getPoolPercentageWithMint(uint torAmount) view external returns(uint percentage);//tor percentage 10000 = 100%
+    function getPoolPercentageWithRedeem(uint torAmount) view external returns(uint percentage);//tor percentage 5000 = 50%
 }
 interface ITORMinter{
     function lastMintTimestamp() view external returns(uint);
@@ -137,8 +137,8 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     uint public reserveCeilingPercentage=10000;//40%=4000
     uint public reserveFloorPercentage=0;//20%=2000
 
-    uint public mintPriceFloor=1001*1e15;//$1.001 , $1=1e18
-    uint public redeemPriceCeiling=998*1e15;//$0.998 , $1=1e18
+    uint public mintPercentageCeiling=6000;//percentage of TOR in curve pool, 100%=10000
+    uint public redeemPercentageFloor=6500;//percentage of TOR in curve pool, 100%=10000
 
     uint public mintBuffer=0;
     uint public redeemBuffer=0;
@@ -146,7 +146,7 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     uint public redeemRate=5*1e18;//per second redeemable rate, 1 tor = 1e18
 
     ITORReserveHelper public torReserveHelper;
-    ITORPriceHelper public torPriceHelper;
+    ITORCurveHelper public torCurveHelper;
 
     address public TORMinter;
     function setTORMinter(address _TORMinter) external onlyOwner(){
@@ -161,13 +161,13 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         require(_reserveFloorPercentage!=0);
         reserveFloorPercentage=_reserveFloorPercentage;
     }
-    function setMintPriceFloor(uint _mintPriceFloor) external onlyOwner(){
-        require(_mintPriceFloor!=0);
-        mintPriceFloor=_mintPriceFloor;
+    function setMintPercentageCeiling(uint _mintPercentageCeiling) external onlyOwner(){
+        require(_mintPercentageCeiling!=0);
+        mintPercentageCeiling=_mintPercentageCeiling;
     }
-    function setRedeemPriceCeiling(uint _redeemPriceCeiling) external onlyOwner(){
-        require(_redeemPriceCeiling!=0);
-        redeemPriceCeiling=_redeemPriceCeiling;
+    function setRedeemPercentageFloor(uint _redeemPercentageFloor) external onlyOwner(){
+        require(_redeemPercentageFloor!=0);
+        redeemPercentageFloor=_redeemPercentageFloor;
     }
     function setMintRate(uint _mintRate) external onlyOwner(){
         require(_mintRate!=0);
@@ -182,7 +182,7 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryMint");
         require(lowerThanReserveCeilingAfterMint(torAmount),"reserve ceiling reached for minting");
-        require(priceAboveFloor(torAmount,stableToken),"price is too low for minting");
+        require(curvePercentageBelowCeiling(torAmount),"curve percentage is too high to mint tor");
         require(enoughMintBuffer(torAmount),"not enough buffer for minting");
         return true;
     }
@@ -191,7 +191,7 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryRedeem");
         require(higherThanReserveFloorAfterRedeem(torAmount),"reserve floor reached for redeeming");
-        require(priceBelowCeiling(torAmount,stableToken),"price is too high for redeeming");
+        require(curvePercentageAboveFloor(torAmount),"curve percentage is too low to redeem tor");
         require(enoughRedeemBuffer(torAmount),"not enough buffer for redeeming");
         return true;
     }
@@ -199,8 +199,8 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
         return torAmount.add(totalSupply)<reserve.mul(reserveCeilingPercentage).div(10000);
     }
-    function priceAboveFloor(uint torAmount,address stableToken) public view returns(bool){
-        return torPriceHelper.getBuyPrice(torAmount,stableToken)>mintPriceFloor;
+    function curvePercentageBelowCeiling(uint torAmount) public view returns(bool){
+        return torCurveHelper.getPoolPercentageWithMint(torAmount)<=mintPercentageCeiling;
     }
     function enoughMintBuffer(uint torAmount) internal returns(bool){
         mintBuffer=getCurrentMintBuffer();
@@ -218,8 +218,8 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
         return totalSupply.sub(torAmount)>reserve.mul(reserveFloorPercentage).div(10000);
     }
-    function priceBelowCeiling(uint torAmount,address stableToken) public view returns(bool){
-        return torPriceHelper.getSellPrice(torAmount,stableToken)<redeemPriceCeiling;
+    function curvePercentageAboveFloor(uint torAmount) public view returns(bool){
+        return torCurveHelper.getPoolPercentageWithRedeem(torAmount)>=redeemPercentageFloor;
     }
     function enoughRedeemBuffer(uint torAmount) internal returns(bool){
         redeemBuffer=getCurrentRedeemBuffer();
