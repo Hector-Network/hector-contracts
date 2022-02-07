@@ -486,12 +486,23 @@ interface ITORMinter{
     function redeemToDai(uint amount) external;
     function redeemToUsdc(uint amount) external;
 }
+interface ITORMinterValues{
+    function totalMintFee() external view returns(uint);
+    function totalBurnFee() external view returns(uint);
+    function totalMinted() external view returns(uint);
+    function totalBurnt() external view returns(uint);
+    function totalHecMinted() external view returns(uint);
+    function totalHecBurnt() external view returns(uint);
+    function lastMintTimestamp() external view returns(uint);
+    function lastRedeemTimestamp() external view returns(uint);
+}
 interface IHECMinter{
     function mintHEC(uint amount) external;
     function burnHEC(uint amount) external;
 }
-interface ITORMintStrategy{
-    function tryMint(address recipient,uint amount) external returns(bool);
+interface ITORMintRedeemStrategy{
+    function tryMint(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function tryRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
 contract TORMinter is ITORMinter,Ownable{
     using SafeERC20 for IERC20;
@@ -499,7 +510,7 @@ contract TORMinter is ITORMinter,Ownable{
 
     IERC20 dai=IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
     IERC20 usdc=IERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
-    IERC20 public hec=IERC20(0x79f29359E6633120c86Ba0349551e134d13fc487);//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
+    IERC20 public hec=IERC20(0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
     IERC20 TOR;
     IHECMinter HECMinter;
     uint public totalMintFee;
@@ -508,11 +519,13 @@ contract TORMinter is ITORMinter,Ownable{
     uint public totalBurnt;
     uint public totalHecMinted;
     uint public totalHecBurnt;
-    ITORMintStrategy public strategy;
+    uint public lastMintTimestamp;
+    uint public lastRedeemTimestamp;
+    ITORMintRedeemStrategy public strategy;
     mapping(IERC20=>IUniswapRouter) routers;
 
-    uint public mintFeeBasisPoints=20;
-    uint public redeemFeeBasisPoints=20;
+    uint public mintFeeBasisPoints=10;
+    uint public redeemFeeBasisPoints=10;
     uint constant UNIT_ONE_IN_BPS=10000;
 
     constructor(address _HECMinter, address _TOR){
@@ -520,8 +533,21 @@ contract TORMinter is ITORMinter,Ownable{
         HECMinter=IHECMinter(_HECMinter);
         require(_TOR!=address(0));
         TOR=IERC20(_TOR);
+        lastMintTimestamp=block.timestamp;
+        lastRedeemTimestamp=block.timestamp;
         routers[dai]=IUniswapRouter(0xF491e7B69E4244ad4002BC14e878a34207E38c29); //dai=>spooky
         routers[usdc]=IUniswapRouter(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52); //usdc=>spirit
+    }
+    function upgradeFrom(address oldTorMinter) external onlyOwner(){
+        if(totalBurnFee==0&&totalBurnt==0&&totalHecBurnt==0
+            &&totalHecMinted==0&&totalMinted==0&&totalMintFee==0){
+            totalMintFee=ITORMinterValues(oldTorMinter).totalMintFee();
+            totalBurnFee=ITORMinterValues(oldTorMinter).totalBurnFee();
+            totalMinted=ITORMinterValues(oldTorMinter).totalMinted();
+            totalBurnt=ITORMinterValues(oldTorMinter).totalBurnt();
+            totalHecMinted=ITORMinterValues(oldTorMinter).totalHecMinted();
+            totalHecBurnt=ITORMinterValues(oldTorMinter).totalHecBurnt();
+            }
     }
     function setHec(address _hec) external onlyOwner(){
         require(_hec!=address(0));
@@ -537,7 +563,7 @@ contract TORMinter is ITORMinter,Ownable{
     }
     function setMintStrategy(address _strategy) external onlyOwner(){
         require(_strategy!=address(0));
-        strategy=ITORMintStrategy(_strategy);
+        strategy=ITORMintRedeemStrategy(_strategy);
     }
     function setMintFee(uint _mintFeeBasisPoints) external onlyOwner(){
         require(_mintFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
@@ -569,6 +595,7 @@ contract TORMinter is ITORMinter,Ownable{
     function mintWithStable(IERC20 _stableToken,uint _stableAmount) internal returns(uint){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"mint for EOA only");
+        require(address(strategy)!=address(0),"mint redeem strategy is not set");
         _stableToken.safeTransferFrom(msg.sender,address(this),_stableAmount);
         uint amount=_stableAmount.mul(UNIT_ONE_IN_BPS.sub(mintFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
         if(_stableAmount>amount){
@@ -590,9 +617,10 @@ contract TORMinter is ITORMinter,Ownable{
         HECMinter.burnHEC(amountOuts[1]);
         totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
         uint tor2mint=convertDecimal(_stableToken,TOR,amount);
-        require(strategy.tryMint(msg.sender,tor2mint)==true,"mint not allowed by strategy");
+        require(strategy.tryMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
         totalMinted=totalMinted.add(tor2mint);
+        lastMintTimestamp=block.timestamp;
         return tor2mint;
     }
 
@@ -607,8 +635,11 @@ contract TORMinter is ITORMinter,Ownable{
     function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
+        require(address(strategy)!=address(0),"mint redeem strategy is not set");
+        require(strategy.tryRedeem(msg.sender,_torAmount,address(_stableToken))==true,"redeem not allowed by strategy");
         TOR.burnFrom(msg.sender,_torAmount);
         totalBurnt=totalBurnt.add(_torAmount);
+        lastRedeemTimestamp=block.timestamp;
         uint amountOut=convertDecimal(TOR,_stableToken,_torAmount).mul(UNIT_ONE_IN_BPS.sub(redeemFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
         address[] memory path=new address[](2);
         path[0]=address(hec);
@@ -632,10 +663,10 @@ contract TORMinter is ITORMinter,Ownable{
         return amountOut;
     }
 
-    function redeemToDai(uint _torAmount) override external onlyOwner(){
+    function redeemToDai(uint _torAmount) override external{
         redeemToStable(_torAmount,dai);
     }
-    function redeemToUsdc(uint _torAmount) override external onlyOwner(){
+    function redeemToUsdc(uint _torAmount) override external{
         redeemToStable(_torAmount,usdc);
     }
 }
