@@ -116,7 +116,7 @@ contract Ownable is IOwnable {
         _owner = _newOwner;
     }
 }
-interface ITORMintStrategy{
+interface ITORMintRedeemStrategy{
     function tryMint(address recipient,uint torAmount,address stableToken) external returns(bool);
     function tryRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
@@ -131,7 +131,7 @@ interface ITORMinter{
     function lastMintTimestamp() view external returns(uint);
     function lastRedeemTimestamp() view external returns(uint);
 }
-contract TORMintStrategy is ITORMintStrategy,Ownable{
+contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     using SafeMath for uint;
 
     uint public reserveCeilingPercentage=10000;//40%=4000
@@ -144,9 +144,11 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
     uint public redeemBuffer=0;
     uint public mintRate=10*1e18;//per second mintable rate, 1 tor = 1e18
     uint public redeemRate=5*1e18;//per second redeemable rate, 1 tor = 1e18
+    uint public mintBufferMax=100000*1e18;//100K TOR as max mint buffer
+    uint public redeemBufferMax=10000*1e18;//10K TOR as max redeem buffer
 
-    ITORReserveHelper public torReserveHelper;
-    ITORCurveHelper public torCurveHelper;
+    ITORReserveHelper public TORReserveHelper;
+    ITORCurveHelper public TORCurveHelper;
 
     address public TORMinter;
     function setTORMinter(address _TORMinter) external onlyOwner(){
@@ -177,6 +179,14 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         require(_redeemRate!=0);
         redeemRate=_redeemRate;
     }
+    function setMintBufferMax(uint _mintBufferMax) external onlyOwner(){
+        require(_mintBufferMax!=0);
+        mintBufferMax=_mintBufferMax;
+    }
+    function setRedeemBufferMax(uint _redeemBufferMax) external onlyOwner(){
+        require(_redeemBufferMax!=0);
+        redeemBufferMax=_redeemBufferMax;
+    }
     function tryMint(address wallet,uint torAmount,address stableToken) override external returns(bool){
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
@@ -196,41 +206,41 @@ contract TORMintStrategy is ITORMintStrategy,Ownable{
         return true;
     }
     function lowerThanReserveCeilingAfterMint(uint torAmount) public view returns (bool){
-        (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
+        (uint reserve,uint totalSupply)=TORReserveHelper.getTorReserveAndSupply();
         return totalSupply.add(torAmount)<reserve.mul(reserveCeilingPercentage).div(10000);
     }
     function curvePercentageBelowCeiling(uint torAmount) public view returns(bool){
-        return torCurveHelper.getPoolPercentageWithMint(torAmount)<=mintPercentageCeiling;
+        return TORCurveHelper.getPoolPercentageWithMint(torAmount)<=mintPercentageCeiling;
     }
     function enoughMintBuffer(uint torAmount) internal returns(bool){
-        mintBuffer=getCurrentMintBuffer();
-        if(mintBuffer>=torAmount){
-            mintBuffer=mintBuffer.sub(torAmount);
+        if(getCurrentMintBuffer()>=torAmount){
+            mintBuffer=getCurrentMintBuffer().sub(torAmount);
             return true;
         }else{
             return false;
         }
     }
-    function getCurrentMintBuffer() public view returns(uint){
-        return mintBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastMintTimestamp()).mul(mintRate));
+    function getCurrentMintBuffer() public view returns(uint _mintBuffer){
+        _mintBuffer=mintBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastMintTimestamp()).mul(mintRate));
+        if(_mintBuffer>mintBufferMax)_mintBuffer=mintBufferMax;
     }
     function higherThanReserveFloorAfterRedeem(uint torAmount) public view returns (bool){
-        (uint reserve,uint totalSupply)=torReserveHelper.getTorReserveAndSupply();
+        (uint reserve,uint totalSupply)=TORReserveHelper.getTorReserveAndSupply();
         return totalSupply.sub(torAmount)>reserve.mul(reserveFloorPercentage).div(10000);
     }
     function curvePercentageAboveFloor(uint torAmount) public view returns(bool){
-        return torCurveHelper.getPoolPercentageWithRedeem(torAmount)>=redeemPercentageFloor;
+        return TORCurveHelper.getPoolPercentageWithRedeem(torAmount)>=redeemPercentageFloor;
     }
     function enoughRedeemBuffer(uint torAmount) internal returns(bool){
-        redeemBuffer=getCurrentRedeemBuffer();
-        if(redeemBuffer>=torAmount){
-            redeemBuffer=redeemBuffer.sub(torAmount);
+        if(getCurrentRedeemBuffer()>=torAmount){
+            redeemBuffer=getCurrentRedeemBuffer().sub(torAmount);
             return true;
         }else{
             return false;
         }
     }
-    function getCurrentRedeemBuffer() public view returns(uint){
-        return redeemBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastRedeemTimestamp()).mul(redeemRate));
+    function getCurrentRedeemBuffer() public view returns(uint _redeemBuffer){
+        _redeemBuffer=redeemBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastRedeemTimestamp()).mul(redeemRate));
+        if(_redeemBuffer>redeemBuffer)_redeemBuffer=redeemBufferMax;
     }
 }
