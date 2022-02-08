@@ -155,6 +155,14 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
         require(_TORMinter!=address(0),"invalid TORMinter address");
         TORMinter=_TORMinter;
     }
+    function setTORReserveHelper(address _TORReserveHelper) external onlyOwner(){
+        require(_TORReserveHelper!=address(0),"invalid TORReserveHelper address");
+        TORReserveHelper=ITORReserveHelper(_TORReserveHelper);
+    }
+    function setTORCurveHelper(address _TORCurveHelper) external onlyOwner(){
+        require(_TORCurveHelper!=address(0),"invalid TORReserveHelper address");
+        TORCurveHelper=ITORCurveHelper(_TORCurveHelper);
+    }
     function setReserveCeilingPercentage(uint _reserveCeilingPercentage) external onlyOwner(){
         require(_reserveCeilingPercentage!=0);
         reserveCeilingPercentage=_reserveCeilingPercentage;
