@@ -489,20 +489,24 @@ interface ITORMinter{
 interface ITORMinterValues{
     function totalMintFee() external view returns(uint);
     function totalBurnFee() external view returns(uint);
-    function totalMinted() external view returns(uint);
-    function totalBurnt() external view returns(uint);
+    function totalTorMinted() external view returns(uint);
+    function totalTorBurnt() external view returns(uint);
     function totalHecMinted() external view returns(uint);
     function totalHecBurnt() external view returns(uint);
     function lastMintTimestamp() external view returns(uint);
     function lastRedeemTimestamp() external view returns(uint);
+}
+interface IOldTORMinterValues{
+    function totalMinted() external view returns(uint);
+    function totalBurnt() external view returns(uint);
 }
 interface IHECMinter{
     function mintHEC(uint amount) external;
     function burnHEC(uint amount) external;
 }
 interface ITORMintRedeemStrategy{
-    function tryMint(address recipient,uint torAmount,address stableToken) external returns(bool);
-    function tryRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canMint(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
 contract TORMinter is ITORMinter,Ownable{
     using SafeERC20 for IERC20;
@@ -515,12 +519,13 @@ contract TORMinter is ITORMinter,Ownable{
     IHECMinter HECMinter;
     uint public totalMintFee;
     uint public totalBurnFee;
-    uint public totalMinted;
-    uint public totalBurnt;
+    uint public totalTorMinted;
+    uint public totalTorBurnt;
     uint public totalHecMinted;
     uint public totalHecBurnt;
     uint public lastMintTimestamp;
     uint public lastRedeemTimestamp;
+    bool upgraded=false;
     ITORMintRedeemStrategy public strategy;
     mapping(IERC20=>IUniswapRouter) routers;
 
@@ -538,15 +543,23 @@ contract TORMinter is ITORMinter,Ownable{
         routers[dai]=IUniswapRouter(0xF491e7B69E4244ad4002BC14e878a34207E38c29); //dai=>spooky
         routers[usdc]=IUniswapRouter(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52); //usdc=>spirit
     }
-    function upgradeFrom(address oldTorMinter) external onlyOwner(){
-        if(totalBurnFee==0&&totalBurnt==0&&totalHecBurnt==0
-            &&totalHecMinted==0&&totalMinted==0&&totalMintFee==0){
+    function upgradeFrom(address oldTorMinter,bool isOldVersion) external onlyOwner(){
+        if(!upgraded){
             totalMintFee=ITORMinterValues(oldTorMinter).totalMintFee();
             totalBurnFee=ITORMinterValues(oldTorMinter).totalBurnFee();
-            totalMinted=ITORMinterValues(oldTorMinter).totalMinted();
-            totalBurnt=ITORMinterValues(oldTorMinter).totalBurnt();
+            if(isOldVersion){
+                totalTorMinted=IOldTORMinterValues(oldTorMinter).totalMinted();
+                totalTorBurnt=IOldTORMinterValues(oldTorMinter).totalBurnt();
+            }else{
+                totalTorMinted=ITORMinterValues(oldTorMinter).totalTorMinted();
+                totalTorBurnt=ITORMinterValues(oldTorMinter).totalTorBurnt();
+            }
             totalHecMinted=ITORMinterValues(oldTorMinter).totalHecMinted();
             totalHecBurnt=ITORMinterValues(oldTorMinter).totalHecBurnt();
+            totalHecBurnt=ITORMinterValues(oldTorMinter).totalHecBurnt();
+            lastMintTimestamp=ITORMinterValues(oldTorMinter).lastMintTimestamp();
+            lastRedeemTimestamp=ITORMinterValues(oldTorMinter).lastRedeemTimestamp();
+            upgraded=true;
             }
     }
     function setHec(address _hec) external onlyOwner(){
@@ -617,9 +630,9 @@ contract TORMinter is ITORMinter,Ownable{
         HECMinter.burnHEC(amountOuts[1]);
         totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
         uint tor2mint=convertDecimal(_stableToken,TOR,amount);
-        require(strategy.tryMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
+        require(strategy.canMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
-        totalMinted=totalMinted.add(tor2mint);
+        totalTorMinted=totalTorMinted.add(tor2mint);
         lastMintTimestamp=block.timestamp;
         return tor2mint;
     }
@@ -636,9 +649,9 @@ contract TORMinter is ITORMinter,Ownable{
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
         require(address(strategy)!=address(0),"mint redeem strategy is not set");
-        require(strategy.tryRedeem(msg.sender,_torAmount,address(_stableToken))==true,"redeem not allowed by strategy");
+        require(strategy.canRedeem(msg.sender,_torAmount,address(_stableToken))==true,"redeem not allowed by strategy");
         TOR.burnFrom(msg.sender,_torAmount);
-        totalBurnt=totalBurnt.add(_torAmount);
+        totalTorBurnt=totalTorBurnt.add(_torAmount);
         lastRedeemTimestamp=block.timestamp;
         uint amountOut=convertDecimal(TOR,_stableToken,_torAmount).mul(UNIT_ONE_IN_BPS.sub(redeemFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
         address[] memory path=new address[](2);
