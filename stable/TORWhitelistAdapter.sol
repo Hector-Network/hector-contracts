@@ -57,14 +57,14 @@ interface ITORMintStrategy{
     function tryMint(address recipient,uint amount) external returns(bool);
 }
 interface ITORMintRedeemStrategy{
-    function tryMint(address recipient,uint torAmount,address stableToken) external returns(bool);
-    function tryRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canMint(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
 contract TORWhitelistAdapter is ITORMintRedeemStrategy,Ownable{
-    function tryMint(address recipient,uint torAmount,address stableToken) override external returns(bool){
+    function canMint(address recipient,uint torAmount,address stableToken) override external returns(bool){
         return ITORMintStrategy(0x44FC4DB9793969019800B5FdeD3b3CF40CF85E75).tryMint(recipient,torAmount);
     }
-    function tryRedeem(address recipient,uint torAmount,address stableToken) override external returns(bool){
+    function canRedeem(address recipient,uint torAmount,address stableToken) override external returns(bool){
         return recipient==owner();
     }
 }
