@@ -481,10 +481,10 @@ interface IUniswapRouter{
     function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
 }
 interface ITORMinter{
-    function mintWithDai(uint amount) external;
-    function mintWithUsdc(uint amount) external;
-    function redeemToDai(uint amount) external;
-    function redeemToUsdc(uint amount) external;
+    function mintWithDai(uint _daiAmount) external returns(uint _torAmount);
+    function mintWithUsdc(uint _usdcAmount) external returns(uint _torAmount);
+    function redeemToDai(uint _torAmount) external returns(uint _daiAmount);
+    function redeemToUsdc(uint _torAmount) external returns(uint _usdcAmount);
 }
 interface ITORMinterValues{
     function totalMintFee() external view returns(uint);
@@ -604,7 +604,7 @@ contract TORMinter is ITORMinter,Ownable{
         else toAmount=fromAmount.mul(10**(toDec-fromDec));
     }
 
-    function mintWithStable(IERC20 _stableToken,uint _stableAmount) internal returns(uint){
+    function mintWithStable(IERC20 _stableToken,uint _stableAmount) internal returns(uint _torAmount){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"mint for EOA only");
         require(address(strategy)!=address(0),"mint redeem strategy is not set");
@@ -633,18 +633,18 @@ contract TORMinter is ITORMinter,Ownable{
         TOR.mint(msg.sender,tor2mint);
         totalTorMinted=totalTorMinted.add(tor2mint);
         lastMintTimestamp=block.timestamp;
-        return tor2mint;
+        _torAmount=tor2mint;
     }
 
-    function mintWithDai(uint _daiAmount) override external{
-        mintWithStable(dai,_daiAmount);
+    function mintWithDai(uint _daiAmount) override external returns(uint _torAmount){
+        return mintWithStable(dai,_daiAmount);
     }
     
-    function mintWithUsdc(uint _usdcAmount) override external{
-        mintWithStable(usdc,_usdcAmount);
+    function mintWithUsdc(uint _usdcAmount) override external returns(uint _torAmount){
+        return mintWithStable(usdc,_usdcAmount);
     }
 
-    function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint){
+    function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint _stableAmount){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
         require(address(strategy)!=address(0),"mint redeem strategy is not set");
@@ -672,13 +672,13 @@ contract TORMinter is ITORMinter,Ownable{
             totalBurnFee=totalBurnFee.add(_torAmount.sub(convertDecimal(_stableToken,TOR,amountOut)));
         }
         _stableToken.transfer(msg.sender,amountOut);
-        return amountOut;
+        _stableAmount=amountOut;
     }
 
-    function redeemToDai(uint _torAmount) override external{
-        redeemToStable(_torAmount,dai);
+    function redeemToDai(uint _torAmount) override external returns(uint _daiAmount){
+        return redeemToStable(_torAmount,dai);
     }
-    function redeemToUsdc(uint _torAmount) override external{
-        redeemToStable(_torAmount,usdc);
+    function redeemToUsdc(uint _torAmount) override external returns(uint _usdcAmount){
+        return redeemToStable(_torAmount,usdc);
     }
 }
