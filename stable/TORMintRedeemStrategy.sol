@@ -117,8 +117,8 @@ contract Ownable is IOwnable {
     }
 }
 interface ITORMintRedeemStrategy{
-    function tryMint(address recipient,uint torAmount,address stableToken) external returns(bool);
-    function tryRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canMint(address recipient,uint torAmount,address stableToken) external returns(bool);
+    function canRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
 interface ITORReserveHelper{
     function getTorReserveAndSupply() view external returns(uint reserve,uint totalSupply);//reserve 1e18,totalSupply 1e18
@@ -195,7 +195,7 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
         require(_redeemBufferMax!=0);
         redeemBufferMax=_redeemBufferMax;
     }
-    function tryMint(address wallet,uint torAmount,address stableToken) override external returns(bool){
+    function canMint(address wallet,uint torAmount,address stableToken) override external returns(bool){
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryMint");
@@ -204,7 +204,7 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
         require(enoughMintBuffer(torAmount),"not enough buffer for minting");
         return true;
     }
-    function tryRedeem(address wallet,uint torAmount,address stableToken) override external returns(bool){
+    function canRedeem(address wallet,uint torAmount,address stableToken) override external returns(bool){
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryRedeem");
@@ -249,6 +249,6 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     }
     function getCurrentRedeemBuffer() public view returns(uint _redeemBuffer){
         _redeemBuffer=redeemBuffer.add(block.timestamp.sub(ITORMinter(TORMinter).lastRedeemTimestamp()).mul(redeemRate));
-        if(_redeemBuffer>redeemBuffer)_redeemBuffer=redeemBufferMax;
+        if(_redeemBuffer>redeemBufferMax)_redeemBuffer=redeemBufferMax;
     }
 }
