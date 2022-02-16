@@ -78,8 +78,6 @@ contract Ownable is IOwnable {
 // Note that the price average is only guaranteed to be over at least 1 period, but may be over a longer period
 contract UniswapPairOracle is Ownable {
     using FixedPoint for *;
-    
-    address timelock_address;
 
     uint public PERIOD = 3600; // 1 hour TWAP (time-weighted average price)
     uint public CONSULT_LENIENCY = 120; // Used for being able to consult past the period end
@@ -95,18 +93,15 @@ contract UniswapPairOracle is Ownable {
     FixedPoint.uq112x112 public price0Average;
     FixedPoint.uq112x112 public price1Average;
 
-
-    modifier onlyPolicy() {
-        require(msg.sender == owner || msg.sender == timelock_address, "You are not an owner or the governance timelock");
-        _;
-    }
-
     constructor (
         address factory, 
         address tokenA, 
-        address tokenB, 
-        address _timelock_address
+        address tokenB
     )  {
+        require(factory != address(0), 'Invalid address');
+        require(tokenA != address(0), 'Invalid address');
+        require(tokenB != address(0), 'Invalid address');
+
         IUniswapV2Pair _pair = IUniswapV2Pair(UniswapV2Library.pairFor(factory, tokenA, tokenB));
         pair = _pair;
         token0 = _pair.token0();
@@ -117,12 +112,6 @@ contract UniswapPairOracle is Ownable {
         uint112 reserve1;
         (reserve0, reserve1, blockTimestampLast) = _pair.getReserves();
         require(reserve0 != 0 && reserve1 != 0, 'UniswapPairOracle: NO_RESERVES'); // Ensure that there's liquidity in the pair
-
-        timelock_address = _timelock_address;
-    }
-
-    function setTimelock(address _timelock_address) external onlyPolicy {
-        timelock_address = _timelock_address;
     }
 
     function setPeriod(uint _period) external onlyPolicy {
