@@ -150,29 +150,33 @@ contract GenericStakingGateway{
         uint _userEarnedValue//1e18
     ){
         _tvl = tvl(stakingRewards,stakingTokenPricer);
-        _apr = annualRewards(stakingRewards,rewardTokenPricer).div(_tvl);
+        _apr = apy(stakingRewards,rewardTokenPricer,_tvl);
         _finish = stakingRewards.periodFinish();
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         _userEarnedAmount = stakingRewards.earned(wallet);
         _userStakedAmount = stakingRewards.balanceOf(wallet);
     }
 
-    function tvl(IStakingRewards stakingRewards,IPricer stakingTokenPricer) public view returns(uint){
-        return stakingRewards.totalSupply().mul(stakingTokenPricer.price(stakingRewards.stakingToken())).div(10^stakingRewards.stakingToken().decimals());
+    function value(IERC20 token,IPricer pricer,uint amount) public view returns(uint){
+        return amount.mul(pricer.price(token)).div(10^token.decimals());
     }
-    function annualRewards(IStakingRewards stakingRewards,IPricer rewardTokenPricer) public view returns(uint){
-        return stakingRewards.rewardRate().mul(31536000).mul(rewardTokenPricer.price(stakingRewards.rewardsToken())).div(10^stakingRewards.rewardsToken().decimals());
+
+    function tvl(IStakingRewards stakingRewards,IPricer stakingTokenPricer) public view returns(uint){
+        return value(stakingRewards.stakingToken(),stakingTokenPricer,stakingRewards.totalSupply());
+    }
+    function apy(IStakingRewards stakingRewards,IPricer rewardTokenPricer,uint _tvl) public view returns(uint){
+        return value(stakingRewards.rewardsToken(),rewardTokenPricer,stakingRewards.rewardRate().mul(31536000)).mul(1e8).div(_tvl);
     }
     function assetPrice() public view returns (uint) {
         ( , int price, , , ) = AggregatorV3Interface(0xf4766552D15AE4d256Ad41B6cf2933482B0680dc).latestRoundData();
         return uint(price);
     }
-    function convertDecimal(uint8 fromDec,uint8 toDec, uint fromAmount) view public returns(uint toAmount){
+    function convertDecimal(uint8 fromDec,uint8 toDec, uint fromAmount) pure public returns(uint toAmount){
         if(fromDec==toDec) toAmount=fromAmount;
         else if(fromDec>toDec) toAmount=fromAmount.div(10**(fromDec-toDec));
         else toAmount=fromAmount.mul(10**(toDec-fromDec));
     }
-    function e18(uint8 fromDec,uint fromAmount) view public returns(uint toAmount){
+    function e18(uint8 fromDec,uint fromAmount) pure public returns(uint toAmount){
         return convertDecimal(fromDec,18,fromAmount);
     }
 }
