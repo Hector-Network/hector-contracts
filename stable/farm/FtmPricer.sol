@@ -105,12 +105,4 @@ contract FtmPricer is IPricer{
         ( , int _price, , , ) = AggregatorV3Interface(0xf4766552D15AE4d256Ad41B6cf2933482B0680dc).latestRoundData();
         return uint(_price).mul(1e10);
     }
-    function convertDecimal(uint8 fromDec,uint8 toDec, uint fromAmount) pure public returns(uint toAmount){
-        if(fromDec==toDec) toAmount=fromAmount;
-        else if(fromDec>toDec) toAmount=fromAmount.div(10**(fromDec-toDec));
-        else toAmount=fromAmount.mul(10**(toDec-fromDec));
-    }
-    function e18(uint8 fromDec,uint fromAmount) pure public returns(uint toAmount){
-        return convertDecimal(fromDec,18,fromAmount);
-    }
 }
