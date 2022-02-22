@@ -154,7 +154,9 @@ contract GenericStakingGateway{
         _finish = stakingRewards.periodFinish();
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         _userEarnedAmount = stakingRewards.earned(wallet);
+        _userEarnedValue = value(stakingRewards.rewardsToken(),rewardTokenPricer,_userEarnedAmount);
         _userStakedAmount = stakingRewards.balanceOf(wallet);
+        _userStakedValue = value(stakingRewards.stakingToken(),stakingTokenPricer,_userStakedAmount);
     }
 
     function value(IERC20 token,IPricer pricer,uint amount) public view returns(uint){
