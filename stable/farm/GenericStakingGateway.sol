@@ -125,8 +125,7 @@ interface IPricer{
 }
 contract GenericStakingGateway{
     using SafeMath for uint;
-    //IStakingRewards public stakingRewards=IStakingRewards(0xD54d478975990927c0Bb9803708A3eD5Dc1cFa20);
-
+    
     function getStakingInfo(IStakingRewards stakingRewards,IPricer stakingTokenPricer,IPricer rewardTokenPricer,address wallet) external view returns(
         uint _tvl,//1e18
         uint _apr,//1e8
