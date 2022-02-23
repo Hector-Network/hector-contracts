@@ -181,18 +181,56 @@ contract StakingGateway{
         uint daiusdc=torPool.balances(1);//1e18
         uint dai=daiusdc.mul(c2pool.balances(0)).div(c2pool.totalSupply());//1e18
         uint usdc=daiusdc.mul(c2pool.balances(1)).div(c2pool.totalSupply()).mul(1e12);//1e18
-        uint ntotal=tor.add(dai).add(usdc).add(amount);
-        uint ntor=ntotal.div(2);
-        uint ndai=ntotal.div(4);
-        //uint nusdc=ntotal.sub(ntor).sub(ndai);
-        if(ntor>=amount.add(tor)) _optimalTor=amount;
-        else if(ntor<=tor) _optimalTor=0;
-        else _optimalTor=ntor.sub(tor);
-        if(ndai>=amount.add(dai)) _optimalDai=amount;
-        else if(ndai<=dai) _optimalDai=0;
-        else _optimalDai=ndai.sub(dai);
-        if(amount>=_optimalTor.add(_optimalDai)) _optimalUsdc=amount.sub(_optimalTor).sub(_optimalDai);
-        else _optimalUsdc=0;
+        if(dai<=usdc&&dai<=tor){
+            if(usdc<=tor){
+                (_optimalDai,_optimalUsdc,_optimalTor)=fill(dai,usdc,tor,1,1,2,amount);
+            }else{
+                (_optimalDai,_optimalTor,_optimalUsdc)=fill(dai,tor,usdc,1,2,1,amount);
+            }
+        }else if(usdc<=dai&&usdc<=tor){
+            if(dai<=tor){
+                (_optimalUsdc,_optimalDai,_optimalTor)=fill(usdc,dai,tor,1,1,2,amount);
+            }else{
+                (_optimalUsdc,_optimalTor,_optimalDai)=fill(usdc,tor,dai,1,2,1,amount);
+            }
+        }else if(tor<=dai&&tor<=usdc){
+            if(dai<=usdc){
+                (_optimalTor,_optimalDai,_optimalUsdc)=fill(tor,dai,usdc,2,1,1,amount);
+            }else{
+                (_optimalTor,_optimalUsdc,_optimalDai)=fill(tor,usdc,dai,2,1,1,amount);
+            }
+        }
+    }
+    function fill(
+        uint coin1,uint coin2,uint coin3,
+        uint factor1,uint factor2,uint factor3,
+        uint amount
+    ) public pure returns(
+        uint _coin1,
+        uint _coin2,
+        uint _coin3
+    ){
+        require(coin1<=coin2&&coin2<=coin3,"coin1 coin2 coin3 not in asending order");
+        uint oamount=amount;
+        if(amount<=coin2.sub(coin1).mul(factor1)) _coin1=amount;
+        else{
+            _coin1=coin2.sub(coin1).mul(factor1);
+            amount=amount.sub(coin2.sub(coin1).mul(factor1));
+            if(amount<=coin3.sub(coin2).mul(factor1.add(factor2))){
+                _coin1=_coin1.add(amount.mul(factor1).div(factor1.add(factor2)));
+                _coin2=amount.mul(factor2).div(factor1.add(factor2));
+            }else{
+                _coin1=_coin1.add(coin3.sub(coin2).mul(factor1));
+                _coin2=coin3.sub(coin2).mul(factor2);
+                amount=amount.sub(coin3.sub(coin2).mul(factor1.add(factor2)));
+                if(amount>0){
+                    _coin1=_coin1.add(amount.mul(factor1).div(factor1.add(factor2).add(factor3)));
+                    _coin2=_coin2.add(amount.mul(factor2).div(factor1.add(factor2).add(factor3)));
+                    _coin3=amount.mul(factor3).div(factor1.add(factor2).add(factor3));
+                }
+            }
+        }
+        if(oamount>_coin1.add(_coin2).add(_coin3))_coin1=_coin1.add(oamount.sub(_coin1.add(_coin2).add(_coin3)));
     }
     function calPoolToken(uint torAmount,uint daiAmount,uint usdcAmount) public view returns(uint poolTokenAmount){
         uint[2] memory tokens;
