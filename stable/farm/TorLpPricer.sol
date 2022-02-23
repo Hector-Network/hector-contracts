@@ -103,6 +103,6 @@ contract TorLpPricer is IPricer{
         if(pair.token1()==0x74E23dF9110Aa9eA0b6ff2fAEE01e740CA1c642e){
             totalTorAmount=reserve1;
         }
-        return totalTorAmount.mul(2).mul(10^pair.decimals()).div(pair.totalSupply());
+        return totalTorAmount.mul(2).mul(10**pair.decimals()).div(pair.totalSupply());
     }
 }
