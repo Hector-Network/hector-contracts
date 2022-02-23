@@ -120,7 +120,7 @@ interface IStakingRewards {
     function withdraw(uint amount) external;
 }
 interface IPricer{
-    //price for 1 token unit (10^tokenDecimals), price is in 1e18
+    //price for 1 token unit (10**tokenDecimals), price is in 1e18
     function price(IERC20 token) external view returns(uint);
 }
 contract GenericStakingGateway{
@@ -148,7 +148,7 @@ contract GenericStakingGateway{
     }
 
     function value(IERC20 token,IPricer pricer,uint amount) public view returns(uint){
-        return amount.mul(pricer.price(token)).div(10^token.decimals());
+        return amount.mul(pricer.price(token)).div(10**token.decimals());
     }
 
     function tvl(IStakingRewards stakingRewards,IPricer stakingTokenPricer) public view returns(uint){
