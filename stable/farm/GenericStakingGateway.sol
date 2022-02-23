@@ -138,7 +138,7 @@ contract GenericStakingGateway{
         uint _userEarnedValue//1e18
     ){
         _tvl = tvl(stakingRewards,stakingTokenPricer);
-        _apr = apy(stakingRewards,rewardTokenPricer,_tvl);
+        _apr = apr(stakingRewards,rewardTokenPricer,_tvl);
         _finish = stakingRewards.periodFinish();
         _begin =_finish.sub(stakingRewards.rewardsDuration());
         _userEarnedAmount = stakingRewards.earned(wallet);
@@ -154,7 +154,7 @@ contract GenericStakingGateway{
     function tvl(IStakingRewards stakingRewards,IPricer stakingTokenPricer) public view returns(uint){
         return value(stakingRewards.stakingToken(),stakingTokenPricer,stakingRewards.totalSupply());
     }
-    function apy(IStakingRewards stakingRewards,IPricer rewardTokenPricer,uint _tvl) public view returns(uint){
+    function apr(IStakingRewards stakingRewards,IPricer rewardTokenPricer,uint _tvl) public view returns(uint){
         return value(stakingRewards.rewardsToken(),rewardTokenPricer,stakingRewards.rewardRate().mul(31536000)).mul(1e8).div(_tvl);
     }
 }
