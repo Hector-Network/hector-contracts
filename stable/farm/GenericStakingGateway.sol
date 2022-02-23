@@ -82,18 +82,6 @@ interface IERC20 {
 
     event Approval(address indexed owner, address indexed spender, uint256 value);
 }
-interface AggregatorV3Interface {
-  function latestRoundData()
-    external
-    view
-    returns (
-      uint80 roundId,
-      int256 answer,
-      uint256 startedAt,
-      uint256 updatedAt,
-      uint80 answeredInRound
-    );
-}
 interface IStakingRewards {
     // Views
 
@@ -168,17 +156,5 @@ contract GenericStakingGateway{
     }
     function apy(IStakingRewards stakingRewards,IPricer rewardTokenPricer,uint _tvl) public view returns(uint){
         return value(stakingRewards.rewardsToken(),rewardTokenPricer,stakingRewards.rewardRate().mul(31536000)).mul(1e8).div(_tvl);
-    }
-    function assetPrice() public view returns (uint) {
-        ( , int price, , , ) = AggregatorV3Interface(0xf4766552D15AE4d256Ad41B6cf2933482B0680dc).latestRoundData();
-        return uint(price);
-    }
-    function convertDecimal(uint8 fromDec,uint8 toDec, uint fromAmount) pure public returns(uint toAmount){
-        if(fromDec==toDec) toAmount=fromAmount;
-        else if(fromDec>toDec) toAmount=fromAmount.div(10**(fromDec-toDec));
-        else toAmount=fromAmount.mul(10**(toDec-fromDec));
-    }
-    function e18(uint8 fromDec,uint fromAmount) pure public returns(uint toAmount){
-        return convertDecimal(fromDec,18,fromAmount);
     }
 }
