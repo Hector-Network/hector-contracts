@@ -134,18 +134,18 @@ interface ITORMinter{
 contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     using SafeMath for uint;
 
-    uint public reserveCeilingPercentage=10000;//40%=4000
+    uint public reserveCeilingPercentage=3000;//40%=4000
     uint public reserveFloorPercentage=0;//20%=2000
 
-    uint public mintPercentageCeiling=6000;//percentage of TOR in curve pool, 100%=10000
-    uint public redeemPercentageFloor=6500;//percentage of TOR in curve pool, 100%=10000
+    uint public mintPercentageCeiling=5000;//percentage of TOR in curve pool, 100%=10000
+    uint public redeemPercentageFloor=6000;//percentage of TOR in curve pool, 100%=10000
 
     uint public mintBuffer=0;
     uint public redeemBuffer=0;
-    uint public mintRate=10*1e18;//per second mintable rate, 1 tor = 1e18
-    uint public redeemRate=5*1e18;//per second redeemable rate, 1 tor = 1e18
-    uint public mintBufferMax=100000*1e18;//100K TOR as max mint buffer
-    uint public redeemBufferMax=10000*1e18;//10K TOR as max redeem buffer
+    uint public mintRate=30*1e18;//per second mintable rate, 1 tor = 1e18
+    uint public redeemRate=10*1e18;//per second redeemable rate, 1 tor = 1e18
+    uint public mintBufferMax=30000*1e18;//100K TOR as max mint buffer
+    uint public redeemBufferMax=30000*1e18;//10K TOR as max redeem buffer
 
     mapping(address=>uint) public allowedStableToken;
 
