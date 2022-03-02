@@ -147,6 +147,8 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     uint public mintBufferMax=100000*1e18;//100K TOR as max mint buffer
     uint public redeemBufferMax=10000*1e18;//10K TOR as max redeem buffer
 
+    mapping(address=>uint) public allowedStableToken;
+
     ITORReserveHelper public TORReserveHelper;
     ITORCurveHelper public TORCurveHelper;
 
@@ -195,7 +197,14 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
         require(_redeemBufferMax!=0);
         redeemBufferMax=_redeemBufferMax;
     }
+    function addAllowedStable(address stableToken) external onlyOwner(){
+        if(allowedStableToken[stableToken]==0) allowedStableToken[stableToken]=1;
+    }
+    function removeAllowedStable(address stableToken) external onlyOwner(){
+        if(allowedStableToken[stableToken]==1) delete allowedStableToken[stableToken];
+    }
     function canMint(address wallet,uint torAmount,address stableToken) override external returns(bool){
+        require(allowedStableToken[stableToken]!=0,"mint not allowed for stableToken");
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryMint");
@@ -205,6 +214,7 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
         return true;
     }
     function canRedeem(address wallet,uint torAmount,address stableToken) override external returns(bool){
+        require(allowedStableToken[stableToken]!=0,"redeem not allowed for stableToken");
         require(torAmount>0,"amount must be positive");
         require(wallet!=address(0),"invalid address");
         require(msg.sender==TORMinter&&TORMinter!=address(0),"only TORMinter can tryRedeem");
