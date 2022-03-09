@@ -827,6 +827,17 @@ interface IAnyswapRouter {
     ) external;
 }
 
+interface IUniswapRouter{
+    function swapExactTokensForTokens(
+        uint256 amountIn,
+        uint256 amountOutMin,
+        address[] calldata path,
+        address to,
+        uint256 deadline
+    ) external returns (uint256[] memory amounts);
+    function getAmountsIn(uint amountOut, address[] calldata path) external view returns (uint[] memory amounts);
+}
+
 /**
  *  Contract deploys reserves from treasury into the Convex lending pool,
  *  earning interest and $CVX.
@@ -858,6 +869,7 @@ contract ConvexAllocator is Ownable {
     //IConvexRewards public rewardPool; // Convex reward contract
     IAnyswapRouter public immutable anyswapRouter; // anyswap router
     ICurve3Pool public curve3Pool; // Curve 3Pool
+    IUniswapRouter public router;  //Uniswap router
     address public rewardCollector;
 
     mapping(address => tokenData) public tokenInfo; // info for deposited tokens
@@ -878,6 +890,12 @@ contract ConvexAllocator is Ownable {
     address public ftmAddressCandidate;
     uint256 public immutable ftmAddressChangeTimelock;
     uint256 public ftmAddressActiveblock;
+    
+    IERC20 DAI = IERC20(0x6B175474E89094C44Da98b954EedeAC495271d0F);
+    IERC20 ANYDAI = IERC20(0x739ca6D71365a08f584c8FC4e1029045Fa8ABC4B);
+    IERC20 CRV = IERC20(0xD533a949740bb3306d119CC777fa900bA034cd52);
+    IERC20 CVX = IERC20(0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B);
+    
 
     /* ======== CONSTRUCTOR ======== */
 
@@ -889,7 +907,8 @@ contract ConvexAllocator is Ownable {
         address _rewardCollector,
         address _ftmAddress,
         uint256 _ftmAddressChangeTimelock,
-        uint256 _timelockInBlocks
+        uint256 _timelockInBlocks,
+        address _router
     ) {
         require(_anyswapRouter != address(0));
         anyswapRouter = IAnyswapRouter(_anyswapRouter);
@@ -912,14 +931,20 @@ contract ConvexAllocator is Ownable {
         ftmAddress = _ftmAddress;
 
         ftmAddressChangeTimelock = _ftmAddressChangeTimelock;
+
+        require(_router != address(0), 'Invalid router');
+        router = IUniswapRouter(_router);
+
+        initialize();
     }
 
-    /* ======== OPEN FUNCTIONS ======== */
+    /* ======== OPEN FUNCTIONS ======== */    
 
     /**
      *  @notice claims accrued CVX rewards for all tracked crvTokens
+     *  @param stableToken address
      */
-    function harvest() public {
+    function harvest(address stableToken) public {
         //claim rewards for all crvTokens
         for (uint256 i = 0; i < pidForReserve.length; i++) {
             address rewardPool = pidForReserve[i].rewardPool;
@@ -929,13 +954,19 @@ contract ConvexAllocator is Ownable {
             IConvexRewards(rewardPool).getReward();
         }
 
+        uint stableAmount;
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             uint256 balance = IERC20(rewardTokens[i]).balanceOf(address(this));
 
             if (balance > 0) {
-                IERC20(rewardTokens[i]).safeTransfer(rewardCollector, balance);
+                //Convert rewards to stables
+                stableAmount += swapRewardsToStable(IERC20(rewardTokens[i]), balance, IERC20(stableToken));                
             }
         }
+
+        //Send stables to treasury
+        if (stableAmount > 0)
+            IERC20(stableToken).safeTransfer(rewardCollector, stableAmount);
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -1157,7 +1188,7 @@ contract ConvexAllocator is Ownable {
      *  @notice sets reward collector address
      *  @param _rewardCollector address
      */
-    function setRewardCollector(address _rewardCollector) external onlyPolicy {
+    function setRewardCollector(address _rewardCollector) public onlyPolicy {
         require(
             _rewardCollector != address(0) &&
                 rewardCollector != _rewardCollector,
@@ -1166,12 +1197,21 @@ contract ConvexAllocator is Ownable {
         rewardCollector = _rewardCollector;
     }
 
+    function setRouter(address _router) public onlyPolicy {
+        require(
+            _router != address(0) &&
+                address(router) != _router,
+            "Invalid router address"
+        );
+        router = IUniswapRouter(_router);
+    }
+
     /**
      *  @notice adds asset and corresponding crvToken to mapping
      *  @param principleToken address
      */
     function addToken(address principleToken, address anyswapERC20Token)
-        external
+        public
         onlyPolicy
     {
         require(anyswapERC20Token != address(0), "invalid anyswap erc20 token");
@@ -1195,7 +1235,7 @@ contract ConvexAllocator is Ownable {
      *  @notice add new reward token to be harvested
      *  @param token address
      */
-    function addRewardToken(address token) external onlyPolicy {
+    function addRewardToken(address token) public onlyPolicy {
         require(IERC20(token).totalSupply() > 0, "Invalid address");
         require(token != address(0));
         rewardTokens.push(token);
@@ -1227,6 +1267,49 @@ contract ConvexAllocator is Ownable {
             // track total value allocated into pools
             totalValueReturned = totalValueReturned.add(value);
         }
+    }
+
+    /**
+     *  @notice sets up token list and rewards token
+     */
+    function initialize() internal {
+        //Initialize token list
+        addToken(address(DAI), address(ANYDAI));
+
+        //Initialize rewards token list
+        addRewardToken(address(CRV));
+        addRewardToken(address(CVX));
+    }
+
+    /**
+     *  @notice swaps reward tokens to stable
+     *  @param rewardToken IERC20
+     *  @param rewardAmount uint
+     *  @param _stableToken IERC20
+     */
+    function swapRewardsToStable(IERC20 rewardToken, uint rewardAmount, IERC20 _stableToken) internal returns(uint _stableAmount){
+        require(address(router) !=address(0), "Invalid router");
+        
+        address[] memory path=new address[](2);
+        path[0] = address(rewardToken);
+        path[1] = address(_stableToken);
+
+        uint[] memory amounts = router.getAmountsIn(rewardAmount, path);
+        
+        rewardToken.approve(address(router), amounts[0]);
+
+        uint[] memory amountOuts = router.swapExactTokensForTokens(
+            amounts[0],
+            1,
+            path,
+            address(this),
+            block.timestamp
+        );
+
+        uint amountOut = amountOuts[1];
+
+        require(_stableToken.transfer(address(this), amountOut), 'Transfer failed');
+        _stableAmount = amountOut;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
