@@ -1294,22 +1294,19 @@ contract ConvexAllocator is Ownable {
         path[0] = address(rewardToken);
         path[1] = address(_stableToken);
 
-        uint[] memory amounts = router.getAmountsIn(rewardAmount, path);
-        
-        rewardToken.approve(address(router), amounts[0]);
+        rewardToken.approve(address(router), rewardAmount);
 
         uint[] memory amountOuts = router.swapExactTokensForTokens(
-            amounts[0],
+            rewardAmount,
             1,
             path,
             address(this),
             block.timestamp
         );
 
-        uint amountOut = amountOuts[1];
-
-        require(_stableToken.transfer(address(this), amountOut), 'Transfer failed');
-        _stableAmount = amountOut;
+        require(amountOuts[1] > 0, "invalid stable coins amount from swap");
+        
+        _stableAmount = amountOuts[1];
     }
 
     /* ======== VIEW FUNCTIONS ======== */
