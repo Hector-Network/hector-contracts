@@ -659,6 +659,7 @@ interface IAthanasiaOtc {
         address otcToken;
         uint256 otcPrice;
         uint256 totalAmount;
+        uint256 purchasedAmount;
     }
 
     /**
@@ -712,7 +713,7 @@ interface IStakingHelper {
     function stake(uint256 _amount, address _recipient) external;
 }
 
-interface IHectorTreasury {
+interface ITreasury {
     function mintRewards(address _recipient, uint256 _amount) external;
 }
 
@@ -724,27 +725,33 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
     IERC20 public immutable HEC;
     IERC20 public immutable sHEC;
     IStakingHelper public immutable stakingHelper;
-    IHectorTreasury public immutable hectorTreasury;
+    ITreasury public immutable treasury;
 
-    mapping(address => TokenInfo) collections;
-    mapping(address => mapping(address => uint256)) userPurchasedForCollection;
+    mapping(address => TokenInfo) public collections;
+    mapping(address => mapping(address => bool)) public whitelist;
+    mapping(address => mapping(address => uint256))
+        public userPurchasedForCollection;
+
+    /* ======= CONSTRUCTOR ======= */
 
     constructor(
         address _HEC,
         address _sHEC,
         address _stakingHelper,
-        address _hectorTreasury
+        address _treasury
     ) {
         require(_HEC != address(0), 'OTC: Invalid HEC');
         require(_sHEC != address(0), 'OTC: Invalid sHEC');
         require(_stakingHelper != address(0), 'OTC: Invalid staking helper');
-        require(_hectorTreasury != address(0), 'OTC: Invalid hector treasury');
+        require(_treasury != address(0), 'OTC: Invalid treasury');
 
         HEC = IERC20(_HEC);
         sHEC = IERC20(_sHEC);
         stakingHelper = IStakingHelper(_stakingHelper);
-        hectorTreasury = IHectorTreasury(_hectorTreasury);
+        treasury = ITreasury(_treasury);
     }
+
+    /* ======= MODIFIER ======= */
 
     modifier onlyExistingCollection(address collection) {
         require(
@@ -753,6 +760,15 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         );
         _;
     }
+
+    modifier onlyWhitelisted(address collection, address sender) {
+        require(whitelist[collection][sender], 'OTC: Not whitelisted sender');
+        _;
+    }
+
+    ///////////////////////////////////////////////////////
+    //               MANAGER CALLED FUNCTIONS            //
+    ///////////////////////////////////////////////////////
 
     function registerCollection(
         address collection,
@@ -770,6 +786,58 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         info.totalAmount = totalAmount;
     }
 
+    function addWhitelist(address collection, address[] memory senders)
+        external
+        onlyOwner
+        onlyExistingCollection(collection)
+    {
+        uint256 length = senders.length;
+
+        for (uint256 i = 0; i < length; i++) {
+            address sender = senders[i];
+
+            if (!whitelist[collection][sender]) {
+                whitelist[collection][sender] = true;
+            }
+        }
+    }
+
+    function removeWhitelist(address collection, address[] memory senders)
+        external
+        onlyOwner
+        onlyExistingCollection(collection)
+    {
+        uint256 length = senders.length;
+
+        for (uint256 i = 0; i < length; i++) {
+            address sender = senders[i];
+
+            if (whitelist[collection][sender]) {
+                whitelist[collection][sender] = false;
+            }
+        }
+    }
+
+    function withdraw(
+        address token,
+        address to,
+        uint256 amount
+    ) external onlyOwner {
+        require(to != address(0), 'OTC: Invalid to');
+        require(amount > 0, 'OTC: Invalid amount');
+
+        if (token == address(0)) {
+            (bool success, ) = payable(to).call{value: amount}('');
+            require(success, 'OTC: ETH withdraw failed');
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+        }
+    }
+
+    ///////////////////////////////////////////////////////
+    //                  VIEW FUNCTIONS                   //
+    ///////////////////////////////////////////////////////
+
     function validateCollection(
         address collection,
         address otcToken,
@@ -780,15 +848,29 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         return info.otcToken == otcToken && info.otcPrice == otcPrice;
     }
 
+    ///////////////////////////////////////////////////////
+    //               USER CALLED FUNCTIONS               //
+    ///////////////////////////////////////////////////////
+
     function otc(
         address collection,
         uint256 amountToPurchase,
         uint256 expectedCost
-    ) external payable override onlyExistingCollection(collection) {
+    )
+        external
+        payable
+        override
+        onlyExistingCollection(collection)
+        onlyWhitelisted(collection, msg.sender)
+    {
         TokenInfo memory info = collections[collection];
         uint256 cost = (amountToPurchase * info.otcPrice) / PRICE_MULTIPLIER;
 
         require(cost == expectedCost, 'OTC: Mismatch to the expected cost');
+        require(
+            info.purchasedAmount + amountToPurchase <= info.totalAmount,
+            'OTC: Exceed total amount'
+        );
 
         if (info.otcToken == address(0)) {
             require(msg.value == cost, 'OTC: Mismatch to the ETH value');
@@ -800,8 +882,11 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
             );
         }
 
+        // Update purchased amount
+        info.purchasedAmount += amountToPurchase;
+
         // Mint HEC
-        hectorTreasury.mintRewards(address(this), amountToPurchase);
+        treasury.mintRewards(address(this), amountToPurchase);
 
         // Stake HEC and Transfer sHEC to user
         stakingHelper.stake(amountToPurchase, msg.sender);
