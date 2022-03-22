@@ -889,6 +889,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         treasury.mintRewards(address(this), amountToPurchase);
 
         // Stake HEC and Transfer sHEC to user
+        HEC.approve(address(stakingHelper), amountToPurchase);
         stakingHelper.stake(amountToPurchase, msg.sender);
 
         userPurchasedForCollection[collection][msg.sender] += amountToPurchase;
