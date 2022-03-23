@@ -781,6 +781,9 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         require(totalAmount > 0, 'OTC: Invalid total amount');
 
         TokenInfo storage info = collections[collection];
+
+        require(info.purchasedAmount == 0, 'OTC: Already purchased collection');
+        
         info.otcToken = otcToken;
         info.otcPrice = otcPrice;
         info.totalAmount = totalAmount;
