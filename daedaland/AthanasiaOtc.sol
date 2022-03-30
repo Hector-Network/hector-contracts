@@ -775,7 +775,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         address otcToken,
         uint256 otcPrice,
         uint256 totalAmount
-    ) external override onlyOwner {
+    ) external override onlyOwner whenNotPaused {
         require(collection != address(0), 'OTC: Invalid collection');
         require(otcPrice > 0, 'OTC: Invalid otc price');
         require(totalAmount > 0, 'OTC: Invalid total amount');
@@ -783,7 +783,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         TokenInfo storage info = collections[collection];
 
         require(info.purchasedAmount == 0, 'OTC: Already purchased collection');
-        
+
         info.otcToken = otcToken;
         info.otcPrice = otcPrice;
         info.totalAmount = totalAmount;
@@ -792,6 +792,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
     function addWhitelist(address collection, address[] memory senders)
         external
         onlyOwner
+        whenNotPaused
         onlyExistingCollection(collection)
     {
         uint256 length = senders.length;
@@ -808,6 +809,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
     function removeWhitelist(address collection, address[] memory senders)
         external
         onlyOwner
+        whenNotPaused
         onlyExistingCollection(collection)
     {
         uint256 length = senders.length;
@@ -825,7 +827,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         address token,
         address to,
         uint256 amount
-    ) external onlyOwner {
+    ) external onlyOwner whenNotPaused {
         require(to != address(0), 'OTC: Invalid to');
         require(amount > 0, 'OTC: Invalid amount');
 
@@ -871,6 +873,7 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         external
         payable
         override
+        whenNotPaused
         onlyExistingCollection(collection)
         onlyWhitelisted(collection, msg.sender)
     {
