@@ -837,6 +837,14 @@ contract AthanasiaOtc is IAthanasiaOtc, Ownable, Pausable {
         }
     }
 
+    function pause() external onlyOwner whenNotPaused {
+        return _pause();
+    }
+
+    function unpause() external onlyOwner whenPaused {
+        return _unpause();
+    }
+
     ///////////////////////////////////////////////////////
     //                  VIEW FUNCTIONS                   //
     ///////////////////////////////////////////////////////
