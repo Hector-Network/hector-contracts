@@ -105,7 +105,7 @@ contract Splitter is RewardReceiver,Loggable{
         }
     }
 
-    function register(IRewardReceiver receiver) external{
+    function register(IRewardReceiver receiver) external onlyOwner{
         receivers.push(receiver);
     }
 }
