@@ -56,20 +56,21 @@ contract Ownable is IOwnable {
 }
 interface IERC20{
     function transferFrom(address sender, address recipient, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 amount) external returns (bool);
 }
 interface IRewardReceiver{
     function receiveReward(uint amount) external;
 }
 abstract contract RewardReceiver is IRewardReceiver,Ownable{
-    event Log(uint value);
     address public rewardToken;
     function receiveReward(uint amount) external override{
+        require(rewardToken!=address(0),"rewardToken is not set");
         IERC20(rewardToken).transferFrom(msg.sender,address(this),amount);
         onRewardReceived(amount);
     }
     function onRewardReceived(uint amount) internal virtual;
     function setRewardToken(address _rewardToken) external onlyOwner{
-        require(rewardToken==address(0)&&_rewardToken!=address(0));
+        require(rewardToken==address(0)&&_rewardToken!=address(0),"rewardToken can be set only once to non-zero address");
         rewardToken=_rewardToken;
     }
 }
