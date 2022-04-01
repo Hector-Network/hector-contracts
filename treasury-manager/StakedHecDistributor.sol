@@ -430,47 +430,35 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
     }
 }
 
-interface ISHEC{
-    function circulatingSupply() external view returns ( uint );
+interface IsHecLockFarm {
+    // Total unlocked and locked liquidity tokens
+    function balanceOf(address account) external view returns (uint);
+     // Total unlocked liquidity tokens
+    function unlockedBalanceOf(address account) external view returns (uint);
+    // Total locked liquidity tokens
+    function lockedBalanceOf(address account) external view returns (uint);
+    // Total 'balance' used for calculating the percent of the pool the account owns
+    // Takes into account the locked stake time multiplier
+    function boostedBalanceOf(address account) external view returns (uint);
 }
 
 abstract contract StakedHecDistributor is RewardReceiver {
     using SafeERC20 for IERC20;
 
     /* ====== VARIABLES ====== */
-
-    IERC20 public HEC = IERC20(0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
     IRewardReceiver public sHecLockFarm;
+    address public stakingContract;
     
-    uint public immutable epochLength;
-    uint public nextEpochBlock;
-    uint public rate;//5900=0.59%
-    uint public favouriteForNew;//1000=0.1%
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    uint8 public NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
+    uint8 constant NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
-    
-    address public immutable oldStaking;
-    address public immutable sHecOld;
-    
-    address public newStaking;
-    address public sHecNew;
-    
-    struct Adjust {
-        bool add;
-        uint rate;
-        uint target;
-    }
-    
-    Adjust public adjustment;
     
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
 
-
-    constructor(uint _epochLength, uint _nextEpochBlock, address _oldStaking, address _sHecOld, address _newStaking, address _sHecNew, address _sHecLockFarm, address  _rewardToken) {
+    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract) {
         //Set sHecLockFarm address for distribution
         require( _sHecLockFarm != address(0) );
         sHecLockFarm = IRewardReceiver(_sHecLockFarm);
@@ -478,18 +466,9 @@ abstract contract StakedHecDistributor is RewardReceiver {
         require( _rewardToken != address(0) );
         rewardToken = _rewardToken;
 
-        //Preserve existing setting for current rebase model
-        require( _oldStaking != address(0) );
-        oldStaking = _oldStaking;
-        require( _sHecOld != address(0) );
-        sHecOld = _sHecOld;
-        require( _newStaking != address(0) );
-        newStaking = _newStaking;
-        require( _sHecNew != address(0) );
-        sHecNew = _sHecNew;
-        epochLength = _epochLength;
-        nextEpochBlock = _nextEpochBlock;
-        favouriteForNew = 0;
+        //Set staking contract for rebase distribution
+        require( _stakingContract != address(0) );
+        stakingContract = _stakingContract;
     }
 
      /* ====== PUBLIC FUNCTIONS ====== */
@@ -498,56 +477,22 @@ abstract contract StakedHecDistributor is RewardReceiver {
         @notice send epoch reward to staking contract which calls the distribute func (pull model)
      */
     function distribute() external returns ( bool ) {
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock + epochLength; // set next epoch block
-            
-            if(rate==0)return false;
-            uint reward = nextRewardAt(rate);
-            uint oldReward = split(reward,ISHEC(sHecOld).circulatingSupply(),ISHEC(sHecNew).circulatingSupply(),favouriteForNew);
-            uint newReward = reward - oldReward;
+        uint amountPerEpoch = totalRewardsForRebaseStaking / (NUM_EPOCH_PER_DAY * DAYS_IN_A_WEEK);
+        require(amountPerEpoch > 0, "Insufficient reward balances");
 
-            if(oldReward>0){
-                accountingForStaking(oldReward);
-                distributeRewards(oldStaking, oldReward); 
-            }
-            if(newReward>0){
-                accountingForStaking(newReward);
-                distributeRewards(newStaking, newReward);
-            }
-            adjust();
-            return true;
-        } else { 
-            return false; 
-        }
+        accountingForStaking(amountPerEpoch);
+
+        distributeRewards(stakingContract, amountPerEpoch);
+
+        return true;
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
 
     /**
-        @notice increment reward rate for collector
-     */
-    function adjust( ) internal {
-        if ( adjustment.rate != 0 ) {
-            if ( adjustment.add ) { // if rate should increase
-                rate = rate + adjustment.rate; // raise rate
-                if ( rate >= adjustment.target ) { // if target met
-                    adjustment.rate = 0; // turn off adjustment
-                }
-            } else { // if rate should decrease
-                rate = rate - adjustment.rate; // lower rate
-                if ( rate <= adjustment.target ) { // if target met
-                    adjustment.rate = 0; // turn off adjustment
-                }
-            }
-        }
-    }
-
-    /**
         @notice send epoch reward to staking contract
      */
     function distributeRewards( address _recipient, uint _amount ) internal {
-        require( _amount <= totalRewardsForRebaseStaking, "Insufficient reward balances" );
-
         IERC20(rewardToken).approve(_recipient, _amount);
 
         IERC20(rewardToken).safeTransfer( _recipient, _amount );
@@ -568,7 +513,10 @@ abstract contract StakedHecDistributor is RewardReceiver {
         @param weeklyDistributedAmount uint
      */
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
-        uint totalWeeklyRewardsStaking = NUM_EPOCH_PER_DAY * rewardsPerEpoch() * DAYS_IN_A_WEEK;
+        //Get the Boosted TVL of lock farm
+        uint totalBoostedLockFarm = IsHecLockFarm(address(sHecLockFarm)).boostedBalanceOf(address(sHecLockFarm));
+
+        uint totalWeeklyRewardsStaking = weeklyDistributedAmount - totalBoostedLockFarm;
 
         totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
         require(totalRewardsForRebaseStaking > 0, "No rewards avail for staking");
@@ -584,71 +532,6 @@ abstract contract StakedHecDistributor is RewardReceiver {
 
    /* ====== VIEW FUNCTIONS ====== */
     
-    /**
-        @notice calculates the amount of reward per epoch for rebase system
-     */
-    function rewardsPerEpoch() internal view returns (uint total) {
-        require(rate > 0, "No rewards");
-            uint reward = nextRewardAt(rate);
-            uint oldReward = split(reward,ISHEC(sHecOld).circulatingSupply(),ISHEC(sHecNew).circulatingSupply(),favouriteForNew);
-            uint newReward = reward - oldReward;
-            total = 0;
-
-            if(oldReward>0){
-                total += oldReward;
-            }
-            if(newReward>0){
-                total += newReward;
-            }
-    }
-
-    function split( uint reward, uint supply1, uint supply2, uint favouriteFor2 ) public pure returns ( uint _reward1 ) {
-        if(reward==0){
-            return 0;
-        }else{
-            uint total = supply1 + supply2;
-            uint percent1 = (supply1 * 1000000) / total;
-            if (favouriteFor2 < percent1) 
-                percent1 = percent1 - favouriteFor2;
-            else percent1=0;
-            uint reward1 = (reward * percent1) / 1000000;
-            //if(supply1>0&&reward1<1)reward1=1;
-            //uint reward1=reward.mul(supply1).div(total);
-            return reward1;
-        }
-    }
-
-    /**
-        @notice view function for next reward at given rate
-        @param _rate uint
-        @return uint
-     */
-    function nextRewardAt( uint _rate ) public view returns ( uint ) {
-        uint supply = IERC20(rewardToken).totalSupply();
-        return (supply * _rate) / 1000000;
-    }
-
-    /**
-        @notice view function for next reward for specified address
-        @param _recipient address
-        @return uint
-     */
-    function nextRewardFor( address _recipient ) public view returns ( uint ) {
-        uint reward;
-        if(_recipient!=newStaking&&_recipient!=oldStaking){
-            return 0;
-        }else{
-            reward = nextRewardAt(rate);
-            uint oldReward = split(reward,ISHEC(sHecOld).circulatingSupply(),ISHEC(sHecNew).circulatingSupply(),favouriteForNew);
-            uint newReward = reward - oldReward;
-            if(_recipient == newStaking){
-                return newReward;
-            }else{
-                return oldReward;
-            }
-        }
-    }
-
     
     /* ====== POLICY FUNCTIONS ====== */
 
@@ -657,39 +540,8 @@ abstract contract StakedHecDistributor is RewardReceiver {
         sHecLockFarm = IRewardReceiver(_sHecLockFarm);
     }
 
-    function setEpochPerDay( uint8 _epochPerDay ) external onlyOwner() {
-        NUM_EPOCH_PER_DAY = _epochPerDay;
+    function setStakingContract(address _stakingContract) external onlyOwner(){
+        require(_stakingContract != address(0));
+        stakingContract = _stakingContract;
     }
-
-    function setRate( uint _rewardRate ) external onlyOwner() {
-        rate=_rewardRate;
-    }
-    
-    function setFavouriteForNew( uint _favouriteForNew ) external onlyOwner() {
-        require(_favouriteForNew<=50000,"the addtional absolute percentage of reward for new staking can't >5%");
-        favouriteForNew=_favouriteForNew;
-    }
-    
-    function setNewStaking(address _newStaking, address _sHecNew) external onlyOwner() {
-        require( _newStaking != address(0) );
-        newStaking = _newStaking;
-        require( _sHecNew != address(0) );
-        sHecNew = _sHecNew;
-    }
-
-    /**
-        @notice set adjustment info for a collector's reward rate
-        @param _add bool
-        @param _rate uint
-        @param _target uint
-     */
-
-    function setAdjustment( bool _add, uint _rate, uint _target ) external onlyOwner() {
-        adjustment = Adjust({
-            add: _add,
-            rate: _rate,
-            target: _target
-        });
-    }
-
 }
