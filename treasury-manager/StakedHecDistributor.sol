@@ -394,7 +394,7 @@ contract Ownable is IOwnable {
 
 interface IERC20{
     function approve(address spender, uint256 amount) external returns (bool);
-    function totalSupply() external view returns (uint256);
+    function totalSupply() external view returns (uint);
     function balanceOf(address account) external view returns (uint256);
     function allowance(address owner, address spender)
         external
@@ -431,10 +431,6 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
 }
 
 interface IsHecLockFarm {
-    // Total unlocked and locked liquidity tokens
-    function balanceOf(address account) external view returns (uint);
-     // Total unlocked liquidity tokens
-    function unlockedBalanceOf(address account) external view returns (uint);
     // Total locked liquidity tokens
     function lockedBalanceOf(address account) external view returns (uint);
     // Total 'balance' used for calculating the percent of the pool the account owns
@@ -452,8 +448,10 @@ abstract contract StakedHecDistributor is RewardReceiver {
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
+    uint constant WEEKLY_BOOST_RATE = 200; //200/10000 ~ 0.02%
     uint8 constant NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
+   
     
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
@@ -513,21 +511,29 @@ abstract contract StakedHecDistributor is RewardReceiver {
         @param weeklyDistributedAmount uint
      */
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
-        //Get the Boosted TVL of lock farm
-        uint totalBoostedLockFarm = IsHecLockFarm(address(sHecLockFarm)).boostedBalanceOf(address(sHecLockFarm));
+        //Assumption: for every sHEC the min lock time is 7 days, 50 weeks lock = 1X boost, 100 weeks lock = 2X , 7 days lock = 0.02X boost
+       
+        uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
+        uint weeklyRewardAmt = (WEEKLY_BOOST_RATE * sHecTotalSupply) / 10000;
 
-        uint totalWeeklyRewardsStaking = weeklyDistributedAmount - totalBoostedLockFarm;
+        //Get the total sHec in sHec locked farm
+        uint sHecLockedAmt = IsHecLockFarm(address(sHecLockFarm)).lockedBalanceOf(address(sHecLockFarm));
 
-        totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
-        require(totalRewardsForRebaseStaking > 0, "No rewards avail for staking");
-        
-        uint totalWeeklysHecLockFarm = weeklyDistributedAmount - totalWeeklyRewardsStaking;
+        //Calculate the rewards distributed to sHec Lock Farm
+         //(0.02% * sHec.circulatingSupply) * lockedBalance / (sHec.circulatingSupply + lockedBalance)
+        uint totalWeeklysHecLockFarm = (weeklyRewardAmt * sHecLockedAmt) / (sHecTotalSupply + sHecLockedAmt);
+
         require(totalWeeklysHecLockFarm > 0, "No rewards avail for sHec Lock Farm");
 
         IERC20(rewardToken).approve(address(sHecLockFarm), totalWeeklysHecLockFarm);
         totalSentForLockFarm += totalWeeklysHecLockFarm;
 
         IRewardReceiver(sHecLockFarm).receiveReward(totalWeeklysHecLockFarm);
+
+        uint totalWeeklyRewardsStaking = weeklyDistributedAmount - totalWeeklysHecLockFarm;
+
+        totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
+        require(totalRewardsForRebaseStaking > 0, "No rewards avail for staking");
     }
 
    /* ====== VIEW FUNCTIONS ====== */
