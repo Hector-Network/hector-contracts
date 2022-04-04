@@ -432,10 +432,10 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
 
 interface IsHecLockFarm {
     // Total locked liquidity tokens
-    function lockedBalanceOf(address account) external view returns (uint);
+    function lockedBalance() external view returns (uint);
     // Total 'balance' used for calculating the percent of the pool the account owns
     // Takes into account the locked stake time multiplier
-    function boostedBalanceOf(address account) external view returns (uint);
+    function boostedBalance() external view returns (uint);
 }
 
 abstract contract StakedHecDistributor is RewardReceiver {
@@ -448,7 +448,6 @@ abstract contract StakedHecDistributor is RewardReceiver {
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    uint constant WEEKLY_BOOST_RATE = 200; //200/10000 ~ 0.02%
     uint8 constant NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
    
@@ -514,14 +513,12 @@ abstract contract StakedHecDistributor is RewardReceiver {
         //Assumption: for every sHEC the min lock time is 7 days, 50 weeks lock = 1X boost, 100 weeks lock = 2X , 7 days lock = 0.02X boost
        
         uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
-        uint weeklyRewardAmt = (WEEKLY_BOOST_RATE * sHecTotalSupply) / 10000;
 
-        //Get the total sHec in sHec locked farm
-        uint sHecLockedAmt = IsHecLockFarm(address(sHecLockFarm)).lockedBalanceOf(address(sHecLockFarm));
+        //Get the total sHec boosted for all wallets in sHec locked farm
+        uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).boostedBalance();
 
         //Calculate the rewards distributed to sHec Lock Farm
-         //(0.02% * sHec.circulatingSupply) * lockedBalance / (sHec.circulatingSupply + lockedBalance)
-        uint totalWeeklysHecLockFarm = (weeklyRewardAmt * sHecLockedAmt) / (sHecTotalSupply + sHecLockedAmt);
+        uint totalWeeklysHecLockFarm = (weeklyDistributedAmount * totalsHecBoost) / (sHecTotalSupply + totalsHecBoost);
 
         require(totalWeeklysHecLockFarm > 0, "No rewards avail for sHec Lock Farm");
 
