@@ -438,7 +438,7 @@ interface IsHecLockFarm {
     function boostedBalance() external view returns (uint);
 }
 
-abstract contract StakedHecDistributor is RewardReceiver {
+contract StakedHecDistributor is RewardReceiver {
     using SafeERC20 for IERC20;
 
     /* ====== VARIABLES ====== */
