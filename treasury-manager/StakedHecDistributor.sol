@@ -431,11 +431,9 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
 }
 
 interface IsHecLockFarm {
-    // Total locked liquidity tokens
-    function lockedBalance() external view returns (uint);
     // Total 'balance' used for calculating the percent of the pool the account owns
     // Takes into account the locked stake time multiplier
-    function boostedBalance() external view returns (uint);
+    function totalTokenBoostedSupply() external view returns (uint);
 }
 
 contract StakedHecDistributor is RewardReceiver {
@@ -515,7 +513,7 @@ contract StakedHecDistributor is RewardReceiver {
         uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
 
         //Get the total sHec boosted for all wallets in sHec locked farm
-        uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).boostedBalance();
+        uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).totalTokenBoostedSupply();
 
         //Calculate the rewards distributed to sHec Lock Farm
         uint totalWeeklysHecLockFarm = (weeklyDistributedAmount * totalsHecBoost) / (sHecTotalSupply + totalsHecBoost);
