@@ -75,9 +75,10 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
         return _farms[index];
     }
 
-    function setFarm(address farm) external override onlyOwner {
+    function addFarm(address farm) external override onlyOwner {
         _farms[_farmIndexTracker.current()] = farm;
         _farmIndexTracker.increment();
+        _isFarm[farm] = true;
     }
 
     function isFarm(address farm) external view override returns (bool) {

@@ -27,7 +27,7 @@ interface ILockAddressRegistry {
 
     function getFarm(uint256 index) external view returns (address);
 
-    function setFarm(address farm) external;
+    function addFarm(address farm) external;
 
     function isFarm(address farm) external view returns (bool);
 
