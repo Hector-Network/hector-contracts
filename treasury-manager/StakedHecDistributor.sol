@@ -443,17 +443,19 @@ contract StakedHecDistributor is RewardReceiver {
     IRewardReceiver public sHecLockFarm;
     address public stakingContract;
     
+    uint public nextEpochBlock;
+    uint public immutable epochLength;
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
     uint8 constant NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
-   
     
+
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
 
-    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract) {
+    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract, uint _epochLength, uint _nextEpochBlock) {
         //Set sHecLockFarm address for distribution
         require( _sHecLockFarm != address(0) );
         sHecLockFarm = IRewardReceiver(_sHecLockFarm);
@@ -464,6 +466,9 @@ contract StakedHecDistributor is RewardReceiver {
         //Set staking contract for rebase distribution
         require( _stakingContract != address(0) );
         stakingContract = _stakingContract;
+
+        epochLength = _epochLength;
+        nextEpochBlock = _nextEpochBlock;
     }
 
      /* ====== PUBLIC FUNCTIONS ====== */
@@ -472,14 +477,22 @@ contract StakedHecDistributor is RewardReceiver {
         @notice send epoch reward to staking contract which calls the distribute func (pull model)
      */
     function distribute() external returns ( bool ) {
-        uint amountPerEpoch = totalRewardsForRebaseStaking / (NUM_EPOCH_PER_DAY * DAYS_IN_A_WEEK);
-        require(amountPerEpoch > 0, "Insufficient reward balances");
+        //the distribute function can be invoked multiple times within one epoch 
+        //but will only send rewards once per epoch at the very first invocation 
+        //of the new epoch
+        if ( nextEpochBlock <= block.number ) {
+            nextEpochBlock += epochLength; // set next epoch block
 
-        accountingForStaking(amountPerEpoch);
+            uint amountPerEpoch = totalRewardsForRebaseStaking / (NUM_EPOCH_PER_DAY * DAYS_IN_A_WEEK);
+            require(amountPerEpoch > 0, "Insufficient reward balances");
 
-        distributeRewards(stakingContract, amountPerEpoch);
+            accountingForStaking(amountPerEpoch);
 
-        return true;
+            distributeRewards(stakingContract, amountPerEpoch);
+
+            return true;
+
+        } else return false;        
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
