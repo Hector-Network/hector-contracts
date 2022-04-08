@@ -25,4 +25,8 @@ interface ILockFarm {
         uint256 indexed fnftId,
         uint256 amount
     );
+    event MultipliersUpdated(
+        uint256 lockedStakeMaxMultiplier,
+        uint256 lockedStakeTimeForMaxMultiplier
+    );
 }

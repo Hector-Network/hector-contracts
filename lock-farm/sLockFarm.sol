@@ -14,7 +14,7 @@ import './interfaces/ILockFarm.sol';
 import './interfaces/ITokenVault.sol';
 import './interfaces/IFNFT.sol';
 
-contract LockFarm is
+contract sLockFarm is
     ILockFarm,
     RewardReceiver,
     LockAccessControl,
@@ -29,13 +29,13 @@ contract LockFarm is
     uint256 public totalTokenSupply;
     uint256 public totalTokenBoostedSupply;
 
-    uint256 public lockedStakeMaxMultiplier = 3e6; // 6 decimals of precision. 1x = 1000000
+    uint256 public lockedStakeMaxMultiplier = 2e6; // 6 decimals of precision. 1x = 1000000
     uint256 public lockedStakeTimeForMaxMultiplier = 3 * 365 * 86400; // 3 years
     uint256 public lockedStakeMinTime = 7 days;
 
     mapping(uint256 => FNFTInfo) public fnfts;
 
-    uint256 private constant MULTIPLIER_BASE = 1e6;
+    uint256 private constant MULTIPLIER_BASE = 0;
     uint256 private constant PRICE_PRECISION = 1e6;
     uint256 private constant SHARE_MULTIPLIER = 1e12;
 
