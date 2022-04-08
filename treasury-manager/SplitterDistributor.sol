@@ -506,13 +506,17 @@ contract Splitter is RewardReceiver,Loggable{
         for(uint i=0;i<receivers.length;i++){
             ReceiverPoolInfo storage info = receiversInfo[address(receivers[i])];
 
-            uint toSend = amount.mul(info.rewardWeightPercentage).div(10000);
-            IERC20(rewardToken).approve(address(receivers[i]),toSend);
+            if (info.isActive) {
+                IRewardReceiver receiver = IRewardReceiver(receivers[i]);
 
-            //Update totalSent for receiver
-            info.totalSent = info.totalSent.add(toSend);
+                uint toSend = amount.mul(info.rewardWeightPercentage).div(10000);
+                IERC20(rewardToken).approve(address(receiver),toSend);
 
-            receivers[i].receiveReward(toSend);
+                //Update totalSent for receiver
+                info.totalSent = info.totalSent.add(toSend);
+
+                receiver.receiveReward(toSend);
+            }
         }
     }
 
