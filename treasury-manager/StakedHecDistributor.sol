@@ -444,12 +444,13 @@ contract StakedHecDistributor is RewardReceiver {
     address public stakingContract;
     
     uint public nextEpochBlock;
-    uint public immutable epochLength;
+    uint public immutable epochLength; //28800s per 8 hrs
+    uint public remainingTimeInSeconds; //
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    uint8 constant NUM_EPOCH_PER_DAY = 3;   //Number of epoch per day
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
+    uint constant SECONDS_IN_A_WEEK = 60 * 60 * 24 * DAYS_IN_A_WEEK;
     
 
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
@@ -469,6 +470,8 @@ contract StakedHecDistributor is RewardReceiver {
 
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
+
+        remainingTimeInSeconds = SECONDS_IN_A_WEEK;
     }
 
      /* ====== PUBLIC FUNCTIONS ====== */
@@ -483,9 +486,19 @@ contract StakedHecDistributor is RewardReceiver {
         if ( nextEpochBlock <= block.number ) {
             nextEpochBlock += epochLength; // set next epoch block
 
-            uint amountPerEpoch = totalRewardsForRebaseStaking / (NUM_EPOCH_PER_DAY * DAYS_IN_A_WEEK);
+            uint amountPerEpoch;
+
+            if (epochLength < remainingTimeInSeconds)
+                amountPerEpoch = (epochLength * totalRewardsForRebaseStaking) / remainingTimeInSeconds;
+            else
+                amountPerEpoch = totalRewardsForRebaseStaking;
+
             require(amountPerEpoch > 0, "Insufficient reward balances");
 
+            //update remaining seconds 
+            remainingTimeInSeconds -= epochLength;
+
+            //update remaining reward amount
             accountingForStaking(amountPerEpoch);
 
             distributeRewards(stakingContract, amountPerEpoch);
@@ -542,6 +555,9 @@ contract StakedHecDistributor is RewardReceiver {
 
         totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
         require(totalRewardsForRebaseStaking > 0, "No rewards avail for staking");
+
+        //Reset the remaining time for rebasing
+        remainingTimeInSeconds = SECONDS_IN_A_WEEK;
     }
 
    /* ====== VIEW FUNCTIONS ====== */
