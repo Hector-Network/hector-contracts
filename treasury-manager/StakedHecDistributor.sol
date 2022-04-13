@@ -247,7 +247,160 @@ library Address {
     }
 }
 
+library SafeMath {
+    /**
+     * @dev Returns the addition of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `+` operator.
+     *
+     * Requirements:
+     *
+     * - Addition cannot overflow.
+     */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "SafeMath: addition overflow");
 
+        return c;
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        return sub(a, b, "SafeMath: subtraction overflow");
+    }
+
+    /**
+     * @dev Returns the subtraction of two unsigned integers, reverting with custom message on
+     * overflow (when the result is negative).
+     *
+     * Counterpart to Solidity's `-` operator.
+     *
+     * Requirements:
+     *
+     * - Subtraction cannot overflow.
+     */
+    function sub(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b <= a, errorMessage);
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the multiplication of two unsigned integers, reverting on
+     * overflow.
+     *
+     * Counterpart to Solidity's `*` operator.
+     *
+     * Requirements:
+     *
+     * - Multiplication cannot overflow.
+     */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-contracts/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "SafeMath: multiplication overflow");
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        return div(a, b, "SafeMath: division by zero");
+    }
+
+    /**
+     * @dev Returns the integer division of two unsigned integers. Reverts with custom message on
+     * division by zero. The result is rounded towards zero.
+     *
+     * Counterpart to Solidity's `/` operator. Note: this function uses a
+     * `revert` opcode (which leaves remaining gas untouched) while Solidity
+     * uses an invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function div(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b > 0, errorMessage);
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        return mod(a, b, "SafeMath: modulo by zero");
+    }
+
+    /**
+     * @dev Returns the remainder of dividing two unsigned integers. (unsigned integer modulo),
+     * Reverts with custom message when dividing by zero.
+     *
+     * Counterpart to Solidity's `%` operator. This function uses a `revert`
+     * opcode (which leaves remaining gas untouched) while Solidity uses an
+     * invalid opcode to revert (consuming all remaining gas).
+     *
+     * Requirements:
+     *
+     * - The divisor cannot be zero.
+     */
+    function mod(
+        uint256 a,
+        uint256 b,
+        string memory errorMessage
+    ) internal pure returns (uint256) {
+        require(b != 0, errorMessage);
+        return a % b;
+    }
+}
 
 /**
  * @title SafeERC20
@@ -260,6 +413,7 @@ library Address {
  */
 library SafeERC20 {
     using Address for address;
+    using SafeMath for uint256;
 
     function safeTransfer(
         IERC20 token,
@@ -438,6 +592,7 @@ interface IsHecLockFarm {
 
 contract StakedHecDistributor is RewardReceiver {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     /* ====== VARIABLES ====== */
     IRewardReceiver public sHecLockFarm;
@@ -445,7 +600,8 @@ contract StakedHecDistributor is RewardReceiver {
     
     uint public nextEpochBlock;
     uint public immutable epochLength; //28800s per 8 hrs
-    uint public remainingTimeInSeconds; //
+    uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
+    uint public remainingTimeInSeconds;
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
@@ -470,8 +626,6 @@ contract StakedHecDistributor is RewardReceiver {
 
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
-
-        remainingTimeInSeconds = SECONDS_IN_A_WEEK;
     }
 
      /* ====== PUBLIC FUNCTIONS ====== */
@@ -484,24 +638,31 @@ contract StakedHecDistributor is RewardReceiver {
         //but will only send rewards once per epoch at the very first invocation 
         //of the new epoch
         if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock += epochLength; // set next epoch block
+            nextEpochBlock = nextEpochBlock.add(epochLength); // set next epoch block
 
             uint amountPerEpoch;
+            uint currentTime = block.timestamp;
 
-            if (epochLength < remainingTimeInSeconds)
-                amountPerEpoch = (epochLength * totalRewardsForRebaseStaking) / remainingTimeInSeconds;
-            else
+            if (currentTime < remainingTimeInSeconds) {
+                amountPerEpoch = epochLength.mul(totalRewardsForRebaseStaking).div(remainingTimeInSeconds);
+
+                 //update remaining seconds 
+                remainingTimeInSeconds = remainingTimeInSeconds.sub(currentTime.sub(startingTimeinSeconds));                
+            }                
+            else {  //edge case
+                //Get the remaining reward
                 amountPerEpoch = totalRewardsForRebaseStaking;
 
-            require(amountPerEpoch > 0, "Insufficient reward balances");
-
-            //update remaining seconds 
-            remainingTimeInSeconds -= epochLength;
-
+                //Reset timer
+                updateTimerForRebase(0, 0);
+            }
+                
             //update remaining reward amount
             accountingForStaking(amountPerEpoch);
 
             distributeRewards(stakingContract, amountPerEpoch);
+
+            emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
 
             return true;
 
@@ -516,17 +677,22 @@ contract StakedHecDistributor is RewardReceiver {
     function distributeRewards( address _recipient, uint _amount ) internal {
         IERC20(rewardToken).approve(_recipient, _amount);
 
-        IERC20(rewardToken).safeTransfer( _recipient, _amount );
-
-        emit RewardsDistributed( msg.sender, _recipient, _amount );
+        IERC20(rewardToken).safeTransfer( _recipient, _amount );       
     } 
 
     function accountingForStaking(uint amount) internal {
         //Keep track of sent amount
-        totalSentForRebaseStaking += amount;
+        totalSentForRebaseStaking = totalSentForRebaseStaking.add(amount);
 
         //update available amount for staking
-        totalRewardsForRebaseStaking -= amount;
+        totalRewardsForRebaseStaking = totalRewardsForRebaseStaking.sub(amount);
+    }
+
+    function updateTimerForRebase(uint start, uint end) internal {
+        startingTimeinSeconds = start;
+
+        //Get the last second of the current week
+        remainingTimeInSeconds = end;
     }
 
     /**
@@ -542,22 +708,27 @@ contract StakedHecDistributor is RewardReceiver {
         uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).totalTokenBoostedSupply();
 
         //Calculate the rewards distributed to sHec Lock Farm
-        uint totalWeeklysHecLockFarm = (weeklyDistributedAmount * totalsHecBoost) / (sHecTotalSupply + totalsHecBoost);
+        uint totalWeeklysHecLockFarm = weeklyDistributedAmount.mul(totalsHecBoost).div(sHecTotalSupply.add(totalsHecBoost));
 
         require(totalWeeklysHecLockFarm > 0, "No rewards avail for sHec Lock Farm");
 
         IERC20(rewardToken).approve(address(sHecLockFarm), totalWeeklysHecLockFarm);
-        totalSentForLockFarm += totalWeeklysHecLockFarm;
+        totalSentForLockFarm = totalSentForLockFarm.add(totalWeeklysHecLockFarm);
 
+        //Distribute rewards to sHec Lock farm
         IRewardReceiver(sHecLockFarm).receiveReward(totalWeeklysHecLockFarm);
 
-        uint totalWeeklyRewardsStaking = weeklyDistributedAmount - totalWeeklysHecLockFarm;
+        emit RewardsDistributed( msg.sender, address(sHecLockFarm), totalWeeklysHecLockFarm);
+
+        //Calculate the rewards distributed to rebase 
+        uint totalWeeklyRewardsStaking = weeklyDistributedAmount.sub(totalWeeklysHecLockFarm);
 
         totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
-        require(totalRewardsForRebaseStaking > 0, "No rewards avail for staking");
-
+        require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase");
+        
         //Reset the remaining time for rebasing
-        remainingTimeInSeconds = SECONDS_IN_A_WEEK;
+        uint startTime = block.timestamp;
+        updateTimerForRebase(startTime, startTime.add(7 days).sub(1));             
     }
 
    /* ====== VIEW FUNCTIONS ====== */
