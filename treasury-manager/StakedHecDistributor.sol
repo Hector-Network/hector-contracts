@@ -642,12 +642,13 @@ contract StakedHecDistributor is RewardReceiver {
 
             uint amountPerEpoch;
             uint currentTime = block.timestamp;
+            uint timeLapsed = currentTime.sub(startingTimeinSeconds);
 
             if (currentTime < remainingTimeInSeconds) {
                 amountPerEpoch = epochLength.mul(totalRewardsForRebaseStaking).div(remainingTimeInSeconds);
 
                  //update remaining seconds 
-                remainingTimeInSeconds = remainingTimeInSeconds.sub(currentTime.sub(startingTimeinSeconds));                
+                 updateTimerForRebase(currentTime, remainingTimeInSeconds.sub(timeLapsed));                
             }                
             else {  //edge case
                 //Get the remaining reward
