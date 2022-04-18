@@ -570,6 +570,11 @@ interface IERC20{
 interface IRewardReceiver{
     function receiveReward(uint amount) external;
 }
+
+interface IEmmissionor{
+    function distributionRemainingTime() external returns(uint);
+}
+
 abstract contract RewardReceiver is IRewardReceiver,Ownable{
     event Log(uint value);
     address public rewardToken;
@@ -597,10 +602,12 @@ contract StakedHecDistributor is RewardReceiver {
     /* ====== VARIABLES ====== */
     IRewardReceiver public sHecLockFarm;
     address public stakingContract;
+    address public emmissionorContract;
     
     uint public nextEpochBlock;
     uint public immutable epochLength; //28800s per 8 hrs
-    uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
+    uint public remainingTimeUntilNextDistribution;
+     uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
     uint public remainingTimeInSeconds;
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
@@ -612,7 +619,7 @@ contract StakedHecDistributor is RewardReceiver {
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
 
-    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract, uint _epochLength, uint _nextEpochBlock) {
+    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
         //Set sHecLockFarm address for distribution
         require( _sHecLockFarm != address(0) );
         sHecLockFarm = IRewardReceiver(_sHecLockFarm);
@@ -623,6 +630,10 @@ contract StakedHecDistributor is RewardReceiver {
         //Set staking contract for rebase distribution
         require( _stakingContract != address(0) );
         stakingContract = _stakingContract;
+
+        //Set emmissionor contract to sync up distribution end time
+        require( _emmissionorContract != address(0) );
+        emmissionorContract = _emmissionorContract;
 
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
@@ -689,7 +700,7 @@ contract StakedHecDistributor is RewardReceiver {
         totalRewardsForRebaseStaking = totalRewardsForRebaseStaking.sub(amount);
     }
 
-    function updateTimerForRebase(uint start, uint end) internal {
+     function updateTimerForRebase(uint start, uint end) internal {
         startingTimeinSeconds = start;
 
         //Get the last second of the current week
@@ -701,7 +712,8 @@ contract StakedHecDistributor is RewardReceiver {
         @param weeklyDistributedAmount uint
      */
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
-        //Assumption: for every sHEC the min lock time is 7 days, 50 weeks lock = 1X boost, 100 weeks lock = 2X , 7 days lock = 0.02X boost
+        remainingTimeUntilNextDistribution =  getEndTimeFromEmmissionor();
+        require(remainingTimeUntilNextDistribution > 0, "Distribution timer is not set");
        
         uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
 
@@ -725,14 +737,20 @@ contract StakedHecDistributor is RewardReceiver {
         uint totalWeeklyRewardsStaking = weeklyDistributedAmount.sub(totalWeeklysHecLockFarm);
 
         totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
-        require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase");
-        
-        //Reset the remaining time for rebasing
+        require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase"); 
+
+        //Start the clock for rebasing
         uint startTime = block.timestamp;
-        updateTimerForRebase(startTime, startTime.add(7 days).sub(1));             
+        updateTimerForRebase(startTime, remainingTimeUntilNextDistribution); 
     }
 
    /* ====== VIEW FUNCTIONS ====== */
+   /**
+        @notice retrieves the remaining time which the Emmissionor contract will make the next distribution
+     */
+    function getEndTimeFromEmmissionor() internal returns(uint) {
+        return IEmmissionor(emmissionorContract).distributionRemainingTime();
+    }
     
     
     /* ====== POLICY FUNCTIONS ====== */
