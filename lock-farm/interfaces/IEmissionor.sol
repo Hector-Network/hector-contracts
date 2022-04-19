@@ -5,4 +5,8 @@ interface IEmissionor {
     function getBeginTime() external view returns (uint256);
 
     function getEndTime() external view returns (uint256);
+
+    function distributionRemainingTime() external view returns (uint256);
+
+    function isEmissionActive() external view returns (bool);
 }

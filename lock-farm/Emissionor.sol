@@ -474,7 +474,7 @@ contract Emissionor is Ownable {
 
     struct EmissionInfo {
         uint256 amount;
-        bool emitted;
+        bool isActive;
     }
 
     /* ====== VARIABLES ====== */
@@ -487,10 +487,10 @@ contract Emissionor is Ownable {
     uint256 totalSentToSplitter; //Tracking rewards sent to splitter contract
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
 
-    uint256 distributionRemainingTime;
+    uint256 public distributionRemainingTime;
 
-    mapping(uint256 => EmissionInfo) emissions; //first second of every week as the key, the value includes the amount and status
-    uint256[] emissionBegins; //emssions' begin timestamp
+    mapping(uint256 => EmissionInfo) public emissions; //first second of every week as the key, the value includes the amount and status
+    uint256[] public emissionBegins; //emssions' begin timestamp
     uint256 lastEmittedTimestamp; //last emitReward timestamp
 
     event RewardsDistributed(
@@ -518,26 +518,39 @@ contract Emissionor is Ownable {
 
     /* ====== INTERNAL FUNCTIONS ====== */
 
-    function initialize(uint256 startTimestamp, uint256 amount)
-        external
-        onlyOwner
-    {
+    function initialize(
+        uint256 startTimestamp,
+        uint256[] memory amounts,
+        uint256 checkSum
+    ) external onlyOwner {
         require(
             startTimestamp > block.timestamp,
             'Start timestamp should be in the future'
         );
-        require(amount > 0, 'Invalid amount');
 
         uint256 secondsOfWeek = startTimestamp % 7 days;
         uint256 begin = startTimestamp - secondsOfWeek;
-        EmissionInfo storage info = emissions[begin];
-        require(info.amount == 0 || !info.emitted, 'Already initialized');
+        uint256 length = amounts.length;
+        uint256 sum = 0;
 
-        if (info.amount == 0) {
-            emissionBegins.push(begin);
+        for (uint256 i = 0; i < length; i++) {
+            uint256 amount = amounts[i];
+            require(amount > 0, 'Invalid amount');
+
+            EmissionInfo storage info = emissions[begin];
+            require(info.amount == 0 || info.isActive, 'Already initialized');
+
+            if (info.amount == 0) {
+                emissionBegins.push(begin);
+                info.isActive = true;
+            }
+            info.amount = amount;
+
+            begin += 7 days;
+            sum += amount;
         }
 
-        info.amount = amount;
+        require(sum == checkSum, 'Incorrect check sum');
     }
 
     function emitReward() external onlyOwner {
@@ -546,10 +559,12 @@ contract Emissionor is Ownable {
         uint256 length = emissionBegins.length;
         for (uint256 i = 0; i < length; i++) {
             uint256 begin = emissionBegins[i];
+
             if (begin > lastEmittedTimestamp && begin <= block.timestamp) {
                 EmissionInfo storage info = emissions[begin];
-                if (info.amount > 0 && !info.emitted) {
-                    info.emitted = true;
+
+                if (info.isActive) {
+                    info.isActive = false;
                     reward += info.amount;
                 }
             }
@@ -576,6 +591,7 @@ contract Emissionor is Ownable {
         }
 
         lastEmittedTimestamp = block.timestamp;
+        distributionRemainingTime = getEndTime();
     }
 
     /**
@@ -614,6 +630,14 @@ contract Emissionor is Ownable {
     }
 
     /* ====== VIEW FUNCTIONS ====== */
+
+    function isEmissionActive(uint256 timestamp) external view returns (bool) {
+        uint256 secondsOfWeek = timestamp % 7 days;
+        uint256 begin = timestamp - secondsOfWeek;
+
+        return emissions[begin].isActive;
+    }
+
     function getBeginTime() public view returns (uint256) {
         uint256 time = block.timestamp;
         uint256 secondsOfWeek = time % 7 days;
