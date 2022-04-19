@@ -4,6 +4,7 @@ pragma solidity ^0.8.7;
 import '@openzeppelin/contracts/access/Ownable.sol';
 
 import './interfaces/ILockAddressRegistry.sol';
+import './interfaces/IEmissionor.sol';
 import './interfaces/ITokenVault.sol';
 import './interfaces/IFNFT.sol';
 
@@ -54,5 +55,9 @@ contract LockAccessControl is Ownable {
 
     function getFNFT() internal view returns (IFNFT) {
         return IFNFT(addressProvider.getFNFT());
+    }
+
+    function getEmissionor() internal view returns (IEmissionor) {
+        return IEmissionor(addressProvider.getEmissionor());
     }
 }

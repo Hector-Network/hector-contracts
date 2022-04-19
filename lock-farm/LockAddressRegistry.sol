@@ -13,6 +13,7 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
     bytes32 public constant TOKEN_VAULT = 'TOKEN_VAULT';
     bytes32 public constant FNFT = 'FNFT';
     bytes32 public constant REWARD_DISTRIBUTOR = 'REWARD_DISTRIBUTOR';
+    bytes32 public constant EMISSIONOR = 'EMISSIONOR';
 
     mapping(bytes32 => address) private _addresses;
 
@@ -27,12 +28,14 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
         address admin,
         address tokenVault,
         address fnft,
-        address rewardDistributor
+        address rewardDistributor,
+        address emissionor
     ) external override onlyOwner {
         _addresses[ADMIN] = admin;
         _addresses[TOKEN_VAULT] = tokenVault;
         _addresses[FNFT] = fnft;
         _addresses[REWARD_DISTRIBUTOR] = rewardDistributor;
+        _addresses[EMISSIONOR] = emissionor;
     }
 
     function getAdmin() external view override returns (address) {
@@ -69,6 +72,14 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
         onlyOwner
     {
         _addresses[REWARD_DISTRIBUTOR] = rewardDistributor;
+    }
+
+    function getEmissionor() external view override returns (address) {
+        return _addresses[EMISSIONOR];
+    }
+
+    function setEmissionor(address emissionor) external override onlyOwner {
+        _addresses[EMISSIONOR] = emissionor;
     }
 
     function getFarm(uint256 index) external view override returns (address) {
