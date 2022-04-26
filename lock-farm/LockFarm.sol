@@ -223,12 +223,11 @@ contract LockFarm is
     ///////////////////////////////////////////////////////
 
     function onRewardReceived(uint256 amount) internal virtual override {
-        uint256 begin = getEmissionor().getBeginTime();
         uint256 end = getEmissionor().getEndTime();
 
         if (beginRewardTimestamp == 0) {
-            beginRewardTimestamp = begin;
-            lastRewardTimestamp = begin;
+            beginRewardTimestamp = block.timestamp;
+            lastRewardTimestamp = block.timestamp;
         }
 
         totalReward += amount;

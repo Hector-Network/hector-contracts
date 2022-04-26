@@ -83,6 +83,11 @@ contract TokenVault is
         whenNotPaused
         nonReentrant
     {
+        require(
+            getFNFT().ownerOf(fnftId) != recipient,
+            'TokenVault: Invalid recipient'
+        );
+
         FNFTConfig memory fnftConfig = fnfts[fnftId];
 
         require(fnftConfig.endTime <= block.timestamp, 'TokenVault: locked');
@@ -93,6 +98,8 @@ contract TokenVault is
             recipient,
             fnftConfig.depositAmount
         );
+
+        delete fnfts[fnftId];
     }
 
     ///////////////////////////////////////////////////////
