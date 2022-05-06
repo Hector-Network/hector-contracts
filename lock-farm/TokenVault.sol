@@ -84,7 +84,7 @@ contract TokenVault is
         nonReentrant
     {
         require(
-            getFNFT().ownerOf(fnftId) != recipient,
+            getFNFT().ownerOf(fnftId) == recipient,
             'TokenVault: Invalid recipient'
         );
 

@@ -102,7 +102,7 @@ contract LockFarm is
     }
 
     function withdraw(uint256 fnftId) external nonReentrant whenNotPaused {
-        require(getFNFT().ownerOf(fnftId) != msg.sender, 'Farm: Invalid owner');
+        require(getFNFT().ownerOf(fnftId) == msg.sender, 'Farm: Invalid owner');
 
         updateFarm();
 
@@ -124,7 +124,7 @@ contract LockFarm is
     }
 
     function claim(uint256 fnftId) external nonReentrant whenNotPaused {
-        require(getFNFT().ownerOf(fnftId) != msg.sender, 'Farm: Invalid owner');
+        require(getFNFT().ownerOf(fnftId) == msg.sender, 'Farm: Invalid owner');
 
         updateFarm();
 
