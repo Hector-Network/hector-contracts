@@ -459,12 +459,6 @@ abstract contract RewardReceiver is IRewardReceiver, Ownable {
     }
 }
 
-interface IRewardWeight {
-    function getRewardWeight(address receiver) external returns (uint256);
-
-    function getRewardAmount(address receiver) external returns (uint256);
-}
-
 interface ITreasury {
     function mintRewards(address _recipient, uint256 _amount) external;
 }
@@ -480,10 +474,8 @@ contract Emissionor is Ownable {
     /* ====== VARIABLES ====== */
     address public rewardToken;
     address public treasury;
-    IRewardWeight public rewardWeightContract;
     IRewardReceiver public splitter;
 
-    uint256 totalRewardMinted; //Weekly reward amount adjusted manually or from a contract
     uint256 totalSentToSplitter; //Tracking rewards sent to splitter contract
     uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
 
@@ -594,41 +586,6 @@ contract Emissionor is Ownable {
         distributionRemainingTime = getEndTime();
     }
 
-    /**
-        @notice minting rewards from treasury to downstream receiver
-     */
-    function sendRewards() external onlyOwner {
-        require(
-            totalRewardMinted > 0,
-            'Need to allocate reward for distribution'
-        );
-
-        //mint rewards from treasury
-        ITreasury(treasury).mintRewards(address(this), totalRewardMinted);
-
-        require(
-            IERC20(rewardToken).balanceOf(address(this)) > 0,
-            'No reward to distribute'
-        );
-
-        IERC20(rewardToken).approve(address(splitter), totalRewardMinted);
-
-        //send rewards to splitter
-        IRewardReceiver(splitter).receiveReward(totalRewardMinted);
-
-        emit RewardsDistributed(
-            msg.sender,
-            address(splitter),
-            totalRewardMinted
-        );
-
-        //Reset reward
-        totalSentToSplitter += totalRewardMinted;
-        totalRewardMinted = 0;
-
-        distributionRemainingTime = getEndTime();
-    }
-
     /* ====== VIEW FUNCTIONS ====== */
 
     function isEmissionActive(uint256 timestamp) external view returns (bool) {
@@ -657,34 +614,6 @@ contract Emissionor is Ownable {
 
     /* ====== POLICY FUNCTIONS ====== */
 
-    /**
-        @notice Set a specific reward amount to be minted and distributed to downstream receivers by governance contract
-        @param receiver address
-     */
-    function setRewardAmountByContract(address receiver) external onlyOwner {
-        require(
-            address(rewardWeightContract) != address(0),
-            'Need to setup reward contract'
-        );
-        require(address(receiver) != address(0), 'Invalid receiver');
-
-        uint256 amount = IRewardWeight(rewardWeightContract).getRewardAmount(
-            receiver
-        );
-        require(amount > 0, 'Invalid reward amount');
-
-        totalRewardMinted = amount;
-    }
-
-    /**
-        @notice Set a specific reward amount to be minted and distributed to downstream receivers
-        @param amount uint
-     */
-    function setRewardAmount(uint256 amount) external onlyOwner {
-        require(amount > 0, 'Invalid reward amount');
-        totalRewardMinted = amount;
-    }
-
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0));
         treasury = _treasury;
@@ -698,17 +627,5 @@ contract Emissionor is Ownable {
     function setRewardToken(address _rewardToken) external onlyOwner {
         require(_rewardToken != address(0));
         rewardToken = _rewardToken;
-    }
-
-    /**
-        @notice set the governance contract for reward weight percentage 
-        @param _rewardWeightContract address
-     */
-    function setRewardGovernanceContract(address _rewardWeightContract)
-        external
-        onlyOwner
-    {
-        require(_rewardWeightContract != address(0), 'Invalid address');
-        rewardWeightContract = IRewardWeight(_rewardWeightContract);
     }
 }
