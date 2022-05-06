@@ -257,6 +257,9 @@ contract sLockFarm is
         returns (uint256)
     {
         uint256 rewardTokenBal = IERC20(rewardToken).balanceOf(address(this));
+
+        require(rewardTokenBal > 0, 'Farm: Empty reward');
+
         if (amount > rewardTokenBal) {
             IERC20(rewardToken).safeTransfer(to, rewardTokenBal);
             return rewardTokenBal;
