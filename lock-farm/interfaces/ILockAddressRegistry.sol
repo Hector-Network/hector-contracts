@@ -6,7 +6,6 @@ interface ILockAddressRegistry {
         address admin,
         address tokenVault,
         address fnft,
-        address rewardDistributor,
         address emissionor
     ) external;
 
@@ -21,10 +20,6 @@ interface ILockAddressRegistry {
     function getFNFT() external view returns (address);
 
     function setFNFT(address fnft) external;
-
-    function getRewardDistributor() external view returns (address);
-
-    function setRewardDistributor(address rewardDistributor) external;
 
     function getEmissionor() external view returns (address);
 

@@ -107,8 +107,7 @@ contract LockFarm is
         updateFarm();
 
         getTokenVault().withdraw(msg.sender, fnftId);
-        FNFTInfo storage info = fnfts[fnftId];
-        emit Withdraw(msg.sender, fnftId, info.amount);
+        FNFTInfo memory info = fnfts[fnftId];
 
         processReward(msg.sender, fnftId);
 
@@ -118,9 +117,9 @@ contract LockFarm is
         totalTokenSupply -= info.amount;
         totalTokenBoostedSupply -= boostedAmount;
 
-        info.amount = 0;
-        info.multiplier = 0;
-        info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
+        delete fnfts[fnftId];
+
+        emit Withdraw(msg.sender, fnftId, info.amount);
     }
 
     function claim(uint256 fnftId) external nonReentrant whenNotPaused {

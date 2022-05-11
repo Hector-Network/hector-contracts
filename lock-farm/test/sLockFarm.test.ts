@@ -106,7 +106,6 @@ describe('sLockFarm test', async () => {
       deployer.address,
       tokenVault.address,
       fnft.address,
-      treasury.address,
       emissionor.address
     );
     await lockAddressRegistry.addFarm(lockFarm.address);
