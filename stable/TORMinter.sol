@@ -636,23 +636,23 @@ contract TORMinter is ITORMinter,Ownable{
             amount=amount.sub(toTreasury);
         }
 
-    if(amount>0){
-        _stableToken.approve(address(routers[_stableToken]),amount);
-        address[] memory path=new address[](2);
-        path[0]=address(_stableToken);
-        path[1]=address(hec);
-        uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
-            amount,
-            1,
-            path,
-            address(this),
-            block.timestamp
-        );
-        require(amountOuts[1]>0,"invalid hec amount from swap");
-        hec.approve(address(HECMinter),amountOuts[1]);
-        HECMinter.burnHEC(amountOuts[1]);
-        totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
-    }
+        if(amount>0){
+            _stableToken.approve(address(routers[_stableToken]),amount);
+            address[] memory path=new address[](2);
+            path[0]=address(_stableToken);
+            path[1]=address(hec);
+            uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
+                amount,
+                1,
+                path,
+                address(this),
+                block.timestamp
+            );
+            require(amountOuts[1]>0,"invalid hec amount from swap");
+            hec.approve(address(HECMinter),amountOuts[1]);
+            HECMinter.burnHEC(amountOuts[1]);
+            totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
+        }
         uint tor2mint=convertDecimal(_stableToken,TOR,amount);
         require(strategy.canMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
