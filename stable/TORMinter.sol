@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity 0.8.7;
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -508,6 +508,9 @@ interface ITORMintRedeemStrategy{
     function canMint(address recipient,uint torAmount,address stableToken) external returns(bool);
     function canRedeem(address recipient,uint torAmount,address stableToken) external returns(bool);
 }
+interface ITreasury{
+    function manage(address _token, uint256 _amount) external;
+}
 contract TORMinter is ITORMinter,Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -515,6 +518,7 @@ contract TORMinter is ITORMinter,Ownable{
     IERC20 dai=IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
     IERC20 usdc=IERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
     IERC20 public hec=IERC20(0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
+    address treasury=0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
     IERC20 TOR;
     IHECMinter HECMinter;
     uint public totalMintFee;
@@ -532,6 +536,8 @@ contract TORMinter is ITORMinter,Ownable{
     uint public mintFeeBasisPoints=10;
     uint public redeemFeeBasisPoints=10;
     uint constant UNIT_ONE_IN_BPS=10000;
+    uint public mintCR=5000;  //4000 = 40%, 40% dai from the mint goes to treasury, and 60% usdc goes to hec/dai lp to buy and burn
+    uint public redeemCR=1000;//1000 = 10%, redeemCR<=mintCR, 10% dai comes from treasury to pay for redeem, 90% usdc comes from minted HEC sold on hec/dai
 
     constructor(address _HECMinter, address _TOR){
         require(_HECMinter!=address(0));
@@ -559,7 +565,7 @@ contract TORMinter is ITORMinter,Ownable{
             totalHecMinted=ITORMinterValues(oldTorMinter).totalHecMinted();
             totalHecBurnt=ITORMinterValues(oldTorMinter).totalHecBurnt();
             upgraded=true;
-            }
+        }
     }
     function setHec(address _hec) external onlyOwner(){
         require(_hec!=address(0));
@@ -591,6 +597,14 @@ contract TORMinter is ITORMinter,Ownable{
     function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
+    function setMintCR(uint _mintCR) external onlyOwner{
+        require(_mintCR<=10000,"mint CR can't be ower 100%");
+        mintCR=_mintCR;
+    }
+    function setRedeemCR(uint _redeemCR) external onlyOwner{
+        require(_redeemCR<=mintCR,"redeem CR can't be more than mint CR");
+        redeemCR=_redeemCR;
+    }
     function collectFee() external onlyOwner(){
         if(dai.balanceOf(address(this))>0)dai.transfer(owner(),dai.balanceOf(address(this)));
         if(usdc.balanceOf(address(this))>0)usdc.transfer(owner(),usdc.balanceOf(address(this)));
@@ -609,10 +623,20 @@ contract TORMinter is ITORMinter,Ownable{
         require(msg.sender==tx.origin,"mint for EOA only");
         require(address(strategy)!=address(0),"mint redeem strategy is not set");
         _stableToken.safeTransferFrom(msg.sender,address(this),_stableAmount);
+        //amount here is net after fee deducted
         uint amount=_stableAmount.mul(UNIT_ONE_IN_BPS.sub(mintFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
         if(_stableAmount>amount){
             totalMintFee=totalMintFee.add(convertDecimal(_stableToken,TOR,_stableAmount.sub(amount)));
         }
+        //toTreasury is amount sending to treasury
+        uint toTreasury = amount.mul(mintCR).div(UNIT_ONE_IN_BPS);
+        if(toTreasury>0){
+            _stableToken.transfer(treasury,toTreasury);
+            //amount here is net amount fund to buy HEC from LP and burn;
+            amount=amount.sub(toTreasury);
+        }
+
+    if(amount>0){
         _stableToken.approve(address(routers[_stableToken]),amount);
         address[] memory path=new address[](2);
         path[0]=address(_stableToken);
@@ -628,6 +652,7 @@ contract TORMinter is ITORMinter,Ownable{
         hec.approve(address(HECMinter),amountOuts[1]);
         HECMinter.burnHEC(amountOuts[1]);
         totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
+    }
         uint tor2mint=convertDecimal(_stableToken,TOR,amount);
         require(strategy.canMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
@@ -644,6 +669,7 @@ contract TORMinter is ITORMinter,Ownable{
         return mintWithStable(usdc,_usdcAmount);
     }
 
+    //todo add redeemCR logic
     function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint _stableAmount){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
