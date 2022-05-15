@@ -638,7 +638,6 @@ contract TORMinter is ITORMinter,Ownable{
             amount=amount.sub(toTreasury);
             totalEarnedCollateral=totalEarnedCollateral.add(convertDecimal(_stableToken,TOR,toTreasury));
         }
-
         if(amount>0){
             _stableToken.approve(address(routers[_stableToken]),amount);
             address[] memory path=new address[](2);
@@ -672,7 +671,6 @@ contract TORMinter is ITORMinter,Ownable{
         return mintWithStable(usdc,_usdcAmount);
     }
 
-    //todo add redeemCR logic
     function redeemToStable(uint _torAmount,IERC20 _stableToken) internal returns(uint _stableAmount){
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
@@ -681,7 +679,17 @@ contract TORMinter is ITORMinter,Ownable{
         TOR.burnFrom(msg.sender,_torAmount);
         totalTorBurnt=totalTorBurnt.add(_torAmount);
         lastRedeemTimestamp=block.timestamp;
-        uint amountOut=convertDecimal(TOR,_stableToken,_torAmount).mul(UNIT_ONE_IN_BPS.sub(redeemFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
+        //deduct fee
+        uint totalAmountOut=convertDecimal(TOR,_stableToken,_torAmount).mul(UNIT_ONE_IN_BPS.sub(redeemFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
+        //amount from treasury based on redeemCR setting
+        uint fromTreasury=totalAmountOut.mul(redeemCR).div(UNIT_ONE_IN_BPS);
+        if(fromTreasury>0){
+            ITreasury(treasury).manage(address(_stableToken),fromTreasury);
+            totalSpentCollateral=totalSpentCollateral.add(convertDecimal(_stableToken,TOR,fromTreasury));
+        }
+        //amount from newly minted HEC sold
+        uint amountOut=totalAmountOut.sub(fromTreasury);
+        if(amountOut>0){
         address[] memory path=new address[](2);
         path[0]=address(hec);
         path[1]=address(_stableToken);
@@ -697,11 +705,13 @@ contract TORMinter is ITORMinter,Ownable{
             block.timestamp
         );
         amountOut=amountOuts[1];
-        if(_torAmount>convertDecimal(_stableToken,TOR,amountOut)){
-            totalBurnFee=totalBurnFee.add(_torAmount.sub(convertDecimal(_stableToken,TOR,amountOut)));
         }
-        _stableToken.transfer(msg.sender,amountOut);
-        _stableAmount=amountOut;
+        totalAmountOut=amountOut.add(fromTreasury);
+        if(_torAmount>convertDecimal(_stableToken,TOR,totalAmountOut)){
+            totalBurnFee=totalBurnFee.add(_torAmount.sub(convertDecimal(_stableToken,TOR,totalAmountOut)));
+        }
+        _stableToken.transfer(msg.sender,totalAmountOut);
+        _stableAmount=totalAmountOut;
     }
 
     function redeemToDai(uint _torAmount) override external returns(uint _daiAmount){
