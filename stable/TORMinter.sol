@@ -529,6 +529,8 @@ contract TORMinter is ITORMinter,Ownable{
     uint public totalHecBurnt;
     uint public lastMintTimestamp;
     uint public lastRedeemTimestamp;
+    uint public totalEarnedCollateral;
+    uint public totalSpentCollateral;
     bool upgraded=false;
     ITORMintRedeemStrategy public strategy;
     mapping(IERC20=>IUniswapRouter) routers;
@@ -634,6 +636,7 @@ contract TORMinter is ITORMinter,Ownable{
             _stableToken.transfer(treasury,toTreasury);
             //amount here is net amount fund to buy HEC from LP and burn;
             amount=amount.sub(toTreasury);
+            totalEarnedCollateral=totalEarnedCollateral.add(convertDecimal(_stableToken,TOR,toTreasury));
         }
 
         if(amount>0){
