@@ -690,21 +690,21 @@ contract TORMinter is ITORMinter,Ownable{
         //amount from newly minted HEC sold
         uint amountOut=totalAmountOut.sub(fromTreasury);
         if(amountOut>0){
-        address[] memory path=new address[](2);
-        path[0]=address(hec);
-        path[1]=address(_stableToken);
-        uint[] memory amounts=routers[_stableToken].getAmountsIn(amountOut, path);
-        HECMinter.mintHEC(amounts[0]);
-        totalHecMinted=totalHecMinted.add(amounts[0]);
-        hec.approve(address(routers[_stableToken]),amounts[0]);
-        uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
-            amounts[0],
-            1,
-            path,
-            address(this),
-            block.timestamp
-        );
-        amountOut=amountOuts[1];
+            address[] memory path=new address[](2);
+            path[0]=address(hec);
+            path[1]=address(_stableToken);
+            uint[] memory amounts=routers[_stableToken].getAmountsIn(amountOut, path);
+            HECMinter.mintHEC(amounts[0]);
+            totalHecMinted=totalHecMinted.add(amounts[0]);
+            hec.approve(address(routers[_stableToken]),amounts[0]);
+            uint[] memory amountOuts=routers[_stableToken].swapExactTokensForTokens(
+                amounts[0],
+                1,
+                path,
+                address(this),
+                block.timestamp
+            );
+            amountOut=amountOuts[1];
         }
         totalAmountOut=amountOut.add(fromTreasury);
         if(_torAmount>convertDecimal(_stableToken,TOR,totalAmountOut)){
