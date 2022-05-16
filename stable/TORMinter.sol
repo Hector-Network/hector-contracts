@@ -486,7 +486,7 @@ interface ITORMinter{
     function redeemToDai(uint _torAmount) external returns(uint _daiAmount);
     function redeemToUsdc(uint _torAmount) external returns(uint _usdcAmount);
 }
-interface ITORMinterValues{
+interface ITORMinterValuesV2{
     function totalMintFee() external view returns(uint);
     function totalBurnFee() external view returns(uint);
     function totalTorMinted() external view returns(uint);
@@ -496,9 +496,9 @@ interface ITORMinterValues{
     function lastMintTimestamp() external view returns(uint);
     function lastRedeemTimestamp() external view returns(uint);
 }
-interface IOldTORMinterValues{
-    function totalMinted() external view returns(uint);
-    function totalBurnt() external view returns(uint);
+interface ITORMinterValuesV3 is ITORMinterValuesV2{
+    function totalEarnedCollateral() external view returns(uint);
+    function totalSpentCollateral() external view returns(uint);
 }
 interface IHECMinter{
     function mintHEC(uint amount) external;
@@ -551,21 +551,20 @@ contract TORMinter is ITORMinter,Ownable{
         routers[dai]=IUniswapRouter(0xF491e7B69E4244ad4002BC14e878a34207E38c29); //dai=>spooky
         routers[usdc]=IUniswapRouter(0x16327E3FbDaCA3bcF7E38F5Af2599D2DDc33aE52); //usdc=>spirit
     }
-    function upgradeFrom(address oldTorMinter,bool isOldVersion) external onlyOwner(){
+    function upgradeFrom(address oldTorMinter,bool isV3MinterValues) external onlyOwner(){
         if(!upgraded){
-            totalMintFee=ITORMinterValues(oldTorMinter).totalMintFee();
-            totalBurnFee=ITORMinterValues(oldTorMinter).totalBurnFee();
-            if(isOldVersion){
-                totalTorMinted=IOldTORMinterValues(oldTorMinter).totalMinted();
-                totalTorBurnt=IOldTORMinterValues(oldTorMinter).totalBurnt();
-            }else{
-                totalTorMinted=ITORMinterValues(oldTorMinter).totalTorMinted();
-                totalTorBurnt=ITORMinterValues(oldTorMinter).totalTorBurnt();
-                lastMintTimestamp=ITORMinterValues(oldTorMinter).lastMintTimestamp();
-                lastRedeemTimestamp=ITORMinterValues(oldTorMinter).lastRedeemTimestamp();
+            if(isV3MinterValues){
+                totalEarnedCollateral=ITORMinterValuesV3(oldTorMinter).totalEarnedCollateral();
+                totalSpentCollateral=ITORMinterValuesV3(oldTorMinter).totalSpentCollateral();
             }
-            totalHecMinted=ITORMinterValues(oldTorMinter).totalHecMinted();
-            totalHecBurnt=ITORMinterValues(oldTorMinter).totalHecBurnt();
+            totalMintFee=ITORMinterValuesV2(oldTorMinter).totalMintFee();
+            totalBurnFee=ITORMinterValuesV2(oldTorMinter).totalBurnFee();
+            totalTorMinted=ITORMinterValuesV2(oldTorMinter).totalTorMinted();
+            totalTorBurnt=ITORMinterValuesV2(oldTorMinter).totalTorBurnt();
+            lastMintTimestamp=ITORMinterValuesV2(oldTorMinter).lastMintTimestamp();
+            lastRedeemTimestamp=ITORMinterValuesV2(oldTorMinter).lastRedeemTimestamp();
+            totalHecMinted=ITORMinterValuesV2(oldTorMinter).totalHecMinted();
+            totalHecBurnt=ITORMinterValuesV2(oldTorMinter).totalHecBurnt();
             upgraded=true;
         }
     }
