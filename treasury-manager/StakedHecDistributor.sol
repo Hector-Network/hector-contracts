@@ -579,7 +579,7 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
     event Log(uint value);
     address public rewardToken;
     function receiveReward(uint amount) external override{
-        IERC20(rewardToken).transferFrom(msg.sender,address(this),amount);
+        require(IERC20(rewardToken).transferFrom(msg.sender,address(this),amount));
         onRewardReceived(amount);
     }
     function onRewardReceived(uint amount) internal virtual;
@@ -605,15 +605,13 @@ contract StakedHecDistributor is RewardReceiver {
     address public emmissionorContract;
     
     uint public nextEpochBlock;
-    uint public immutable epochLength; //28800s per 8 hrs
+    uint public epochLength; //28800s per 8 hrs
     uint public remainingTimeUntilNextDistribution;
-     uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
+    uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
     uint public remainingTimeInSeconds;
     uint totalRewardsForRebaseStaking;
     uint totalSentForRebaseStaking; //Tracking rewards sent to staking
     uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
-    uint constant SECONDS_IN_A_WEEK = 60 * 60 * 24 * DAYS_IN_A_WEEK;
     
 
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
@@ -764,4 +762,20 @@ contract StakedHecDistributor is RewardReceiver {
         require(_stakingContract != address(0));
         stakingContract = _stakingContract;
     }
+
+    function setEmmissionorContract(address _emmissionorContract) external onlyOwner(){
+        require( _emmissionorContract != address(0) );
+        emmissionorContract = _emmissionorContract;
+    }
+
+    function setEpochLength(uint _epochLength) external onlyOwner(){
+        require( _epochLength > 0 );
+        epochLength = _epochLength;
+    }
+
+    function setNextEpochBlock(uint _nextEpochBlock) external onlyOwner(){
+        require( _nextEpochBlock > 0 );
+        nextEpochBlock = _nextEpochBlock;
+    }
+
 }

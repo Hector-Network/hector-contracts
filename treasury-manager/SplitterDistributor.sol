@@ -473,7 +473,7 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
     event Log(uint value);
     address public rewardToken;
     function receiveReward(uint amount) external override{
-        IERC20(rewardToken).transferFrom(msg.sender,address(this),amount);
+        require(IERC20(rewardToken).transferFrom(msg.sender,address(this),amount));
         onRewardReceived(amount);
     }
     function onRewardReceived(uint amount) internal virtual;
@@ -497,18 +497,28 @@ contract Splitter is RewardReceiver,Loggable{
     IRewardWeight public rewardWeightContract;
     IRewardReceiver[] public receivers;
     mapping(address => ReceiverPoolInfo) public receiversInfo;
+
+    constructor(address _rewardWeightContract) {
+        require( _rewardWeightContract != address(0) );
+        rewardWeightContract = IRewardWeight(_rewardWeightContract);
+    }
     
     function onRewardReceived(uint amount) internal override{
         emit Log(address(this),"Splitter","onRewardReceived",amount);
 
-        for(uint i=0;i<receivers.length;i++){
+       for(uint i=0;i<receivers.length;i++){
             ReceiverPoolInfo storage info = receiversInfo[address(receivers[i])];
+            uint currentBalance = IERC20(rewardToken).balanceOf(address(this));
 
-            if (info.isActive) {
+            if (currentBalance > 0 && info.isActive) {
                 IRewardReceiver receiver = IRewardReceiver(receivers[i]);
                 uint rewardWeight = IRewardWeight(rewardWeightContract).getRewardWeight(address(receiver));
 
                 uint toSend = amount.mul(rewardWeight).div(10000);
+               
+                //Send whatever remaining
+                if (currentBalance < toSend) toSend = currentBalance;
+
                 IERC20(rewardToken).approve(address(receiver),toSend);
 
                 //Update totalSent for receiver
