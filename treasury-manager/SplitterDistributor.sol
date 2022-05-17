@@ -463,7 +463,7 @@ interface IERC20{
 }
 
 interface IRewardWeight{
-    function getRewardWeight(address receiver) external returns(uint);
+    function getRewardWeight(address receiver) view external returns(uint);
 }
 
 interface IRewardReceiver{
@@ -473,7 +473,7 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
     event Log(uint value);
     address public rewardToken;
     function receiveReward(uint amount) external override{
-        IERC20(rewardToken).transferFrom(msg.sender,address(this),amount);
+        require(IERC20(rewardToken).transferFrom(msg.sender,address(this),amount));
         onRewardReceived(amount);
     }
     function onRewardReceived(uint amount) internal virtual;
@@ -489,9 +489,7 @@ interface Loggable{
 
 contract Splitter is RewardReceiver,Loggable{
     using SafeMath for uint;
-
     struct ReceiverPoolInfo {
-        uint rewardWeightPercentage;    //100%=10000, 40%=4000, 4%=400
         uint totalSent;
         bool isActive;
     }
@@ -499,17 +497,28 @@ contract Splitter is RewardReceiver,Loggable{
     IRewardWeight public rewardWeightContract;
     IRewardReceiver[] public receivers;
     mapping(address => ReceiverPoolInfo) public receiversInfo;
+
+    constructor(address _rewardWeightContract) {
+        require( _rewardWeightContract != address(0) );
+        rewardWeightContract = IRewardWeight(_rewardWeightContract);
+    }
     
     function onRewardReceived(uint amount) internal override{
         emit Log(address(this),"Splitter","onRewardReceived",amount);
 
-        for(uint i=0;i<receivers.length;i++){
+       for(uint i=0;i<receivers.length;i++){
             ReceiverPoolInfo storage info = receiversInfo[address(receivers[i])];
+            uint currentBalance = IERC20(rewardToken).balanceOf(address(this));
 
-            if (info.isActive) {
+            if (currentBalance > 0 && info.isActive) {
                 IRewardReceiver receiver = IRewardReceiver(receivers[i]);
+                uint rewardWeight = IRewardWeight(rewardWeightContract).getRewardWeight(address(receiver));
 
-                uint toSend = amount.mul(info.rewardWeightPercentage).div(10000);
+                uint toSend = amount.mul(rewardWeight).div(10000);
+               
+                //Send whatever remaining
+                if (currentBalance < toSend) toSend = currentBalance;
+
                 IERC20(rewardToken).approve(address(receiver),toSend);
 
                 //Update totalSent for receiver
@@ -523,51 +532,30 @@ contract Splitter is RewardReceiver,Loggable{
     /**
         @notice register receiver to the splitter, weight (100%=10000, 40%=4000, 4%=400)
         @param receiver IRewardReceiver
-        @param weightPercentage uint
      */
-    function register(IRewardReceiver receiver, uint weightPercentage) external onlyOwner{
-        receivers.push(receiver);
-        receiversInfo[address(receiver)] = ReceiverPoolInfo(weightPercentage, 0, true);
-    }
+    function register(address receiver) external onlyOwner{
+        require(receiver != address(0), "Invalid receiver");
 
-    /**
-        @notice Update weight percentage for receiver contract (100%=10000, 40%=4000, 4%=400)
-        @param receiver IRewardReceiver
-        @param weightPercentage uint
-     */
-    function setRewardWeight(IRewardReceiver receiver, uint weightPercentage) external onlyOwner {
-        require(weightPercentage > 0, "Invalid reward weight");
-        receiversInfo[address(receiver)].rewardWeightPercentage = weightPercentage;
-    }
-
-    /**
-        @notice Update the active status of the receiver contract
-        @param receiver IRewardReceiver
-        @param status bool
-     */
-    function updateReceiverStatus(IRewardReceiver receiver, bool status) external onlyOwner {
-        receiversInfo[address(receiver)].isActive = status;
-    }
-
-    /**
-        @notice Update weight percentage for receiver contract by governance contract
-        @param receiver address
-     */
-    function setRewardWeightByContract(address receiver) external onlyOwner {
-        require(address(rewardWeightContract) != address(0), "Need to setup reward contract");
-
-        uint weight = IRewardWeight(rewardWeightContract).getRewardWeight(receiver);
-        require(weight > 0, "Invalid reward weight");
-
-        receiversInfo[address(receiver)].rewardWeightPercentage = weight;
+        receivers.push(IRewardReceiver(receiver));
+        receiversInfo[receiver] = ReceiverPoolInfo(0, true);
     }
 
      /**
         @notice set the governance contract for reward weight percentage 
         @param _rewardWeightContract address
      */
-    function setRewardGovernanceContract(address _rewardWeightContract) external onlyOwner {
-        require(_rewardWeightContract != address(0),"Invalid address");
+    function setRewardContract(address _rewardWeightContract) external onlyOwner {
+        require(_rewardWeightContract != address(0),"Invalid reward weight address");
         rewardWeightContract = IRewardWeight(_rewardWeightContract);
+    }
+
+    /**
+        @notice Update the active status of the receiver contract
+        @param receiver address
+        @param status bool
+     */
+    function updateReceiverStatus(address receiver, bool status) external onlyOwner {
+        require(receiver != address(0), "Invalid receiver");
+        receiversInfo[receiver].isActive = status;
     }
 }
