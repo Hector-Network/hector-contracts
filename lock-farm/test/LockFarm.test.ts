@@ -1,5 +1,5 @@
 import { ethers } from 'hardhat';
-import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signer-with-address';
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 
 import {
@@ -205,17 +205,17 @@ describe('LockFarm test', async () => {
   });
 
   describe('#4: Emissionor', async () => {
-    it('Failed - nonOwner cannot initialize', async () => {
+    it('Failed - nonMod cannot initialize', async () => {
       await expect(
         emissionor
           .connect(alice)
           .initialize(rewardStartTimestamp, rewardAmounts, rewardCheckSum)
-      ).to.be.revertedWith('Ownable: caller is not the owner');
+      ).to.be.revertedWith('Non Moderator');
     });
 
-    it('Failed - nonOwner cannot emitReward', async () => {
+    it('Failed - nonMod cannot emitReward', async () => {
       await expect(emissionor.connect(alice).emitReward()).to.be.revertedWith(
-        'Ownable: caller is not the owner'
+        'Non Moderator'
       );
     });
 

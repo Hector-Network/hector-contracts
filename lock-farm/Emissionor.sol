@@ -477,9 +477,11 @@ contract Emissionor is Ownable {
     IRewardReceiver public splitter;
 
     uint256 totalSentToSplitter; //Tracking rewards sent to splitter contract
-    uint8 constant DAYS_IN_A_WEEK = 7; //number of days reward accumulated
+    uint256 constant WEEK = 7 days; //number of days reward accumulated
 
     uint256 public distributionRemainingTime;
+
+    mapping(address => bool) public moderators; //moderators array
 
     mapping(uint256 => EmissionInfo) public emissions; //first second of every week as the key, the value includes the amount and status
     uint256[] public emissionBegins; //emssions' begin timestamp
@@ -490,6 +492,8 @@ contract Emissionor is Ownable {
         address indexed recipient,
         uint256 amount
     );
+
+    /* ====== CONSTRUCTOR ====== */
 
     constructor(
         address _treasury,
@@ -504,23 +508,30 @@ contract Emissionor is Ownable {
 
         require(_rewardToken != address(0));
         rewardToken = _rewardToken;
+
+        moderators[msg.sender] = true;
+    }
+
+    /* ====== MODIFIER ====== */
+
+    modifier onlyMod() {
+        require(moderators[msg.sender], 'Non Moderator');
+        _;
     }
 
     /* ====== PUBLIC FUNCTIONS ====== */
-
-    /* ====== INTERNAL FUNCTIONS ====== */
 
     function initialize(
         uint256 startTimestamp,
         uint256[] memory amounts,
         uint256 checkSum
-    ) external onlyOwner {
+    ) external onlyMod {
         require(
             startTimestamp > block.timestamp,
             'Start timestamp should be in the future'
         );
 
-        uint256 secondsOfWeek = startTimestamp % 7 days;
+        uint256 secondsOfWeek = startTimestamp % WEEK;
         uint256 begin = startTimestamp - secondsOfWeek;
         uint256 length = amounts.length;
         uint256 sum = 0;
@@ -538,14 +549,14 @@ contract Emissionor is Ownable {
             }
             info.amount = amount;
 
-            begin += 7 days;
+            begin += WEEK;
             sum += amount;
         }
 
         require(sum == checkSum, 'Incorrect check sum');
     }
 
-    function emitReward() external onlyOwner {
+    function emitReward() external onlyMod {
         uint256 reward = 0;
 
         uint256 length = emissionBegins.length;
@@ -589,7 +600,7 @@ contract Emissionor is Ownable {
     /* ====== VIEW FUNCTIONS ====== */
 
     function isEmissionActive(uint256 timestamp) external view returns (bool) {
-        uint256 secondsOfWeek = timestamp % 7 days;
+        uint256 secondsOfWeek = timestamp % WEEK;
         uint256 begin = timestamp - secondsOfWeek;
 
         return emissions[begin].isActive;
@@ -597,7 +608,7 @@ contract Emissionor is Ownable {
 
     function getBeginTime() public view returns (uint256) {
         uint256 time = block.timestamp;
-        uint256 secondsOfWeek = time % 7 days;
+        uint256 secondsOfWeek = time % WEEK;
         uint256 begin = time - secondsOfWeek;
 
         return begin;
@@ -605,14 +616,19 @@ contract Emissionor is Ownable {
 
     function getEndTime() public view returns (uint256) {
         uint256 time = block.timestamp;
-        uint256 secondsOfWeek = time % 7 days;
+        uint256 secondsOfWeek = time % WEEK;
         uint256 begin = time - secondsOfWeek;
-        uint256 end = begin + 7 days - 1;
+        uint256 end = begin + WEEK - 1;
 
         return end;
     }
 
     /* ====== POLICY FUNCTIONS ====== */
+
+    function setModerator(address moderator, bool approved) external onlyOwner {
+        require(moderator != address(0), 'Invalid address');
+        moderators[moderator] = approved;
+    }
 
     function setTreasury(address _treasury) external onlyOwner {
         require(_treasury != address(0));
