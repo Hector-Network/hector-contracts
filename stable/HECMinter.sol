@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity 0.8.7;
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -479,7 +479,7 @@ contract HECMinter is IHECMinter,Ownable{
     using SafeERC20 for IERC20;
     using SafeMath for uint;
     address public TORMinter;
-    address public treasury=0x243bE5DF259a4a8c14dD6eED87129aF01bc8f03a;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
+    address public treasury=0xD6724A7236a9aff922799b7ad5Afdb1588bD4861;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
     address public HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
     uint public limit;
     uint public minted;
