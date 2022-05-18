@@ -518,7 +518,7 @@ contract TORMinter is ITORMinter,Ownable{
     IERC20 dai=IERC20(0x8D11eC38a3EB5E956B052f67Da8Bdc9bef8Abf3E);
     IERC20 usdc=IERC20(0x04068DA6C83AFCFA0e13ba15A6696662335D5B75);
     IERC20 public hec=IERC20(0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0);
-    address treasury=0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
+    address public treasury=0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
     IERC20 TOR;
     IHECMinter HECMinter;
     uint public totalMintFee;
@@ -583,6 +583,10 @@ contract TORMinter is ITORMinter,Ownable{
     function setMintStrategy(address _strategy) external onlyOwner(){
         require(_strategy!=address(0));
         strategy=ITORMintRedeemStrategy(_strategy);
+    }
+    function setTreasury(address _treasury) external onlyOwner(){
+        require(_treasury!=address(0));
+        treasury=_treasury;
     }
     function setMintFee(uint _mintFeeBasisPoints) external onlyOwner(){
         require(_mintFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
