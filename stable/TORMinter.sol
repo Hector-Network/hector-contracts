@@ -630,6 +630,7 @@ contract TORMinter is ITORMinter,Ownable{
         _stableToken.safeTransferFrom(msg.sender,address(this),_stableAmount);
         //amount here is net after fee deducted
         uint amount=_stableAmount.mul(UNIT_ONE_IN_BPS.sub(mintFeeBasisPoints)).div(UNIT_ONE_IN_BPS);
+        uint tor2mint=convertDecimal(_stableToken,TOR,amount);
         if(_stableAmount>amount){
             totalMintFee=totalMintFee.add(convertDecimal(_stableToken,TOR,_stableAmount.sub(amount)));
         }
@@ -658,7 +659,6 @@ contract TORMinter is ITORMinter,Ownable{
             HECMinter.burnHEC(amountOuts[1]);
             totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
         }
-        uint tor2mint=convertDecimal(_stableToken,TOR,amount);
         require(strategy.canMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
         totalTorMinted=totalTorMinted.add(tor2mint);
