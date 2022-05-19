@@ -477,7 +477,7 @@ contract Emissionor is Ownable {
     IRewardReceiver public splitter;
 
     uint256 totalSentToSplitter; //Tracking rewards sent to splitter contract
-    uint256 constant WEEK = 7 days; //number of days reward accumulated
+    uint256 constant WEEK = 7 days; //number of seconds reward accumulated
 
     uint256 public distributionRemainingTime;
 
@@ -573,6 +573,9 @@ contract Emissionor is Ownable {
             }
         }
 
+        lastEmittedTimestamp = block.timestamp;
+        distributionRemainingTime = getEndTime();
+
         if (reward > 0) {
             //mint rewards from treasury
             ITreasury(treasury).mintRewards(address(this), reward);
@@ -592,9 +595,6 @@ contract Emissionor is Ownable {
             //Reset reward
             totalSentToSplitter += reward;
         }
-
-        lastEmittedTimestamp = block.timestamp;
-        distributionRemainingTime = getEndTime();
     }
 
     /* ====== VIEW FUNCTIONS ====== */
