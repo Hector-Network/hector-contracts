@@ -49,8 +49,8 @@ contract FNFT is
         // We cannot just use balanceOf to create the new tokenId because tokens
         // can be burned (destroyed), so we need a separate counter.
         fnftId = _fnftIdTracker.current();
-        _mint(to, fnftId);
         _fnftIdTracker.increment();
+        _mint(to, fnftId);
     }
 
     ///////////////////////////////////////////////////////

@@ -20,7 +20,6 @@ contract LockAccessControl is Ownable {
     /* ======= MODIFIER ======= */
 
     modifier onlyTokenVault() {
-        require(_msgSender() != address(0), 'AccessControl: Zero address');
         require(
             _msgSender() == addressProvider.getTokenVault(),
             'AccessControl: Invalid token vault'
@@ -29,7 +28,6 @@ contract LockAccessControl is Ownable {
     }
 
     modifier onlyFarm() {
-        require(_msgSender() != address(0), 'AccessControl: Zero address');
         require(
             addressProvider.isFarm(_msgSender()),
             'AccessControl: Invalid farm'
