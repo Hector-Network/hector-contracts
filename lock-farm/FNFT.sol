@@ -10,6 +10,8 @@ import '@openzeppelin/contracts/utils/Counters.sol';
 
 import './LockAccessControl.sol';
 
+// Credits to Revest Team
+// Github:https://github.com/Revest-Finance/RevestContracts/blob/master/hardhat/contracts/FNFTHandler.sol
 contract FNFT is
     AccessControlEnumerable,
     LockAccessControl,

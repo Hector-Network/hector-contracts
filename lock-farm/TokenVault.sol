@@ -11,6 +11,8 @@ import './LockAccessControl.sol';
 import './interfaces/ITokenVault.sol';
 import './interfaces/IFNFT.sol';
 
+// Credits to Revest Team
+// Github:https://github.com/Revest-Finance/RevestContracts/blob/master/hardhat/contracts/TokenVault.sol
 contract TokenVault is
     ITokenVault,
     LockAccessControl,
