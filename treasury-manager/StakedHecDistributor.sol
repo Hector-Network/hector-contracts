@@ -584,7 +584,7 @@ abstract contract RewardReceiver is IRewardReceiver,Ownable{
     }
     function onRewardReceived(uint amount) internal virtual;
     function setRewardToken(address _rewardToken) external onlyOwner{
-        require(rewardToken==address(0)&&_rewardToken!=address(0));
+        require(_rewardToken!=address(0));
         rewardToken=_rewardToken;
     }
 }
