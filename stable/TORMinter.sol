@@ -603,11 +603,12 @@ contract TORMinter is ITORMinter,Ownable{
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
     function setMintCR(uint _mintCR) external onlyOwner{
-        require(_mintCR<=10000,"mint CR can't be ower 100%");
+        require(_mintCR<=10000,"mint CR must be lower than 100%");
+        require(_mintCR>=redeemCR,"mint CR must be higher than redeem CR");
         mintCR=_mintCR;
     }
     function setRedeemCR(uint _redeemCR) external onlyOwner{
-        require(_redeemCR<=mintCR,"redeem CR can't be more than mint CR");
+        require(_redeemCR<=mintCR,"redeem CR must be lower than mint CR");
         redeemCR=_redeemCR;
     }
     function collectFee() external onlyOwner(){
