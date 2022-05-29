@@ -156,8 +156,13 @@ contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     address public TORMinter=0x9b0c6FfA7d0Ec29EAb516d3F2dC809eE43DD60ca;
 
     address public timelock;
-    function setTimelock(address _timelock) external onlyOwner(){
+    function setTimelock(address _timelock) external{
         require(_timelock!=address(0),"invalid timelock address");
+        require(
+            (timelock!=address(0)&&msg.sender==timelock) || //
+            (timelock==address(0)&&msg.sender==owner()),
+            "once timelock is set, new timelock can only be set ty existing timelock address"
+        );
         timelock=_timelock;
     }
     function setTORMinter(address _TORMinter) external onlyOwner(){
