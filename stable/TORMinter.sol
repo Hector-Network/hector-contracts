@@ -664,7 +664,7 @@ contract TORMinter is ITORMinter,Ownable{
             HECMinter.burnHEC(amountOuts[1]);
             totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
         }
-        require(strategy.canMint(msg.sender,tor2mint,address(_stableToken))==true,"mint not allowed by strategy");
+        require(strategy.canMint(msg.sender,tor2mint,address(_stableToken)),"mint not allowed by strategy");
         TOR.mint(msg.sender,tor2mint);
         totalTorMinted=totalTorMinted.add(tor2mint);
         lastMintTimestamp=block.timestamp;
@@ -683,7 +683,7 @@ contract TORMinter is ITORMinter,Ownable{
         require(address(routers[_stableToken])!=address(0),"unknown stable token");
         require(msg.sender==tx.origin,"redeem for EOA only");
         require(address(strategy)!=address(0),"mint redeem strategy is not set");
-        require(strategy.canRedeem(msg.sender,_torAmount,address(_stableToken))==true,"redeem not allowed by strategy");
+        require(strategy.canRedeem(msg.sender,_torAmount,address(_stableToken)),"redeem not allowed by strategy");
         TOR.burnFrom(msg.sender,_torAmount);
         totalTorBurnt=totalTorBurnt.add(_torAmount);
         lastRedeemTimestamp=block.timestamp;
