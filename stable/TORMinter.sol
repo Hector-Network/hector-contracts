@@ -544,9 +544,9 @@ contract TORMinter is ITORMinter,Ownable{
     uint public redeemCR=1000;//1000 = 10%, redeemCR<=mintCR, 10% dai comes from treasury to pay for redeem, 90% usdc comes from minted HEC sold on hec/dai
 
     constructor(address _HECMinter, address _TOR){
-        require(_HECMinter!=address(0));
+        require(_HECMinter!=address(0),"invalid _HECMinter address");
         HECMinter=IHECMinter(_HECMinter);
-        require(_TOR!=address(0));
+        require(_TOR!=address(0),"invalid _TOR address");
         TOR=IERC20(_TOR);
         lastMintTimestamp=block.timestamp;
         lastRedeemTimestamp=block.timestamp;
@@ -571,23 +571,23 @@ contract TORMinter is ITORMinter,Ownable{
         }
     }
     function setHec(address _hec) external onlyOwner(){
-        require(_hec!=address(0));
+        require(_hec!=address(0),"invalid _hec address");
         hec=IERC20(_hec);
     }
     function setTOR(address _TOR) external onlyOwner(){
-        require(_TOR!=address(0));
+        require(_TOR!=address(0),"invalid _TOR address");
         TOR=IERC20(_TOR);
     }
     function setHECMinter(address _HECMinter) external onlyOwner(){
-        require(_HECMinter!=address(0));
+        require(_HECMinter!=address(0),"invalid _HECMinter address");
         HECMinter=IHECMinter(_HECMinter);
     }
     function setMintStrategy(address _strategy) external onlyOwner(){
-        require(_strategy!=address(0));
+        require(_strategy!=address(0),"invalid _strategy address");
         strategy=ITORMintRedeemStrategy(_strategy);
     }
     function setTreasury(address _treasury) external onlyOwner(){
-        require(_treasury!=address(0));
+        require(_treasury!=address(0),"invalid _treasury address");
         treasury=_treasury;
     }
     function setMintFee(uint _mintFeeBasisPoints) external onlyOwner(){
@@ -599,11 +599,11 @@ contract TORMinter is ITORMinter,Ownable{
         redeemFeeBasisPoints=_redeemFeeBasisPoints;
     }
     function setDaiLpSwapRouter(address _swapRouter) external onlyOwner(){
-        require(_swapRouter!=address(0));
+        require(_swapRouter!=address(0),"invalid _swapRouter address");
         routers[dai]=IUniswapRouter(_swapRouter);
     }
     function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
-        require(_swapRouter!=address(0));
+        require(_swapRouter!=address(0),"invalid _swapRouter address");
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
     function setMintCR(uint _mintCR) external onlyOwner{
