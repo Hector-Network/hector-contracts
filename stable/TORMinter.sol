@@ -449,7 +449,7 @@ contract Ownable is IOwnable {
         _;
     }
 
-    function renounceManagement(string memory confirm) public virtual override onlyOwner() {
+    function renounceManagement(string memory confirm) external virtual override onlyOwner() {
         require(
             keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked("confirm renounce")),
             "Ownable: renouce needs 'confirm renounce' as input"
@@ -459,13 +459,13 @@ contract Ownable is IOwnable {
         _newOwner = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
+    function pushManagement( address newOwner_ ) external virtual override onlyOwner() {
         require( newOwner_ != address(0), "Ownable: new owner is the zero address");
         emit OwnershipPushed( _owner, newOwner_ );
         _newOwner = newOwner_;
     }
 
-    function pullManagement() public virtual override {
+    function pullManagement() external virtual override {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
         _owner = _newOwner;
