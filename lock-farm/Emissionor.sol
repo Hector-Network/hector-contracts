@@ -487,6 +487,8 @@ contract Emissionor is Ownable {
     uint256[] public emissionBegins; //emssions' begin timestamp
     uint256 lastEmittedTimestamp; //last emitReward timestamp
 
+    bool public isInitialized; // initialize status
+
     event RewardsDistributed(
         address indexed caller,
         address indexed recipient,
@@ -500,6 +502,9 @@ contract Emissionor is Ownable {
         address _splitter,
         address _rewardToken
     ) {
+        require(!isInitialized, 'Already initialized');
+        isInitialized = true;
+
         require(_treasury != address(0));
         treasury = _treasury;
 
