@@ -599,9 +599,11 @@ contract TORMinter is ITORMinter,Ownable{
         redeemFeeBasisPoints=_redeemFeeBasisPoints;
     }
     function setDaiLpSwapRouter(address _swapRouter) external onlyOwner(){
+        require(_swapRouter!=address(0));
         routers[dai]=IUniswapRouter(_swapRouter);
     }
-    function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
+    function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner
+        require(_swapRouter!=address(0));
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
     function setMintCR(uint _mintCR) external onlyOwner{
