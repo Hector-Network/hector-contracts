@@ -502,9 +502,6 @@ contract Emissionor is Ownable {
         address _splitter,
         address _rewardToken
     ) {
-        require(!isInitialized, 'Already initialized');
-        isInitialized = true;
-
         require(_treasury != address(0));
         treasury = _treasury;
 
@@ -531,6 +528,9 @@ contract Emissionor is Ownable {
         uint256[] memory amounts,
         uint256 checkSum
     ) external onlyMod {
+        require(!isInitialized, 'Already initialized');
+        isInitialized = true;
+
         require(
             startTimestamp > block.timestamp,
             'Start timestamp should be in the future'
@@ -545,13 +545,10 @@ contract Emissionor is Ownable {
             uint256 amount = amounts[i];
             require(amount > 0, 'Invalid amount');
 
-            EmissionInfo storage info = emissions[begin];
-            require(info.amount == 0 || info.isActive, 'Already initialized');
+            emissionBegins.push(begin);
 
-            if (info.amount == 0) {
-                emissionBegins.push(begin);
-                info.isActive = true;
-            }
+            EmissionInfo storage info = emissions[begin];
+            info.isActive = true;
             info.amount = amount;
 
             begin += WEEK;
