@@ -456,6 +456,7 @@ contract Ownable is IOwnable {
         );
         emit OwnershipPushed( _owner, address(0) );
         _owner = address(0);
+        _newOwner = address(0);
     }
 
     function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
@@ -468,6 +469,7 @@ contract Ownable is IOwnable {
         require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
         emit OwnershipPulled( _owner, _newOwner );
         _owner = _newOwner;
+        _newOwner = address(0);
     }
 }
 interface IUniswapRouter{
