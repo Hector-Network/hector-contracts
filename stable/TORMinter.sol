@@ -602,7 +602,7 @@ contract TORMinter is ITORMinter,Ownable{
         require(_swapRouter!=address(0));
         routers[dai]=IUniswapRouter(_swapRouter);
     }
-    function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner
+    function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
         require(_swapRouter!=address(0));
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
@@ -616,8 +616,8 @@ contract TORMinter is ITORMinter,Ownable{
         redeemCR=_redeemCR;
     }
     function collectFee() external onlyOwner(){
-        if(dai.balanceOf(address(this))>0)dai.transfer(owner(),dai.balanceOf(address(this)));
-        if(usdc.balanceOf(address(this))>0)usdc.transfer(owner(),usdc.balanceOf(address(this)));
+        if(dai.balanceOf(address(this))>0)dai.safeTransfer(owner(),dai.balanceOf(address(this)));
+        if(usdc.balanceOf(address(this))>0)usdc.safeTransfer(owner(),usdc.balanceOf(address(this)));
     }
 
     function convertDecimal(IERC20 from,IERC20 to, uint fromAmount) view public returns(uint toAmount){
@@ -642,7 +642,7 @@ contract TORMinter is ITORMinter,Ownable{
         //toTreasury is amount sending to treasury
         uint toTreasury = amount.mul(mintCR).div(UNIT_ONE_IN_BPS);
         if(toTreasury>0){
-            _stableToken.transfer(treasury,toTreasury);
+            _stableToken.safeTransfer(treasury,toTreasury);
             //amount here is net amount fund to buy HEC from LP and burn;
             amount=amount.sub(toTreasury);
             totalEarnedCollateral=totalEarnedCollateral.add(convertDecimal(_stableToken,TOR,toTreasury));
@@ -718,7 +718,7 @@ contract TORMinter is ITORMinter,Ownable{
         if(_torAmount>convertDecimal(_stableToken,TOR,totalAmountOut)){
             totalBurnFee=totalBurnFee.add(_torAmount.sub(convertDecimal(_stableToken,TOR,totalAmountOut)));
         }
-        _stableToken.transfer(msg.sender,totalAmountOut);
+        _stableToken.safeTransfer(msg.sender,totalAmountOut);
         _stableAmount=totalAmountOut;
     }
 
