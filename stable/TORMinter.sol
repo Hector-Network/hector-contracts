@@ -568,56 +568,69 @@ contract TORMinter is ITORMinter,Ownable{
             totalHecMinted=ITORMinterValuesV2(oldTorMinter).totalHecMinted();
             totalHecBurnt=ITORMinterValuesV2(oldTorMinter).totalHecBurnt();
             upgraded=true;
+            emit UpgradedFrom(oldTorMinter);
         }
     }
     function setHec(address _hec) external onlyOwner(){
         require(_hec!=address(0),"invalid _hec address");
-        hec=IERC20(_hec);
+        emit AddressUpdated(1,address(hec),_hec);
+        hec=IERC20(_hec);        
     }
     function setTOR(address _TOR) external onlyOwner(){
         require(_TOR!=address(0),"invalid _TOR address");
+        emit AddressUpdated(2,address(TOR),_TOR);
         TOR=IERC20(_TOR);
     }
     function setHECMinter(address _HECMinter) external onlyOwner(){
         require(_HECMinter!=address(0),"invalid _HECMinter address");
+        emit AddressUpdated(3,address(HECMinter),_HECMinter);
         HECMinter=IHECMinter(_HECMinter);
     }
     function setMintStrategy(address _strategy) external onlyOwner(){
         require(_strategy!=address(0),"invalid _strategy address");
+        emit AddressUpdated(4,address(strategy),_strategy);
         strategy=ITORMintRedeemStrategy(_strategy);
     }
     function setTreasury(address _treasury) external onlyOwner(){
         require(_treasury!=address(0),"invalid _treasury address");
+        emit AddressUpdated(5,treasury,_treasury);
         treasury=_treasury;
     }
     function setMintFee(uint _mintFeeBasisPoints) external onlyOwner(){
         require(_mintFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
+        emit FeeUpdated(1,mintFeeBasisPoints,_mintFeeBasisPoints);
         mintFeeBasisPoints=_mintFeeBasisPoints;
     }
     function setRedeemFee(uint _redeemFeeBasisPoints) external onlyOwner(){
         require(_redeemFeeBasisPoints<=1000,"fee can't be higher than 1000 bps");
+        emit FeeUpdated(2,redeemFeeBasisPoints,_redeemFeeBasisPoints);
         redeemFeeBasisPoints=_redeemFeeBasisPoints;
     }
     function setDaiLpSwapRouter(address _swapRouter) external onlyOwner(){
         require(_swapRouter!=address(0),"invalid _swapRouter address");
+        emit AddressUpdated(6,address(routers[dai]),_swapRouter);
         routers[dai]=IUniswapRouter(_swapRouter);
     }
     function setUsdcLpSwapRouter(address _swapRouter) external onlyOwner(){
         require(_swapRouter!=address(0),"invalid _swapRouter address");
+        emit AddressUpdated(6,address(routers[usdc]),_swapRouter);
         routers[usdc]=IUniswapRouter(_swapRouter);
     }
     function setMintCR(uint _mintCR) external onlyOwner{
         require(_mintCR<=10000,"mint CR must be lower than or equal to 100%");
         require(_mintCR>=redeemCR,"mint CR must be higher than or equal to redeem CR");
+        emit CRUpdated(1,mintCR,_mintCR);
         mintCR=_mintCR;
     }
     function setRedeemCR(uint _redeemCR) external onlyOwner{
         require(_redeemCR<=mintCR,"redeem CR must be lower than or equal to mint CR");
+        emit CRUpdated(2,redeemCR,_redeemCR);
         redeemCR=_redeemCR;
     }
     function collectFee() external onlyOwner(){
         if(dai.balanceOf(address(this))>0)dai.safeTransfer(owner(),dai.balanceOf(address(this)));
         if(usdc.balanceOf(address(this))>0)usdc.safeTransfer(owner(),usdc.balanceOf(address(this)));
+        emit FeeCollected(dai.balanceOf(address(this)),usdc.balanceOf(address(this)),owner());
     }
 
     function convertDecimal(IERC20 from,IERC20 to, uint fromAmount) view public returns(uint toAmount){
@@ -659,7 +672,6 @@ contract TORMinter is ITORMinter,Ownable{
                 address(this),
                 block.timestamp
             );
-            require(amountOuts[1]>0,"invalid hec amount from swap");
             hec.approve(address(HECMinter),amountOuts[1]);
             HECMinter.burnHEC(amountOuts[1]);
             totalHecBurnt=totalHecBurnt.add(amountOuts[1]);
@@ -669,6 +681,7 @@ contract TORMinter is ITORMinter,Ownable{
         totalTorMinted=totalTorMinted.add(tor2mint);
         lastMintTimestamp=block.timestamp;
         _torAmount=tor2mint;
+        emit TorMinted(address(_stableToken),_stableAmount,_torAmount);
     }
 
     function mintWithDai(uint _daiAmount) override external returns(uint _torAmount){
@@ -720,6 +733,7 @@ contract TORMinter is ITORMinter,Ownable{
         }
         _stableToken.safeTransfer(msg.sender,totalAmountOut);
         _stableAmount=totalAmountOut;
+        emit TorRedeemed(_torAmount,address(_stableToken),_stableAmount);
     }
 
     function redeemToDai(uint _torAmount) override external returns(uint _daiAmount){
@@ -728,4 +742,12 @@ contract TORMinter is ITORMinter,Ownable{
     function redeemToUsdc(uint _torAmount) override external returns(uint _usdcAmount){
         return redeemToStable(_torAmount,usdc);
     }
+
+    event UpgradedFrom(address oldMinter);
+    event AddressUpdated(uint addressType,address oldAddress,address newAddress);
+    event FeeUpdated(uint feeType,uint oldFeeBp,uint newFeeBp);
+    event CRUpdated(uint CRType,uint oldCRBp,uint newCRBp);
+    event FeeCollected(uint daiAmount,uint usdcAmount,address feeToAddress);
+    event TorMinted(address stableCoin,uint stableAmount,uint torAmount);
+    event TorRedeemed(uint torAmount,address stableCoin,uint stableAmount);
 }
