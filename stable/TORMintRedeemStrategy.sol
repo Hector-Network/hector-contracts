@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.7.5;
+pragma solidity 0.8.7;
 library SafeMath {
 
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
@@ -135,39 +135,52 @@ interface ITORMinter{
 contract TORMintRedeemStrategy is ITORMintRedeemStrategy,Ownable{
     using SafeMath for uint;
 
-    uint public reserveCeilingPercentage=3000;//40%=4000
+    uint public reserveCeilingPercentage=5000;//40%=4000
     uint public reserveFloorPercentage=0;//20%=2000
 
-    uint public mintPercentageCeiling=5000;//percentage of TOR in curve pool, 100%=10000
-    uint public redeemPercentageFloor=6000;//percentage of TOR in curve pool, 100%=10000
+    uint public mintPercentageCeiling=500;//percentage of TOR in curve pool, 100%=10000
+    uint public redeemPercentageFloor=6500;//percentage of TOR in curve pool, 100%=10000
 
     uint public mintBuffer=0;
     uint public redeemBuffer=0;
-    uint public mintRate=30*1e18;//per second mintable rate, 1 tor = 1e18
-    uint public redeemRate=10*1e18;//per second redeemable rate, 1 tor = 1e18
+    uint public mintRate=25*1e18;//per second mintable rate, 1 tor = 1e18
+    uint public redeemRate=5*1e18;//per second redeemable rate, 1 tor = 1e18
     uint public mintBufferMax=30000*1e18;//100K TOR as max mint buffer
     uint public redeemBufferMax=30000*1e18;//10K TOR as max redeem buffer
 
     mapping(address=>uint) public allowedStableToken;
 
-    ITORReserveHelper public TORReserveHelper;
-    ITORCurveHelper public TORCurveHelper;
+    ITORReserveHelper public TORReserveHelper=ITORReserveHelper(0x504dDf1ff26047D850EFa88e64e65EBA9b1E5cbF);
+    ITORCurveHelper public TORCurveHelper=ITORCurveHelper(0x2cFC70B2c114De258F05069c8f8416f6215C4A68);
 
-    address public TORMinter;
+    address public TORMinter=0x9b0c6FfA7d0Ec29EAb516d3F2dC809eE43DD60ca;
+
+    address public timelock;
+    function setTimelock(address _timelock) external{
+        require(_timelock!=address(0),"invalid timelock address");
+        require(
+            (timelock!=address(0)&&msg.sender==timelock) || //
+            (timelock==address(0)&&msg.sender==owner()),
+            "once timelock is set, new timelock can only be set ty existing timelock address"
+        );
+        timelock=_timelock;
+    }
     function setTORMinter(address _TORMinter) external onlyOwner(){
         require(_TORMinter!=address(0),"invalid TORMinter address");
         TORMinter=_TORMinter;
     }
-    function setTORReserveHelper(address _TORReserveHelper) external onlyOwner(){
+    function setTORReserveHelper(address _TORReserveHelper) external{
+        require(msg.sender==timelock,"only timelock address can setTORReserveHelper");
         require(_TORReserveHelper!=address(0),"invalid TORReserveHelper address");
         TORReserveHelper=ITORReserveHelper(_TORReserveHelper);
     }
     function setTORCurveHelper(address _TORCurveHelper) external onlyOwner(){
-        require(_TORCurveHelper!=address(0),"invalid TORReserveHelper address");
+        require(_TORCurveHelper!=address(0),"invalid TORCurveHelper address");
         TORCurveHelper=ITORCurveHelper(_TORCurveHelper);
     }
     function setReserveCeilingPercentage(uint _reserveCeilingPercentage) external onlyOwner(){
-        require(_reserveCeilingPercentage!=0);
+        require(_reserveCeilingPercentage!=0,"reserveCeilingPercentage must be greater than 0%");
+        require(_reserveCeilingPercentage<=10000,"reserveCeilingPercentage can't be more than 100%");
         reserveCeilingPercentage=_reserveCeilingPercentage;
     }
     function setReserveFloorPercentage(uint _reserveFloorPercentage) external onlyOwner(){
