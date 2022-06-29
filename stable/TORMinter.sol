@@ -628,9 +628,11 @@ contract TORMinter is ITORMinter,Ownable{
         redeemCR=_redeemCR;
     }
     function collectFee() external onlyOwner(){
+        uint daiAmount=dai.balanceOf(address(this));
         if(dai.balanceOf(address(this))>0)dai.safeTransfer(owner(),dai.balanceOf(address(this)));
+        uint usdcAmount=usdc.balanceOf(address(this));
         if(usdc.balanceOf(address(this))>0)usdc.safeTransfer(owner(),usdc.balanceOf(address(this)));
-        emit FeeCollected(dai.balanceOf(address(this)),usdc.balanceOf(address(this)),owner());
+        if(daiAmount>0||usdcAmount>0) emit FeeCollected(daiAmount,usdcAmount,owner());
     }
 
     function convertDecimal(IERC20 from,IERC20 to, uint fromAmount) view public returns(uint toAmount){
