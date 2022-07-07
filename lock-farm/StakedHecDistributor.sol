@@ -600,7 +600,7 @@ contract StakedHecDistributor is RewardReceiver {
     using SafeMath for uint256;
 
     /* ====== VARIABLES ====== */
-    IRewardReceiver public sHecLockFarm;
+    //IRewardReceiver public sHecLockFarm;
     address public stakingContract;
     address public emmissionorContract;
     
@@ -617,11 +617,7 @@ contract StakedHecDistributor is RewardReceiver {
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
 
-    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
-        //Set sHecLockFarm address for distribution
-        require( _sHecLockFarm != address(0) );
-        sHecLockFarm = IRewardReceiver(_sHecLockFarm);
-
+    constructor(address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
         require( _rewardToken != address(0) );
         rewardToken = _rewardToken;
 
@@ -712,29 +708,9 @@ contract StakedHecDistributor is RewardReceiver {
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
         remainingTimeUntilNextDistribution =  getEndTimeFromEmmissionor();
         require(remainingTimeUntilNextDistribution > 0, "Distribution timer is not set");
-       
-        uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
-
-        //Get the total sHec boosted for all wallets in sHec locked farm
-        uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).totalTokenBoostedSupply();
-
-        //Calculate the rewards distributed to sHec Lock Farm
-        uint totalWeeklysHecLockFarm = weeklyDistributedAmount.mul(totalsHecBoost).div(sHecTotalSupply.add(totalsHecBoost));
-
-        require(totalWeeklysHecLockFarm > 0, "No rewards avail for sHec Lock Farm");
-
-        IERC20(rewardToken).approve(address(sHecLockFarm), totalWeeklysHecLockFarm);
-        totalSentForLockFarm = totalSentForLockFarm.add(totalWeeklysHecLockFarm);
-
-        //Distribute rewards to sHec Lock farm
-        IRewardReceiver(sHecLockFarm).receiveReward(totalWeeklysHecLockFarm);
-
-        emit RewardsDistributed( msg.sender, address(sHecLockFarm), totalWeeklysHecLockFarm);
 
         //Calculate the rewards distributed to rebase 
-        uint totalWeeklyRewardsStaking = weeklyDistributedAmount.sub(totalWeeklysHecLockFarm);
-
-        totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
+        totalRewardsForRebaseStaking += weeklyDistributedAmount;
         require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase"); 
 
         //Start the clock for rebasing
@@ -752,11 +728,6 @@ contract StakedHecDistributor is RewardReceiver {
     
     
     /* ====== POLICY FUNCTIONS ====== */
-
-    function setSHecLockFarm(address _sHecLockFarm) external onlyOwner(){
-        require(_sHecLockFarm != address(0));
-        sHecLockFarm = IRewardReceiver(_sHecLockFarm);
-    }
 
     function setStakingContract(address _stakingContract) external onlyOwner(){
         require(_stakingContract != address(0));
