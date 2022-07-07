@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity 0.8.7;
+pragma solidity ^0.8.7;
+
 library Address {
     /**
      * @dev Returns true if `account` is a contract.
@@ -50,14 +51,14 @@ library Address {
     function sendValue(address payable recipient, uint256 amount) internal {
         require(
             address(this).balance >= amount,
-            "Address: insufficient balance"
+            'Address: insufficient balance'
         );
 
         // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = recipient.call{ value: amount }("");
+        (bool success, ) = recipient.call{value: amount}('');
         require(
             success,
-            "Address: unable to send value, recipient may have reverted"
+            'Address: unable to send value, recipient may have reverted'
         );
     }
 
@@ -83,7 +84,7 @@ library Address {
         internal
         returns (bytes memory)
     {
-        return functionCall(target, data, "Address: low-level call failed");
+        return functionCall(target, data, 'Address: low-level call failed');
     }
 
     /**
@@ -121,7 +122,7 @@ library Address {
                 target,
                 data,
                 value,
-                "Address: low-level call with value failed"
+                'Address: low-level call with value failed'
             );
     }
 
@@ -139,13 +140,14 @@ library Address {
     ) internal returns (bytes memory) {
         require(
             address(this).balance >= value,
-            "Address: insufficient balance for call"
+            'Address: insufficient balance for call'
         );
-        require(isContract(target), "Address: call to non-contract");
+        require(isContract(target), 'Address: call to non-contract');
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) =
-            target.call{ value: value }(data);
+        (bool success, bytes memory returndata) = target.call{value: value}(
+            data
+        );
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
@@ -164,7 +166,7 @@ library Address {
             functionStaticCall(
                 target,
                 data,
-                "Address: low-level static call failed"
+                'Address: low-level static call failed'
             );
     }
 
@@ -179,7 +181,7 @@ library Address {
         bytes memory data,
         string memory errorMessage
     ) internal view returns (bytes memory) {
-        require(isContract(target), "Address: static call to non-contract");
+        require(isContract(target), 'Address: static call to non-contract');
 
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory returndata) = target.staticcall(data);
@@ -200,7 +202,7 @@ library Address {
             functionDelegateCall(
                 target,
                 data,
-                "Address: low-level delegate call failed"
+                'Address: low-level delegate call failed'
             );
     }
 
@@ -215,7 +217,7 @@ library Address {
         bytes memory data,
         string memory errorMessage
     ) internal returns (bytes memory) {
-        require(isContract(target), "Address: delegate call to non-contract");
+        require(isContract(target), 'Address: delegate call to non-contract');
 
         // solhint-disable-next-line avoid-low-level-calls
         (bool success, bytes memory returndata) = target.delegatecall(data);
@@ -244,25 +246,6 @@ library Address {
             }
         }
     }
-}
-
-interface IERC20 {
-    function approve(address spender, uint256 amount) external returns (bool);
-    function balanceOf(address account) external view returns (uint256);
-    function allowance(address owner, address spender)
-        external
-        view
-        returns (uint256);
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) external returns (bool);
-    function transfer(address recipient, uint256 amount)
-        external
-        returns (bool);
-    function burnFrom(address account_, uint256 amount_) external;
-    function burn(uint256 amount_) external;
 }
 
 /**
@@ -318,7 +301,7 @@ library SafeERC20 {
         // solhint-disable-next-line max-line-length
         require(
             (value == 0) || (token.allowance(address(this), spender) == 0),
-            "SafeERC20: approve from non-zero to non-zero allowance"
+            'SafeERC20: approve from non-zero to non-zero allowance'
         );
         _callOptionalReturn(
             token,
@@ -337,105 +320,47 @@ library SafeERC20 {
         // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
         // the target address contains contract code and also asserts for success in the low-level call.
 
-        bytes memory returndata =
-            address(token).functionCall(
-                data,
-                "SafeERC20: low-level call failed"
-            );
+        bytes memory returndata = address(token).functionCall(
+            data,
+            'SafeERC20: low-level call failed'
+        );
         if (returndata.length > 0) {
             // Return data is optional
             // solhint-disable-next-line max-line-length
             require(
                 abi.decode(returndata, (bool)),
-                "SafeERC20: ERC20 operation did not succeed"
+                'SafeERC20: ERC20 operation did not succeed'
             );
         }
     }
 }
-library SafeMath {
 
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a, "SafeMath: addition overflow");
-
-        return c;
-    }
-
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, "SafeMath: subtraction overflow");
-    }
-
-    function sub(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, "SafeMath: multiplication overflow");
-
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, "SafeMath: division by zero");
-    }
-
-    function div(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b > 0, errorMessage);
-        uint256 c = a / b;
-        return c;
-    }
-
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, "SafeMath: modulo by zero");
-    }
-
-    function mod(uint256 a, uint256 b, string memory errorMessage) internal pure returns (uint256) {
-        require(b != 0, errorMessage);
-        return a % b;
-    }
-
-    function sqrrt(uint256 a) internal pure returns (uint c) {
-        if (a > 3) {
-            c = a;
-            uint b = add( div( a, 2), 1 );
-            while (b < c) {
-                c = b;
-                b = div( add( div( a, b ), b), 2 );
-            }
-        } else if (a != 0) {
-            c = 1;
-        }
-    }
-}
 interface IOwnable {
     function owner() external view returns (address);
 
     function renounceManagement(string memory confirm) external;
 
-    function pushManagement( address newOwner_ ) external;
+    function pushManagement(address newOwner_) external;
 
     function pullManagement() external;
 }
 
 contract Ownable is IOwnable {
-
     address internal _owner;
     address internal _newOwner;
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPushed(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
+    event OwnershipPulled(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
-    constructor () {
+    constructor() {
         _owner = msg.sender;
-        emit OwnershipPulled( address(0), _owner );
+        emit OwnershipPulled(address(0), _owner);
     }
 
     function owner() public view override returns (address) {
@@ -443,84 +368,282 @@ contract Ownable is IOwnable {
     }
 
     modifier onlyOwner() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        require(_owner == msg.sender, 'Ownable: caller is not the owner');
         _;
     }
 
-    function renounceManagement(string memory confirm) public virtual override onlyOwner() {
+    function renounceManagement(string memory confirm)
+        public
+        virtual
+        override
+        onlyOwner
+    {
         require(
-            keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked("confirm renounce")),
+            keccak256(abi.encodePacked(confirm)) ==
+                keccak256(abi.encodePacked('confirm renounce')),
             "Ownable: renouce needs 'confirm renounce' as input"
         );
-        emit OwnershipPushed( _owner, address(0) );
+        emit OwnershipPushed(_owner, address(0));
         _owner = address(0);
+        _newOwner = address(0);
     }
 
-    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
+    function pushManagement(address newOwner_)
+        public
+        virtual
+        override
+        onlyOwner
+    {
+        require(
+            newOwner_ != address(0),
+            'Ownable: new owner is the zero address'
+        );
+        emit OwnershipPushed(_owner, newOwner_);
         _newOwner = newOwner_;
     }
 
     function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
+        require(msg.sender == _newOwner, 'Ownable: must be new owner to pull');
+        emit OwnershipPulled(_owner, _newOwner);
         _owner = _newOwner;
     }
 }
-interface IHECMinter{
-    function mintHEC(uint amount) external;
-    function burnHEC(uint amount) external;
+
+interface IERC20 {
+    function approve(address spender, uint256 amount) external returns (bool);
+
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address account) external view returns (uint256);
+
+    function allowance(address owner, address spender)
+        external
+        view
+        returns (uint256);
+
+    function transferFrom(
+        address sender,
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
+
+    function transfer(address recipient, uint256 amount)
+        external
+        returns (bool);
+
+    function mint(address account_, uint256 amount_) external;
+
+    function decimals() external view returns (uint8);
+
+    function burnFrom(address account_, uint256 amount_) external;
 }
-interface ITreasury{
-    function mintRewards( address _recipient, uint _amount ) external;
+
+interface IRewardReceiver {
+    function receiveReward(uint256 amount) external;
 }
-contract HECMinter is IHECMinter,Ownable{
+
+abstract contract RewardReceiver is IRewardReceiver, Ownable {
+    event Log(uint256 value);
+    address public rewardToken;
+
+    function receiveReward(uint256 amount) external override {
+        IERC20(rewardToken).transferFrom(msg.sender, address(this), amount);
+        onRewardReceived(amount);
+    }
+
+    function onRewardReceived(uint256 amount) internal virtual;
+
+    function setRewardToken(address _rewardToken) external onlyOwner {
+        require(rewardToken == address(0) && _rewardToken != address(0));
+        rewardToken = _rewardToken;
+    }
+}
+
+interface ITreasury {
+    function mintRewards(address _recipient, uint256 _amount) external;
+}
+
+contract Emissionor is Ownable {
     using SafeERC20 for IERC20;
-    using SafeMath for uint;
-    address public TORMinter;
-    address public treasury=0xD6724A7236a9aff922799b7ad5Afdb1588bD4861;//0xCB54EA94191B280C296E6ff0E37c7e76Ad42dC6A;
-    address public HEC=0x79f29359E6633120c86Ba0349551e134d13fc487;//0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0;
-    uint public limit;
-    uint public minted;
-    uint public burnt;
-    constructor(uint _limit){
-        limit=_limit;
+
+    struct EmissionInfo {
+        uint256 amount;
+        bool isActive;
     }
-    function setHec(address _HEC) external onlyOwner(){
-        require(_HEC!=address(0));
-        HEC=_HEC;
+
+    /* ====== VARIABLES ====== */
+    address public rewardToken;
+    address public treasury;
+    IRewardReceiver public splitter;
+
+    uint256 totalSentToSplitter; //Tracking rewards sent to splitter contract
+    uint256 constant WEEK = 7 days; //number of seconds reward accumulated
+
+    uint256 public distributionRemainingTime;
+
+    mapping(address => bool) public moderators; //moderators array
+
+    mapping(uint256 => EmissionInfo) public emissions; //first second of every week as the key, the value includes the amount and status
+    uint256[] public emissionBegins; //emssions' begin timestamp
+    uint256 lastEmittedTimestamp; //last emitReward timestamp
+
+    bool public isInitialized; // initialize status
+
+    event RewardsDistributed(
+        address indexed caller,
+        address indexed recipient,
+        uint256 amount
+    );
+
+    /* ====== CONSTRUCTOR ====== */
+
+    constructor(
+        address _treasury,
+        address _splitter,
+        address _rewardToken
+    ) {
+        require(_treasury != address(0));
+        treasury = _treasury;
+
+        require(_splitter != address(0));
+        splitter = IRewardReceiver(_splitter);
+
+        require(_rewardToken != address(0));
+        rewardToken = _rewardToken;
+
+        moderators[msg.sender] = true;
     }
-    function setTrasury(address _treasury) external onlyOwner(){
-        require(_treasury!=address(0));
-        treasury=_treasury;
+
+    /* ====== MODIFIER ====== */
+
+    modifier onlyMod() {
+        require(moderators[msg.sender], 'Non Moderator');
+        _;
     }
-    function setLimit(uint _limit) external onlyOwner(){
-        //require(_limit>limit);
-        limit=_limit;
+
+    /* ====== PUBLIC FUNCTIONS ====== */
+
+    function initialize(
+        uint256 startTimestamp,
+        uint256[] memory amounts,
+        uint256 checkSum
+    ) external onlyMod {
+        require(!isInitialized, 'Already initialized');
+        isInitialized = true;
+
+        require(
+            startTimestamp > block.timestamp,
+            'Start timestamp should be in the future'
+        );
+
+        uint256 secondsOfWeek = startTimestamp % WEEK;
+        uint256 begin = startTimestamp - secondsOfWeek;
+        uint256 length = amounts.length;
+        uint256 sum = 0;
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 amount = amounts[i];
+            require(amount > 0, 'Invalid amount');
+
+            emissionBegins.push(begin);
+
+            EmissionInfo storage info = emissions[begin];
+            info.isActive = true;
+            info.amount = amount;
+
+            begin += WEEK;
+            sum += amount;
+        }
+
+        require(sum == checkSum, 'Incorrect check sum');
     }
-    function setTORMinter(address _TORMinter) external onlyOwner(){
-        require(_TORMinter!=address(0));
-        TORMinter=_TORMinter;
+
+    function emitReward() external onlyMod {
+        uint256 reward = 0;
+
+        uint256 length = emissionBegins.length;
+        for (uint256 i = 0; i < length; i++) {
+            uint256 begin = emissionBegins[i];
+
+            if (begin > lastEmittedTimestamp && begin <= block.timestamp) {
+                EmissionInfo storage info = emissions[begin];
+
+                if (info.isActive) {
+                    info.isActive = false;
+                    reward += info.amount;
+                }
+            }
+        }
+
+        lastEmittedTimestamp = block.timestamp;
+        distributionRemainingTime = getEndTime();
+
+        if (reward > 0) {
+            //mint rewards from treasury
+            ITreasury(treasury).mintRewards(address(this), reward);
+
+            require(
+                IERC20(rewardToken).balanceOf(address(this)) > 0,
+                'No reward to distribute'
+            );
+
+            IERC20(rewardToken).approve(address(splitter), reward);
+
+            //send rewards to splitter
+            IRewardReceiver(splitter).receiveReward(reward);
+
+            emit RewardsDistributed(msg.sender, address(splitter), reward);
+
+            //Reset reward
+            totalSentToSplitter += reward;
+        }
     }
-    function mintHEC(uint amount) override external{
-        require(TORMinter!=address(0)&&msg.sender==TORMinter,"only TOR minter can mint HEC this way");
-        require(amount>0,"invalid amount");
-        require(minted.add(amount)<=limit.add(burnt),"exceed mint limit");
-        minted=minted.add(amount);
-        mintTo(msg.sender,amount);
+
+    /* ====== VIEW FUNCTIONS ====== */
+
+    function isEmissionActive(uint256 timestamp) external view returns (bool) {
+        uint256 secondsOfWeek = timestamp % WEEK;
+        uint256 begin = timestamp - secondsOfWeek;
+
+        return emissions[begin].isActive;
     }
-    function burnHEC(uint amount) override external{
-        require(TORMinter!=address(0)&&msg.sender==TORMinter,"only TOR minter can burn HEC this way");
-        require(amount>0,"invalid amount");
-        burnt=burnt.add(amount);
-        burnFrom(msg.sender,amount);
+
+    function getBeginTime() public view returns (uint256) {
+        uint256 time = block.timestamp;
+        uint256 secondsOfWeek = time % WEEK;
+        uint256 begin = time - secondsOfWeek;
+
+        return begin;
     }
-    function mintTo(address account, uint256 amount) internal{
-        ITreasury(treasury).mintRewards(account,amount);
+
+    function getEndTime() public view returns (uint256) {
+        uint256 time = block.timestamp;
+        uint256 secondsOfWeek = time % WEEK;
+        uint256 begin = time - secondsOfWeek;
+        uint256 end = begin + WEEK - 1;
+
+        return end;
     }
-    function burnFrom(address account, uint256 amount) internal{
-        IERC20(HEC).transferFrom(account,address(this),amount);
-        IERC20(HEC).burn(amount);
+
+    /* ====== POLICY FUNCTIONS ====== */
+
+    function setModerator(address moderator, bool approved) external onlyOwner {
+        require(moderator != address(0), 'Invalid address');
+        moderators[moderator] = approved;
+    }
+
+    function setTreasury(address _treasury) external onlyOwner {
+        require(_treasury != address(0));
+        treasury = _treasury;
+    }
+
+    function setSplitterContract(address _splitter) external onlyOwner {
+        require(_splitter != address(0));
+        splitter = IRewardReceiver(_splitter);
+    }
+
+    function setRewardToken(address _rewardToken) external onlyOwner {
+        require(_rewardToken != address(0));
+        rewardToken = _rewardToken;
     }
 }
