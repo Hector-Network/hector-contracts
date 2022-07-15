@@ -600,19 +600,16 @@ contract StakedHecDistributor is RewardReceiver {
     using SafeMath for uint256;
 
     /* ====== VARIABLES ====== */
-    //IRewardReceiver public sHecLockFarm;
     address public stakingContract;
     address public emmissionorContract;
     
     uint public nextEpochBlock;
     uint public epochLength; //28800s per 8 hrs
-    uint public remainingTimeUntilNextDistribution;
+    uint public emissionEndTime;
     uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
     uint public remainingTimeInSeconds;
     uint totalRewardsForRebaseStaking;
-    uint totalSentForRebaseStaking; //Tracking rewards sent to staking
-    uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    
+    uint totalSentForRebaseStaking; //Tracking rewards sent to staking    
 
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
@@ -650,7 +647,7 @@ contract StakedHecDistributor is RewardReceiver {
             uint timeLapsed = currentTime.sub(startingTimeinSeconds);
 
             if (currentTime < remainingTimeInSeconds) {
-                amountPerEpoch = epochLength.mul(totalRewardsForRebaseStaking).div(remainingTimeInSeconds);
+                amountPerEpoch = (totalRewardsForRebaseStaking * (nextEpochBlock - currentTime)) / (emissionEndTime - currentTime); 
 
                  //update remaining seconds 
                  updateTimerForRebase(currentTime, remainingTimeInSeconds.sub(timeLapsed));                
@@ -706,8 +703,8 @@ contract StakedHecDistributor is RewardReceiver {
         @param weeklyDistributedAmount uint
      */
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
-        remainingTimeUntilNextDistribution =  getEndTimeFromEmmissionor();
-        require(remainingTimeUntilNextDistribution > 0, "Distribution timer is not set");
+        emissionEndTime =  getEndTimeFromEmmissionor();
+        require(emissionEndTime > 0, "Distribution timer is not set");
 
         //Calculate the rewards distributed to rebase 
         totalRewardsForRebaseStaking += weeklyDistributedAmount;
@@ -715,7 +712,7 @@ contract StakedHecDistributor is RewardReceiver {
 
         //Start the clock for rebasing
         uint startTime = block.timestamp;
-        updateTimerForRebase(startTime, remainingTimeUntilNextDistribution); 
+        updateTimerForRebase(startTime, emissionEndTime); 
     }
 
    /* ====== VIEW FUNCTIONS ====== */
