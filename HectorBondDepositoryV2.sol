@@ -662,6 +662,8 @@ contract HectorBondDepositoryV2 is Ownable {
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
+        uint maxDiscount; // in hundreths of a %. i.e. 500 = 5%
+        uint maxLockingPeriod; // max locking period in seconds
     }
 
     // Info for bond holder
@@ -723,6 +725,8 @@ contract HectorBondDepositoryV2 is Ownable {
      *  @param _maxPayout uint
      *  @param _fee uint
      *  @param _maxDebt uint
+     *  @param _maxDiscount uint
+     *  @param _maxLockingPeriod uint
      *  @param _initialDebt uint
      */
     function initializeBondTerms( 
@@ -732,6 +736,8 @@ contract HectorBondDepositoryV2 is Ownable {
         uint _maxPayout,
         uint _fee,
         uint _maxDebt,
+        uint _maxDiscount,
+        uint _maxLockingPeriod,
         uint _initialDebt
     ) external onlyPolicy() {
         terms = Terms ({
@@ -740,7 +746,9 @@ contract HectorBondDepositoryV2 is Ownable {
             minimumPrice: _minimumPrice,
             maxPayout: _maxPayout,
             fee: _fee,
-            maxDebt: _maxDebt
+            maxDebt: _maxDebt,
+            maxDiscount: _maxDiscount,
+            maxLockingPeriod: _maxLockingPeriod
         });
         totalDebt = _initialDebt;
         lastDecay = block.number;
@@ -821,21 +829,25 @@ contract HectorBondDepositoryV2 is Ownable {
      *  @notice deposit bond
      *  @param _amount uint
      *  @param _maxPrice uint
+     *  @param _lockingPeriod uint
      *  @param _depositor address
      *  @return uint
      */
     function deposit( 
         uint _amount, 
         uint _maxPrice,
+        uint _lockingPeriod,
         address _depositor
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
+        require( _lockingPeriod <= terms.maxLockingPeriod, "Invalid locking period");
 
         decayDebt();
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
         
-        uint priceInUSD = bondPriceInUSD(); // Stored in bond info
-        uint nativePrice = _bondPrice();
+        uint userDiscount = terms.maxDiscount.mul( _lockingPeriod ).div( terms.maxLockingPeriod );
+        uint priceInUSD = bondPriceInUSD().mul( 10000 - userDiscount ).div( 10000 ); // Stored in bond info
+        uint nativePrice = _bondPrice().mul( 10000- userDiscount ).div( 10000 );
 
         require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
@@ -844,25 +856,14 @@ contract HectorBondDepositoryV2 is Ownable {
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 HEC ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
-
-        // profits are calculated
-        uint fee = payout.mul( terms.fee ).div( 10000 );
-        uint profit = value.sub( payout ).sub( fee );
+        require( _amount.add( payout ).sub( value ) <= IERC20( HEC ).balanceOf(address(this)), "Insufficient HEC"); // (_amount - profit) HEC, profit = value - payout
 
         /**
-            principle is transferred in
-            approved and
-            deposited into the treasury, returning (_amount - profit) HEC
+            principle is transferred
          */
         IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( principle ).approve( address( treasury ), _amount );
-        ITreasury( treasury ).deposit( _amount, principle, profit );
         
         totalPrinciple=totalPrinciple.add(_amount);
-        
-        if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( HEC ).safeTransfer( DAO, fee ); 
-        }
         
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
@@ -893,26 +894,11 @@ contract HectorBondDepositoryV2 is Ownable {
         Bond memory info = bondInfo[ _recipient ];
         uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
 
-        if ( percentVested >= 10000 ) { // if fully vested
-            delete bondInfo[ _recipient ]; // delete user info
-            emit BondRedeemed( _recipient, info.payout, 0 ); // emit bond data
-            return stakeOrSend( _recipient, _stake, info.payout ); // pay user everything due
+        require(percentVested >= 10000, "Not fully vested");
 
-        } else { // if unfinished
-            // calculate payout vested
-            uint payout = info.payout.mul( percentVested ).div( 10000 );
-
-            // store updated deposit info
-            bondInfo[ _recipient ] = Bond({
-                payout: info.payout.sub( payout ),
-                vesting: info.vesting.sub( block.number.sub( info.lastBlock ) ),
-                lastBlock: block.number,
-                pricePaid: info.pricePaid
-            });
-
-            emit BondRedeemed( _recipient, payout, bondInfo[ _recipient ].payout );
-            return stakeOrSend( _recipient, _stake, payout );
-        }
+        delete bondInfo[ _recipient ]; // delete user info
+        emit BondRedeemed( _recipient, info.payout, 0 ); // emit bond data
+        return stakeOrSend( _recipient, _stake, info.payout ); // pay user everything due
     }
 
 
@@ -1015,12 +1001,6 @@ contract HectorBondDepositoryV2 is Ownable {
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
-        uint bph=backingCalculator.treasuryBacking();//1e4
-        uint nativeBph=toNativePrice(bph);//1e4
-        uint priceFloor=nativeBph.mul(uint(100).add(premium)).div(100);
-        if ( price_ < priceFloor ) {
-            price_ = priceFloor;
-        }
     }
     function toNativePrice(uint _bph) public view returns (uint _nativeBph){
         if(isLiquidityBond)
@@ -1041,12 +1021,6 @@ contract HectorBondDepositoryV2 is Ownable {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
             terms.minimumPrice = 0;
-        }
-        uint bph=backingCalculator.treasuryBacking();//1e4
-        uint nativeBph=toNativePrice(bph);//1e4
-        uint priceFloor=nativeBph.mul(uint(100).add(premium)).div(100);
-        if ( price_ < priceFloor ) {
-            price_ = priceFloor;
         }
     }
 
