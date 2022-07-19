@@ -629,6 +629,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
     uint public totalDebt; // total value of outstanding bonds; used for pricing
     uint public lastDecay; // reference block for debt decay
 
+    uint public totalRemainingPayout; // total remaining HEC payout for bonding
     uint public totalPrinciple; // total principle bonded through this depository
     
     string internal name_; //name of this bond
@@ -841,7 +842,10 @@ contract HectorBondNoTreasuryDepository is Ownable {
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 HEC ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
-        require( _amount.add( payout ).sub( value ) <= IERC20( HEC ).balanceOf(address(this)), "Insufficient HEC"); // (_amount - profit) HEC, profit = value - payout
+
+        // total remaining payout is increased
+        totalRemainingPayout = totalRemainingPayout.add( value );
+        require( totalRemainingPayout <= IERC20( HEC ).balanceOf(address(this)), "Insufficient HEC"); // has enough HEC balance for payout
 
         /**
             principle is transferred
@@ -881,6 +885,8 @@ contract HectorBondNoTreasuryDepository is Ownable {
         require(percentVested >= 10000, "Not fully vested");
 
         delete bondInfo[ _recipient ]; // delete user info
+
+        totalRemainingPayout = totalRemainingPayout.sub( info.payout );  // total remaining payout is decreased
         
         IERC20( HEC ).transfer( _recipient, info.payout ); // send payout
 
