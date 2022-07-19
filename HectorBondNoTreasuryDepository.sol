@@ -584,18 +584,9 @@ library FixedPoint {
     }
 }
 
-interface ITreasury {
-    function deposit( uint _amount, address _token, uint _profit ) external returns ( bool );
-    function valueOf( address _token, uint _amount ) external view returns ( uint value_ );
-}
-
 interface IBondCalculator {
     function valuation( address _LP, uint _amount ) external view returns ( uint );
     function markdown( address _LP ) external view returns ( uint );
-}
-
-interface IBackingCalculator {
-    function treasuryBacking() external view returns(uint _treasuryBacking);
 }
 
 contract HectorBondNoTreasuryDepository is Ownable {
@@ -621,7 +612,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
 
     address public immutable HEC; // token given as payment for bond
     address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints HEC when receives principle
     address public immutable DAO; // receives profit share from bond
 
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
@@ -642,7 +632,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
     uint public totalPrinciple; // total principle bonded through this depository
     
     string internal name_; //name of this bond
-    IBackingCalculator public backingCalculator;
     uint8 public principleDecimals; //principle decimals or pair markdown decimals
 
     /* ======== STRUCTS ======== */
@@ -687,9 +676,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
         address _HEC,
         address _principle,
         uint8 _principleDecimals,
-        address _treasury, 
         address _DAO, 
-        address _backingCalculator,
         address _bondCalculator
     ) {
         require( _HEC != address(0) );
@@ -698,12 +685,8 @@ contract HectorBondNoTreasuryDepository is Ownable {
         principle = _principle;
         require(_principleDecimals!=0);
         principleDecimals =_principleDecimals;
-        require( _treasury != address(0) );
-        treasury = _treasury;
         require( _DAO != address(0) );
         DAO = _DAO;
-        require(address(0)!=_backingCalculator);
-        backingCalculator=IBackingCalculator(_backingCalculator);
         // bondCalculator should be address(0) if not LP bond
         bondCalculator = _bondCalculator;
         isLiquidityBond = ( _bondCalculator != address(0) );
@@ -853,7 +836,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
 
         require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
-        uint value = ITreasury( treasury ).valueOf( principle, _amount );
+        uint value = _amount.mul( 10 ** IERC20( HEC ).decimals() ).div( 10 ** IERC20( principle ).decimals() );
         uint payout = payoutFor( value, _lockingPeriod ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 HEC ( underflow protection )
@@ -940,11 +923,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
     function decayDebt() internal {
         totalDebt = totalDebt.sub( debtDecay() );
         lastDecay = block.number;
-    }
-
-    function setBackingCalculator(address _backingCalculator) external onlyPolicy{
-        require(address(0)!=_backingCalculator);
-        backingCalculator=IBackingCalculator(_backingCalculator);
     }
 
     function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
