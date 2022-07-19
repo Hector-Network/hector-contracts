@@ -974,12 +974,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
             price_ = terms.minimumPrice;
         }
     }
-    function toNativePrice(uint _bph) public view returns (uint _nativeBph){
-        if(isLiquidityBond)
-            _nativeBph=_bph.mul(10**principleDecimals).div(IBondCalculator( bondCalculator ).markdown( principle ));
-        else
-            _nativeBph=_bph;
-    }
+    
     /**
      *  @notice calculate current bond price and remove floor if above
      *  @return price_ uint
