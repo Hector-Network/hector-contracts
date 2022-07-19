@@ -633,7 +633,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
     uint public totalPrinciple; // total principle bonded through this depository
     
     string internal name_; //name of this bond
-    uint8 public principleDecimals; //principle decimals or pair markdown decimals
 
     /* ======== STRUCTS ======== */
 
@@ -676,7 +675,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
         string memory _name,
         address _HEC,
         address _principle,
-        uint8 _principleDecimals,
         address _DAO, 
         address _bondCalculator
     ) {
@@ -684,8 +682,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
         HEC = _HEC;
         require( _principle != address(0) );
         principle = _principle;
-        require(_principleDecimals!=0);
-        principleDecimals =_principleDecimals;
         require( _DAO != address(0) );
         DAO = _DAO;
         // bondCalculator should be address(0) if not LP bond
@@ -929,11 +925,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
     function decayDebt() internal {
         totalDebt = totalDebt.sub( debtDecay() );
         lastDecay = block.number;
-    }
-
-    function setPrincipleDecimals(uint8 _principleDecimals) external onlyPolicy{
-        require(_principleDecimals!=0);
-        principleDecimals=_principleDecimals;
     }
 
 
