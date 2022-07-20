@@ -843,7 +843,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         // total remaining payout is increased
-        totalRemainingPayout = totalRemainingPayout.add( value );
+        totalRemainingPayout = totalRemainingPayout.add( payout );
         require( totalRemainingPayout <= IERC20( HEC ).balanceOf(address(this)), "Insufficient HEC"); // has enough HEC balance for payout
 
         /**

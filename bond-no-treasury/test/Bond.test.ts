@@ -149,6 +149,10 @@ describe('Bond with no treasury', function () {
       expect(info.lastBlockAt).equal(
         (await ethers.provider.getBlock(reciept.blockNumber)).timestamp
       );
+
+      expect(await hectorBondNoTreasuryDepository.totalRemainingPayout()).equal(
+        payout0
+      );
     });
 
     it('payout with max locking period', async function () {
@@ -161,6 +165,27 @@ describe('Bond with no treasury', function () {
       expect(info.payout).equal(payout1);
       expect(info.lastBlockAt).equal(
         (await ethers.provider.getBlock(reciept.blockNumber)).timestamp
+      );
+
+      expect(await hectorBondNoTreasuryDepository.totalRemainingPayout()).equal(
+        payout1
+      );
+    });
+
+    it('totalReaminingPayout', async function () {
+      await hectorBondNoTreasuryDepository
+        .connect(alice)
+        .deposit(amount, maxPrice, lockingPeriod, alice.address);
+      expect(await hectorBondNoTreasuryDepository.totalRemainingPayout()).equal(
+        payout0
+      );
+
+      await hectorBondNoTreasuryDepository
+        .connect(bob)
+        .deposit(amount, maxPrice, maxLockingPeriod, bob.address);
+
+      expect(await hectorBondNoTreasuryDepository.totalRemainingPayout()).equal(
+        payout0 + payout1
       );
     });
   });
@@ -180,7 +205,7 @@ describe('Bond with no treasury', function () {
         .deposit(amount, maxPrice, maxLockingPeriod, bob.address);
     });
 
-    it('after 5 dyas for alice', async function () {
+    it('after 5 days for alice', async function () {
       await increaseTime(lockingPeriod);
 
       await hectorBondNoTreasuryDepository.connect(alice).redeem(alice.address);
@@ -188,6 +213,10 @@ describe('Bond with no treasury', function () {
 
       const info = await hectorBondNoTreasuryDepository.bondInfo(alice.address);
       expect(info.payout).equal(0);
+
+      expect(await hectorBondNoTreasuryDepository.totalRemainingPayout()).equal(
+        payout1
+      );
     });
 
     it('after 5 days for bob', async function () {
