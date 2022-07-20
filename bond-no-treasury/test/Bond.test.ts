@@ -1,10 +1,10 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import { ethers } from 'hardhat';
-import { BigNumber, constants, utils } from 'ethers';
-import { HectorToken } from './../types/HEC.sol/HectorToken';
+import { constants, utils } from 'ethers';
+import { HectorToken } from './../types/contracts/HEC.sol/HectorToken';
 import { MockPrinciple } from './../types/contracts/mock/MockPrinciple';
-import { HectorBondNoTreasuryDepository } from './../types/HectorBondNoTreasuryDepository.sol/HectorBondNoTreasuryDepository';
+import { HectorBondNoTreasuryDepository } from './../types/contracts/HectorBondNoTreasuryDepository.sol/HectorBondNoTreasuryDepository';
 import { increaseTime } from './../helper/helpers';
 
 describe('Bond with no treasury', function () {
@@ -23,13 +23,11 @@ describe('Bond with no treasury', function () {
   const maxPayout = 500;
   const fee = 500;
   const maxDebt = utils.parseUnits('2000', 9);
-  const maxDiscount = 500;
-  const maxLockingPeriod = 3600;
   const totalSupply = utils.parseEther('5000');
   const initialDebt = utils.parseUnits('100', 9);
 
-  const payout0 = 101399310484; // payout for 1000 seconds locking
-  const payout1 = 105263157894; // payout for 3600 (max) seconds locking
+  const payout0 = 105263157894; // payout for 5 days lock
+  const payout1 = 117647058823; // payout for 6 months lock
 
   beforeEach(async function () {
     [owner, alice, bob, carol] = await ethers.getSigners();
@@ -62,11 +60,18 @@ describe('Bond with no treasury', function () {
       maxPayout,
       fee,
       maxDebt,
-      maxDiscount,
-      maxLockingPeriod,
       totalSupply,
       initialDebt
     );
+    await hectorBondNoTreasuryDepository.setLockingDiscount(5 * 24 * 3600, 500); // 5 days lock - 5%
+    await hectorBondNoTreasuryDepository.setLockingDiscount(
+      5 * 7 * 24 * 3600,
+      1000
+    ); // 7 weeks lock - 10%
+    await hectorBondNoTreasuryDepository.setLockingDiscount(
+      5 * 30 * 24 * 3600,
+      1500
+    ); // 5 months lock - 15%
 
     await hectorToken.mint(hectorBondNoTreasuryDepository.address, totalSupply);
     await principle
@@ -81,28 +86,10 @@ describe('Bond with no treasury', function () {
   });
 
   describe('#setBondTerms', () => {
-    const maxDiscount = 1500;
-    const maxLockingPeriod = 13600;
     const totalSupply = utils.parseEther('15000');
 
-    it('maxDiscount', async function () {
-      await hectorBondNoTreasuryDepository.setBondTerms(5, maxDiscount);
-
-      expect((await hectorBondNoTreasuryDepository.terms()).maxDiscount).equal(
-        maxDiscount
-      );
-    });
-
-    it('maxLockingPeriod', async function () {
-      await hectorBondNoTreasuryDepository.setBondTerms(6, maxLockingPeriod);
-
-      expect(
-        (await hectorBondNoTreasuryDepository.terms()).maxLockingPeriod
-      ).equal(maxLockingPeriod);
-    });
-
-    it('maxLockingPeriod', async function () {
-      await hectorBondNoTreasuryDepository.setBondTerms(7, totalSupply);
+    it('totalSupply', async function () {
+      await hectorBondNoTreasuryDepository.setBondTerms(5, totalSupply);
 
       expect((await hectorBondNoTreasuryDepository.terms()).totalSupply).equal(
         totalSupply
@@ -110,13 +97,39 @@ describe('Bond with no treasury', function () {
     });
   });
 
+  describe('#setLockingDiscount', () => {
+    it('add new discount', async function () {
+      await hectorBondNoTreasuryDepository.setLockingDiscount(100, 10); // 100 seconds lock - 0.1%
+
+      expect(await hectorBondNoTreasuryDepository.lockingDiscounts(100)).equal(
+        10
+      );
+    });
+
+    it('update existing discount', async function () {
+      expect(
+        await hectorBondNoTreasuryDepository.lockingDiscounts(5 * 7 * 24 * 3600)
+      ).equal(1000);
+
+      await hectorBondNoTreasuryDepository.setLockingDiscount(
+        5 * 7 * 24 * 3600,
+        2000
+      ); // 5 days lock - 20%
+
+      expect(
+        await hectorBondNoTreasuryDepository.lockingDiscounts(5 * 7 * 24 * 3600)
+      ).equal(2000);
+    });
+  });
+
   describe('#deposit', () => {
     const amount = utils.parseEther('100');
     const maxPrice = 30000;
-    const lockingPeriod = 1000;
+    const lockingPeriod = 5 * 24 * 3600; // 5 days lock
+    const maxLockingPeriod = 5 * 30 * 24 * 3600; // 5 months lock
 
     it('invalid user locking period', async function () {
-      let lockingPeriod = maxLockingPeriod + 1;
+      let lockingPeriod = 24 * 3600; // 1 day lock
 
       await expect(
         hectorBondNoTreasuryDepository
@@ -155,7 +168,8 @@ describe('Bond with no treasury', function () {
   describe('#redeem', () => {
     const amount = utils.parseEther('100');
     const maxPrice = 30000;
-    const lockingPeriod = 1000;
+    const lockingPeriod = 5 * 24 * 3600; // 5 days lock
+    const maxLockingPeriod = 5 * 30 * 24 * 3600; // 5 months lock
 
     beforeEach(async function () {
       await hectorBondNoTreasuryDepository
@@ -166,7 +180,7 @@ describe('Bond with no treasury', function () {
         .deposit(amount, maxPrice, maxLockingPeriod, bob.address);
     });
 
-    it('after 1000 seconds for alice', async function () {
+    it('after 5 dyas for alice', async function () {
       await increaseTime(lockingPeriod);
 
       await hectorBondNoTreasuryDepository.connect(alice).redeem(alice.address);
@@ -176,7 +190,7 @@ describe('Bond with no treasury', function () {
       expect(info.payout).equal(0);
     });
 
-    it('after 1000 seconds for bob', async function () {
+    it('after 5 days for bob', async function () {
       await increaseTime(lockingPeriod);
 
       await expect(
@@ -184,7 +198,7 @@ describe('Bond with no treasury', function () {
       ).to.be.revertedWith('Not fully vested');
     });
 
-    it('after 3600 (max) seconds for bob', async function () {
+    it('after 5 months for bob', async function () {
       await increaseTime(maxLockingPeriod);
 
       await hectorBondNoTreasuryDepository.connect(bob).redeem(bob.address);

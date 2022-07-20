@@ -626,6 +626,8 @@ contract HectorBondNoTreasuryDepository is Ownable {
 
     mapping( address => Bond ) public bondInfo; // stores bond information for depositors
 
+    mapping( uint => uint) public lockingDiscounts; // stores discount in hundreths for locking periods ( 500 = 5% = 0.05 )
+
     uint public totalDebt; // total value of outstanding bonds; used for pricing
     uint public lastDecay; // reference block for debt decay
 
@@ -644,8 +646,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
         uint maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-        uint maxDiscount; // in hundreths of a %. i.e. 500 = 5%
-        uint maxLockingPeriod; // max locking period in seconds
         uint totalSupply; // HEC total supply
     }
 
@@ -698,8 +698,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
      *  @param _maxPayout uint
      *  @param _fee uint
      *  @param _maxDebt uint
-     *  @param _maxDiscount uint
-     *  @param _maxLockingPeriod uint
      *  @param _initialDebt uint
      *  @param _totalSupply uint
      */
@@ -710,8 +708,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
         uint _maxPayout,
         uint _fee,
         uint _maxDebt,
-        uint _maxDiscount,
-        uint _maxLockingPeriod,
         uint _totalSupply,
         uint _initialDebt
     ) external onlyPolicy() {
@@ -722,8 +718,6 @@ contract HectorBondNoTreasuryDepository is Ownable {
             maxPayout: _maxPayout,
             fee: _fee,
             maxDebt: _maxDebt,
-            maxDiscount: _maxDiscount,
-            maxLockingPeriod: _maxLockingPeriod,
             totalSupply: _totalSupply
         });
         totalDebt = _initialDebt;
@@ -735,7 +729,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
     
     /* ======== POLICY FUNCTIONS ======== */
 
-    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT, MINPRICE, MAXDISCOUNT, MAXLOCKINGPERIOD, TOTALSUPPLY }
+    enum PARAMETER { VESTING, PAYOUT, FEE, DEBT, MINPRICE, TOTALSUPPLY }
     /**
      *  @notice set parameters for new bonds
      *  @param _parameter PARAMETER
@@ -755,13 +749,21 @@ contract HectorBondNoTreasuryDepository is Ownable {
             terms.maxDebt = _input;
         } else if ( _parameter == PARAMETER.MINPRICE ) { // 4
             terms.minimumPrice = _input;
-        } else if ( _parameter == PARAMETER.MAXDISCOUNT ) { // 5
-            terms.maxDiscount = _input;
-        } else if ( _parameter == PARAMETER.MAXLOCKINGPERIOD ) { // 6
-            terms.maxLockingPeriod = _input;
-        } else if ( _parameter == PARAMETER.TOTALSUPPLY ) { // 7
+        }  else if ( _parameter == PARAMETER.TOTALSUPPLY ) { // 5
             terms.totalSupply = _input;
         }
+    }
+
+    /**
+     *  @notice set discount for locking period
+     *  @param _lockingPeriod uint
+     *  @param _discount uint
+     */
+    function setLockingDiscount( uint _lockingPeriod, uint _discount ) external onlyPolicy() {
+        require( _lockingPeriod > 0, "Invalid locking period" );
+        require( _discount >= 0 && _discount < 10000, "Invalid discount" );
+
+        lockingDiscounts[ _lockingPeriod ] = _discount;
     }
 
     /**
@@ -822,19 +824,20 @@ contract HectorBondNoTreasuryDepository is Ownable {
         address _depositor
     ) external returns ( uint ) {
         require( _depositor != address(0), "Invalid address" );
-        require( _lockingPeriod <= terms.maxLockingPeriod, "Invalid locking period");
+
+        uint discount = lockingDiscounts[ _lockingPeriod ];
+        require( discount > 0, "Invalid locking period");
 
         decayDebt();
         require( totalDebt <= terms.maxDebt, "Max capacity reached" );
         
-        uint userDiscount = terms.maxDiscount.mul( _lockingPeriod ).div( terms.maxLockingPeriod );
-        uint priceInUSD = bondPriceInUSD().mul( 10000 - userDiscount ).div( 10000 ); // Stored in bond info
-        uint nativePrice = _bondPrice().mul( 10000 - userDiscount ).div( 10000 );
+        uint priceInUSD = bondPriceInUSD().mul( 10000 - discount ).div( 10000 ); // Stored in bond info
+        uint nativePrice = _bondPrice().mul( 10000 - discount ).div( 10000 );
 
         require( _maxPrice >= nativePrice, "Slippage limit: more than max price" ); // slippage protection
 
         uint value = _amount.mul( 10 ** IERC20( HEC ).decimals() ).div( 10 ** IERC20( principle ).decimals() );
-        uint payout = payoutFor( value, _lockingPeriod ); // payout to bonder is computed
+        uint payout = payoutFor( value, discount ); // payout to bonder is computed
 
         require( payout >= 10000000, "Bond too small" ); // must be > 0.01 HEC ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
@@ -941,12 +944,11 @@ contract HectorBondNoTreasuryDepository is Ownable {
     /**
      *  @notice calculate interest due for new bond
      *  @param _value uint
-     *  @param _lockingPeriod uint
+     *  @param _discount uint
      *  @return uint
      */
-    function payoutFor( uint _value, uint _lockingPeriod ) public view returns ( uint ) {
-        uint userDiscount = terms.maxDiscount.mul( _lockingPeriod ).div( terms.maxLockingPeriod );
-        uint nativePrice = bondPrice().mul( 10000 - userDiscount ).div( 10000 );
+    function payoutFor( uint _value, uint _discount ) public view returns ( uint ) {
+        uint nativePrice = bondPrice().mul( 10000 - _discount ).div( 10000 );
 
         return FixedPoint.fraction( _value, nativePrice ).decode112with18().div( 1e14 );
     }
@@ -1089,10 +1091,12 @@ contract HectorBondNoTreasuryDepository is Ownable {
      *  @notice allow anyone to send lost tokens (excluding principle or HEC) to the DAO
      *  @return bool
      */
-    function recoverLostToken( address _token ) external returns ( bool ) {
-        require( _token != HEC );
-        require( _token != principle );
-        IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
-        return true;
+    function withdrawToken( address _token ) external onlyPolicy returns ( bool ) { 
+        uint amount = IERC20( _token ).balanceOf( address(this) ); 
+        if( _token == HEC ){ 
+            amount = amount.sub(totalRemainingPayout); 
+        } 
+        IERC20( _token ).safeTransfer( DAO, amount ); 
+        return true; 
     }
 }
