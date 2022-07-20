@@ -661,7 +661,7 @@ contract StakedHecDistributor is RewardReceiver {
         @notice send epoch reward to staking contract
      */
     function distributeRewards( address _recipient, uint _amount ) internal {
-        IERC20(rewardToken).approve(_recipient, _amount);
+        //IERC20(rewardToken).approve(_recipient, _amount);
 
         IERC20(rewardToken).safeTransfer( _recipient, _amount );       
     } 
