@@ -55,7 +55,7 @@ library Address {
         );
 
         // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = recipient.call{value: amount}("");
+        (bool success, ) = recipient.call{ value: amount }("");
         require(
             success,
             "Address: unable to send value, recipient may have reverted"
@@ -145,9 +145,8 @@ library Address {
         require(isContract(target), "Address: call to non-contract");
 
         // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{value: value}(
-            data
-        );
+        (bool success, bytes memory returndata) =
+            target.call{ value: value }(data);
         return _verifyCallResult(success, returndata, errorMessage);
     }
 
@@ -476,10 +475,11 @@ library SafeERC20 {
         // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
         // the target address contains contract code and also asserts for success in the low-level call.
 
-        bytes memory returndata = address(token).functionCall(
-            data,
-            "SafeERC20: low-level call failed"
-        );
+        bytes memory returndata =
+            address(token).functionCall(
+                data,
+                "SafeERC20: low-level call failed"
+            );
         if (returndata.length > 0) {
             // Return data is optional
             // solhint-disable-next-line max-line-length
@@ -496,27 +496,22 @@ interface IOwnable {
 
     function renounceManagement(string memory confirm) external;
 
-    function pushManagement(address newOwner_) external;
+    function pushManagement( address newOwner_ ) external;
 
     function pullManagement() external;
 }
 
 contract Ownable is IOwnable {
+
     address internal _owner;
     address internal _newOwner;
 
-    event OwnershipPushed(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
-    event OwnershipPulled(
-        address indexed previousOwner,
-        address indexed newOwner
-    );
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
-    constructor() {
+    constructor () {
         _owner = msg.sender;
-        emit OwnershipPulled(address(0), _owner);
+        emit OwnershipPulled( address(0), _owner );
     }
 
     function owner() public view override returns (address) {
@@ -524,107 +519,80 @@ contract Ownable is IOwnable {
     }
 
     modifier onlyOwner() {
-        require(_owner == msg.sender, "Ownable: caller is not the owner");
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
         _;
     }
 
-    function renounceManagement(string memory confirm)
-        public
-        virtual
-        override
-        onlyOwner
-    {
+    function renounceManagement(string memory confirm) public virtual override onlyOwner() {
         require(
-            keccak256(abi.encodePacked(confirm)) ==
-                keccak256(abi.encodePacked("confirm renounce")),
+            keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked("confirm renounce")),
             "Ownable: renouce needs 'confirm renounce' as input"
         );
-        emit OwnershipPushed(_owner, address(0));
+        emit OwnershipPushed( _owner, address(0) );
         _owner = address(0);
         _newOwner = address(0);
     }
 
-    function pushManagement(address newOwner_)
-        public
-        virtual
-        override
-        onlyOwner
-    {
-        require(
-            newOwner_ != address(0),
-            "Ownable: new owner is the zero address"
-        );
-        emit OwnershipPushed(_owner, newOwner_);
+    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
         _newOwner = newOwner_;
     }
 
     function pullManagement() public virtual override {
-        require(msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled(_owner, _newOwner);
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
         _owner = _newOwner;
     }
 }
 
-interface IERC20 {
+interface IERC20{
     function approve(address spender, uint256 amount) external returns (bool);
-
-    function totalSupply() external view returns (uint256);
-
+    function totalSupply() external view returns (uint);
     function balanceOf(address account) external view returns (uint256);
-
     function allowance(address owner, address spender)
         external
         view
         returns (uint256);
-
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
     ) external returns (bool);
-
     function transfer(address recipient, uint256 amount)
         external
         returns (bool);
-
     function mint(address account_, uint256 amount_) external;
-
     function decimals() external view returns (uint8);
-
     function burnFrom(address account_, uint256 amount_) external;
 }
 
-interface IRewardReceiver {
-    function receiveReward(uint256 amount) external;
+interface IRewardReceiver{
+    function receiveReward(uint amount) external;
 }
 
-interface IEmmissionor {
-    function distributionRemainingTime() external returns (uint256);
+interface IEmmissionor{
+    function distributionRemainingTime() external returns(uint);
 }
 
-abstract contract RewardReceiver is IRewardReceiver, Ownable {
-    event Log(uint256 value);
+abstract contract RewardReceiver is IRewardReceiver,Ownable{
+    event Log(uint value);
     address public rewardToken;
-
-    function receiveReward(uint256 amount) external override {
-        require(
-            IERC20(rewardToken).transferFrom(msg.sender, address(this), amount)
-        );
+    function receiveReward(uint amount) external override{
+        require(IERC20(rewardToken).transferFrom(msg.sender,address(this),amount));
         onRewardReceived(amount);
     }
-
-    function onRewardReceived(uint256 amount) internal virtual;
-
-    function setRewardToken(address _rewardToken) external onlyOwner {
-        require(_rewardToken != address(0));
-        rewardToken = _rewardToken;
+    function onRewardReceived(uint amount) internal virtual;
+    function setRewardToken(address _rewardToken) external onlyOwner{
+        require(_rewardToken!=address(0));
+        rewardToken=_rewardToken;
     }
 }
 
 interface IsHecLockFarm {
     // Total 'balance' used for calculating the percent of the pool the account owns
     // Takes into account the locked stake time multiplier
-    function totalTokenBoostedSupply() external view returns (uint256);
+    function totalTokenBoostedSupply() external view returns (uint);
 }
 
 contract StakedHecDistributor is RewardReceiver {
@@ -634,72 +602,57 @@ contract StakedHecDistributor is RewardReceiver {
     /* ====== VARIABLES ====== */
     address public stakingContract;
     address public emmissionorContract;
+    
+    uint public nextEpochBlock;
+    uint public epochLength; //28800s per 8 hrs
+    uint public emissionEndTime;
+    uint totalRewardsForRebaseStaking;
+    uint totalSentForRebaseStaking; //Tracking rewards sent to staking    
 
-    uint256 public nextEpochBlock;
-    uint256 public epochLength; //28800s per 8 hrs
-    uint256 public emissionEndTime;
-    uint256 totalRewardsForRebaseStaking;
-    uint256 totalSentForRebaseStaking; //Tracking rewards sent to staking
+    event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
-    event RewardsDistributed(
-        address indexed caller,
-        address indexed recipient,
-        uint256 amount
-    );
 
-    constructor(
-        address _rewardToken,
-        address _stakingContract,
-        address _emmissionorContract,
-        uint256 _epochLength,
-        uint256 _nextEpochBlock
-    ) {
-        require(_rewardToken != address(0));
+    constructor(address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
+        require( _rewardToken != address(0) );
         rewardToken = _rewardToken;
 
         //Set staking contract for rebase distribution
-        require(_stakingContract != address(0));
+        require( _stakingContract != address(0) );
         stakingContract = _stakingContract;
 
         //Set emmissionor contract to sync up distribution end time
-        require(_emmissionorContract != address(0));
+        require( _emmissionorContract != address(0) );
         emmissionorContract = _emmissionorContract;
 
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
     }
 
-    /* ====== PUBLIC FUNCTIONS ====== */
-
+     /* ====== PUBLIC FUNCTIONS ====== */
+    
     /**
         @notice send epoch reward to staking contract which calls the distribute func (pull model)
      */
-    function distribute() external returns (bool) {
-        //the distribute function can be invoked multiple times within one epoch
-        //but will only send rewards once per epoch at the very first invocation
+    function distribute() external returns ( bool ) {
+        //the distribute function can be invoked multiple times within one epoch 
+        //but will only send rewards once per epoch at the very first invocation 
         //of the new epoch
-        if (nextEpochBlock <= block.number) {
+        if ( nextEpochBlock <= block.number ) {
             nextEpochBlock = nextEpochBlock.add(epochLength); // set next epoch block
 
-            uint256 currentTime = block.timestamp;
-
-            uint256 amountPerEpoch = (totalRewardsForRebaseStaking *
-                (nextEpochBlock - currentTime)) /
-                (emissionEndTime - currentTime);
-
+            uint currentTime = block.timestamp;
+            uint amountPerEpoch = (totalRewardsForRebaseStaking * (nextEpochBlock - currentTime)) / (emissionEndTime - currentTime);
+                
             //update remaining reward amount
             accountingForStaking(amountPerEpoch);
 
             distributeRewards(stakingContract, amountPerEpoch);
 
-            emit RewardsDistributed(
-                msg.sender,
-                stakingContract,
-                amountPerEpoch
-            );
+            emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
 
             return true;
-        } else return false;
+
+        } else return false;        
     }
 
     /* ====== INTERNAL FUNCTIONS ====== */
@@ -707,13 +660,13 @@ contract StakedHecDistributor is RewardReceiver {
     /**
         @notice send epoch reward to staking contract
      */
-    function distributeRewards(address _recipient, uint256 _amount) internal {
+    function distributeRewards( address _recipient, uint _amount ) internal {
         IERC20(rewardToken).approve(_recipient, _amount);
 
-        IERC20(rewardToken).safeTransfer(_recipient, _amount);
-    }
+        IERC20(rewardToken).safeTransfer( _recipient, _amount );       
+    } 
 
-    function accountingForStaking(uint256 amount) internal {
+    function accountingForStaking(uint amount) internal {
         //Keep track of sent amount
         totalSentForRebaseStaking = totalSentForRebaseStaking.add(amount);
 
@@ -725,50 +678,44 @@ contract StakedHecDistributor is RewardReceiver {
         @notice pushing weekly distributed rewards from splitter to staking and sHecLockFarm
         @param weeklyDistributedAmount uint
      */
-    function onRewardReceived(uint256 weeklyDistributedAmount)
-        internal
-        override
-    {
-        emissionEndTime = getEndTimeFromEmmissionor();
+    function onRewardReceived(uint weeklyDistributedAmount) internal override {
+        emissionEndTime =  getEndTimeFromEmmissionor();
         require(emissionEndTime > 0, "Distribution timer is not set");
 
+        //Calculate the rewards distributed to rebase 
         totalRewardsForRebaseStaking += weeklyDistributedAmount;
-        require(
-            totalRewardsForRebaseStaking > 0,
-            "No rewards avail for rebase"
-        );
+        require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase"); 
     }
 
-    /* ====== VIEW FUNCTIONS ====== */
-    /**
+   /* ====== VIEW FUNCTIONS ====== */
+   /**
         @notice retrieves the remaining time which the Emmissionor contract will make the next distribution
      */
-    function getEndTimeFromEmmissionor() internal returns (uint256) {
+    function getEndTimeFromEmmissionor() internal returns(uint) {
         return IEmmissionor(emmissionorContract).distributionRemainingTime();
     }
-
+    
+    
     /* ====== POLICY FUNCTIONS ====== */
 
-    function setStakingContract(address _stakingContract) external onlyOwner {
+    function setStakingContract(address _stakingContract) external onlyOwner(){
         require(_stakingContract != address(0));
         stakingContract = _stakingContract;
     }
 
-    function setEmmissionorContract(address _emmissionorContract)
-        external
-        onlyOwner
-    {
-        require(_emmissionorContract != address(0));
+    function setEmmissionorContract(address _emmissionorContract) external onlyOwner(){
+        require( _emmissionorContract != address(0) );
         emmissionorContract = _emmissionorContract;
     }
 
-    function setEpochLength(uint256 _epochLength) external onlyOwner {
-        require(_epochLength > 0);
+    function setEpochLength(uint _epochLength) external onlyOwner(){
+        require( _epochLength > 0 );
         epochLength = _epochLength;
     }
 
-    function setNextEpochBlock(uint256 _nextEpochBlock) external onlyOwner {
-        require(_nextEpochBlock > 0);
+    function setNextEpochBlock(uint _nextEpochBlock) external onlyOwner(){
+        require( _nextEpochBlock > 0 );
         nextEpochBlock = _nextEpochBlock;
     }
+
 }
