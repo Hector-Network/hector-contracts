@@ -761,7 +761,7 @@ contract HectorBondNoTreasuryDepository is Ownable {
      */
     function setLockingDiscount( uint _lockingPeriod, uint _discount ) external onlyPolicy() {
         require( _lockingPeriod > 0, "Invalid locking period" );
-        require( _discount >= 0 && _discount < 10000, "Invalid discount" );
+        require( _discount > 0 && _discount < 10000, "Invalid discount" );
 
         lockingDiscounts[ _lockingPeriod ] = _discount;
     }
