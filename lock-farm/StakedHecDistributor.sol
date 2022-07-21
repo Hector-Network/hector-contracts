@@ -642,14 +642,15 @@ contract StakedHecDistributor is RewardReceiver {
 
             uint currentTime = block.timestamp;
             uint amountPerEpoch = (totalRewardsForRebaseStaking * (nextEpochBlock - currentTime)) / (emissionEndTime - currentTime);
-                
-            //update remaining reward amount
-            accountingForStaking(amountPerEpoch);
 
-            distributeRewards(stakingContract, amountPerEpoch);
+            if (amountPerEpoch > 0) {
+                 //update remaining reward amount
+                accountingForStaking(amountPerEpoch);
 
-            emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
+                distributeRewards(stakingContract, amountPerEpoch);
 
+                emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
+            }    
             return true;
 
         } else return false;        
