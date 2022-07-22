@@ -637,8 +637,9 @@ contract StakedHecDistributor is RewardReceiver {
         //the distribute function can be invoked multiple times within one epoch 
         //but will only send rewards once per epoch at the very first invocation 
         //of the new epoch
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add(epochLength); // set next epoch block
+        if (nextEpochBlock < block.number) {
+            uint blockInEpoch = (block.number - nextEpochBlock) % epochLength;
+            nextEpochBlock = block.number- blockInEpoch + nextEpochBlock;
 
             uint currentTime = block.timestamp;
             uint amountPerEpoch = (totalRewardsForRebaseStaking * (nextEpochBlock - currentTime)) / (emissionEndTime - currentTime);
