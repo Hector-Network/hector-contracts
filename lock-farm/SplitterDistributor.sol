@@ -497,6 +497,18 @@ contract Splitter is RewardReceiver,Loggable{
     IRewardWeight public rewardWeightContract;
     IRewardReceiver[] public receivers;
     mapping(address => ReceiverPoolInfo) public receiversInfo;
+    uint8 MAX_RECEIVER_CONTRACTS = 20;
+    uint8 MAX_RECEIVER_CONTRACTS_ALLOWED = 51;
+    
+    //Triggered When registering a new reward contract
+    event RegisterReceiverEvent(address newReceiver);
+    //Triggered when a new reward weight contract is set
+    event SetRewardWeightContractEvent(address oldReceiver, address newReceiver);
+    //Triggered when the receiver contract is activated/deactivated
+    event UpdateReceiverStatusEvent(address receiver, bool oldValue, bool newValue);
+    //Triggered when MAX_RECEIVER_CONTRACTS is updated
+    event UpdateMaxReceiversEvent(uint8 oldValue, uint8 newValue);
+
 
     constructor(address _rewardWeightContract) {
         require( _rewardWeightContract != address(0) );
@@ -506,7 +518,10 @@ contract Splitter is RewardReceiver,Loggable{
     function onRewardReceived(uint amount) internal override{
         emit Log(address(this),"Splitter","onRewardReceived",amount);
 
-       for(uint i=0;i<receivers.length;i++){
+        //Prevent Gas Exhaustion
+        uint8 totalReceivers = uint8((receivers.length > MAX_RECEIVER_CONTRACTS) ? MAX_RECEIVER_CONTRACTS : receivers.length);
+
+       for(uint i=0;i < totalReceivers; i++){
             ReceiverPoolInfo storage info = receiversInfo[address(receivers[i])];
             uint currentBalance = IERC20(rewardToken).balanceOf(address(this));
 
@@ -535,9 +550,12 @@ contract Splitter is RewardReceiver,Loggable{
      */
     function register(address receiver) external onlyOwner{
         require(receiver != address(0), "Invalid receiver");
+        require(receivers.length < MAX_RECEIVER_CONTRACTS, "Maximum number of receivers reached.");
 
         receivers.push(IRewardReceiver(receiver));
         receiversInfo[receiver] = ReceiverPoolInfo(0, true);
+
+        emit RegisterReceiverEvent(receiver);
     }
 
      /**
@@ -546,7 +564,26 @@ contract Splitter is RewardReceiver,Loggable{
      */
     function setRewardContract(address _rewardWeightContract) external onlyOwner {
         require(_rewardWeightContract != address(0),"Invalid reward weight address");
+        address oldContract = address(rewardWeightContract);
+
         rewardWeightContract = IRewardWeight(_rewardWeightContract);
+
+        emit SetRewardWeightContractEvent(oldContract, _rewardWeightContract);
+    }
+
+     /**
+        @notice set the new value for MAX_RECEIVER_CONTRACTS
+        @param newValue uint8
+     */
+    function updateMaxReceivers(uint8 newValue) external onlyOwner {
+        require(newValue > 0,"Invalid max value.");
+        require(newValue < MAX_RECEIVER_CONTRACTS_ALLOWED, "Maximum number of receivers reached.");
+
+        
+        uint8 oldValue = MAX_RECEIVER_CONTRACTS;
+        MAX_RECEIVER_CONTRACTS = newValue;
+
+        emit UpdateMaxReceiversEvent(oldValue, newValue);
     }
 
     /**
@@ -556,6 +593,10 @@ contract Splitter is RewardReceiver,Loggable{
      */
     function updateReceiverStatus(address receiver, bool status) external onlyOwner {
         require(receiver != address(0), "Invalid receiver");
+
+        bool oldValue = receiversInfo[receiver].isActive;
         receiversInfo[receiver].isActive = status;
+
+        emit UpdateReceiverStatusEvent(receiver, oldValue, status);
     }
 }

@@ -65,6 +65,19 @@ contract RewardWeight is Ownable{
     }
 
     mapping(address => ReceiverPoolInfo) public receiversInfo;
+    address[] public receivers;
+    uint MAX_PERCENTAGE_VALUE = 10000;
+    uint8 MAX_RECEIVER_CONTRACTS = 20;
+    uint8 MAX_RECEIVER_CONTRACTS_ALLOWED = 51;
+
+    //Triggered When registering a new reward contract
+    event RegisterReceiverEvent(address receiver, uint weightPercentage);
+    //Triggered when a new reward weight contract is set
+    event SetRewardWeightContractEvent(address receiver, uint oldValue, uint newValue);
+    //Triggered when the receiver contract is activated/deactivated
+    event UpdateReceiverStatusEvent(address receiver, bool oldValue, bool newValue);
+    //Triggered when MAX_RECEIVER_CONTRACTS is updated
+    event UpdateMaxReceiversEvent(uint8 oldValue, uint8 newValue);
 
     /**
         @notice register receiver to receive weight, weight (100%=10000, 40%=4000, 4%=400)
@@ -72,10 +85,42 @@ contract RewardWeight is Ownable{
         @param weightPercentage uint
      */
     function register(address receiver, uint weightPercentage) external onlyOwner{
-        require(receiver != address(0), "Invalid receiver");
-        require(weightPercentage > 0, "Invalid reward weight");
+        require(receiver != address(0), "Must be greater than 0");
+        uint currentWeightTotal = getTotalWeightPercentage();
 
+        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Invalid reward weight");
+        require(receivers.length < MAX_RECEIVER_CONTRACTS, "Maximum number of receivers reached.");
+
+        receivers.push(receiver);
         receiversInfo[receiver] = ReceiverPoolInfo(weightPercentage, true);
+
+        emit RegisterReceiverEvent(receiver, weightPercentage);
+    }
+
+     /**
+        @notice set the new value for MAX_RECEIVER_CONTRACTS
+        @param newValue uint8
+     */
+    function updateMaxReceivers(uint8 newValue) external onlyOwner {
+        require(newValue > 0,"Invalid max value.");
+        require(newValue < MAX_RECEIVER_CONTRACTS_ALLOWED, "Maximum number of receivers reached.");
+
+        
+        uint8 oldValue = MAX_RECEIVER_CONTRACTS;
+        MAX_RECEIVER_CONTRACTS = newValue;
+
+        emit UpdateMaxReceiversEvent(oldValue, newValue);
+    }
+    
+    function getTotalWeightPercentage() view internal returns (uint total) {
+        //Prevent Gas Exhaustion
+        uint8 totalReceivers = uint8((receivers.length > MAX_RECEIVER_CONTRACTS) ? MAX_RECEIVER_CONTRACTS : receivers.length);
+        total = 0;
+
+       for(uint i=0;i < totalReceivers; i++)  {
+            ReceiverPoolInfo storage info = receiversInfo[address(receivers[i])];
+           if (info.isActive) total += info.rewardWeightPercentage;
+       }
     }
 
     /**
@@ -84,8 +129,16 @@ contract RewardWeight is Ownable{
         @param weightPercentage uint
      */
     function setRewardWeight(address receiver, uint weightPercentage) external onlyOwner {
-        require(weightPercentage > 0, "Invalid reward weight");
+        require(weightPercentage > 0, "Must be greater than 0");
+         uint currentWeightTotal = getTotalWeightPercentage();
+
+        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Invalid reward weight");
+
+        uint oldValue = receiversInfo[receiver].rewardWeightPercentage;
+
         receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
+
+        emit SetRewardWeightContractEvent(receiver, oldValue, weightPercentage);
     }
 
     /**
@@ -108,6 +161,10 @@ contract RewardWeight is Ownable{
      */
     function updateReceiverStatus(address receiver, bool status) external onlyOwner {
         require(receiver != address(0), "Invalid receiver");
+
+        bool oldValue = receiversInfo[receiver].isActive;
         receiversInfo[receiver].isActive = status;
+
+        emit UpdateReceiverStatusEvent(receiver, oldValue, status);
     }
 }
