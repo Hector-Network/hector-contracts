@@ -577,7 +577,7 @@ contract Splitter is RewardReceiver,Loggable{
      */
     function updateMaxReceivers(uint8 newValue) external onlyOwner {
         require(newValue > 0,"Invalid max value.");
-        require(newValue < MAX_RECEIVER_CONTRACTS_ALLOWED, "Maximum number of receivers reached.");
+        require(newValue < MAX_RECEIVER_CONTRACTS_ALLOWED, "Maximum number of receivers ALLOWED reached.");
 
         
         uint8 oldValue = MAX_RECEIVER_CONTRACTS;

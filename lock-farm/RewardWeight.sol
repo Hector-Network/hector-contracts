@@ -88,7 +88,7 @@ contract RewardWeight is Ownable{
         require(receiver != address(0), "Must be greater than 0");
         uint currentWeightTotal = getTotalWeightPercentage();
 
-        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Invalid reward weight");
+        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Total percentage must be less than 100%");
         require(receivers.length < MAX_RECEIVER_CONTRACTS, "Maximum number of receivers reached.");
 
         receivers.push(receiver);
@@ -132,7 +132,7 @@ contract RewardWeight is Ownable{
         require(weightPercentage > 0, "Must be greater than 0");
          uint currentWeightTotal = getTotalWeightPercentage();
 
-        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Invalid reward weight");
+        require(weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal, "Total percentage must be less than 100%");
 
         uint oldValue = receiversInfo[receiver].rewardWeightPercentage;
 
