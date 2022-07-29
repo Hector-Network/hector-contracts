@@ -191,8 +191,6 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
     address public immutable token0;
     address public immutable token1;
 
-    uint256 public price0CumulativeLast;
-    uint256 public price1CumulativeLast;
     uint32 public blockTimestampLast;
     FixedPoint.uq112x112 public price0Average;
     FixedPoint.uq112x112 public price1Average;
@@ -227,27 +225,18 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
     }
 
     function update(
-        uint256 price0Cumulative,
-        uint256 price1Cumulative,
-        uint32 blockTimestamp
+        uint224 _price0Average,
+        uint224 _price1Average,
+        uint32 _blockTimestamp
     ) external onlyPolicy {
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
+        uint32 timeElapsed = _blockTimestamp - blockTimestampLast; // Overflow is desired
 
         // Ensure that at least one full period has passed since the last update
         require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
 
-        // Overflow is desired, casting never truncates
-        // Cumulative price is in (uq112x112 price * seconds) units so we simply wrap it after division by time elapsed
-        price0Average = FixedPoint.uq112x112(
-            uint224((price0Cumulative - price0CumulativeLast) / timeElapsed)
-        );
-        price1Average = FixedPoint.uq112x112(
-            uint224((price1Cumulative - price1CumulativeLast) / timeElapsed)
-        );
-
-        price0CumulativeLast = price0Cumulative;
-        price1CumulativeLast = price1Cumulative;
-        blockTimestampLast = blockTimestamp;
+        price0Average = FixedPoint.uq112x112(_price0Average);
+        price1Average = FixedPoint.uq112x112(_price1Average);
+        blockTimestampLast = _blockTimestamp;
     }
 
     // Note this will always return 0 before update has been called successfully for the first time.
