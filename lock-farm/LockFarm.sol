@@ -24,7 +24,7 @@ contract LockFarm is
 {
     using SafeERC20 for IERC20;
 
-    IERC20 stakingToken;
+    IERC20 immutable stakingToken;
 
     uint256 public totalReward;
     uint256 public totalRewardPeriod;
@@ -37,7 +37,7 @@ contract LockFarm is
 
     uint256 public lockedStakeMaxMultiplier = 3e6; // 6 decimals of precision. 1x = 1000000
     uint256 public lockedStakeTimeForMaxMultiplier = 3 * 365 * 86400; // 3 years
-    uint256 public lockedStakeMinTime = 7 days;
+    uint256 public constant lockedStakeMinTime = 7 days;
 
     mapping(uint256 => FNFTInfo) public fnfts;
 
@@ -69,7 +69,6 @@ contract LockFarm is
     {
         require(amount > 0, 'Farm: Invalid amount');
         require(
-            secs > 0 &&
                 secs >= lockedStakeMinTime &&
                 secs <= lockedStakeTimeForMaxMultiplier,
             'Farm: Invalid secs'
@@ -109,10 +108,7 @@ contract LockFarm is
         getTokenVault().withdraw(msg.sender, fnftId);
         FNFTInfo memory info = fnfts[fnftId];
 
-        processReward(msg.sender, fnftId);
-
-        uint256 boostedAmount = (info.amount * info.multiplier) /
-            PRICE_PRECISION;
+        uint256 boostedAmount = processReward(msg.sender, fnftId);
 
         totalTokenSupply -= info.amount;
         totalTokenBoostedSupply -= boostedAmount;
@@ -129,10 +125,8 @@ contract LockFarm is
 
         FNFTInfo storage info = fnfts[fnftId];
 
-        processReward(msg.sender, fnftId);
+        uint256 boostedAmount = processReward(msg.sender, fnftId);
 
-        uint256 boostedAmount = (info.amount * info.multiplier) /
-            PRICE_PRECISION;
         info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
     }
 
@@ -233,7 +227,7 @@ contract LockFarm is
         totalRewardPeriod = end - beginRewardTimestamp + 1;
     }
 
-    function processReward(address to, uint256 fnftId) internal {
+    function processReward(address to, uint256 fnftId) internal returns (uint256) {
         FNFTInfo storage info = fnfts[fnftId];
         uint256 boostedAmount = (info.amount * info.multiplier) /
             PRICE_PRECISION;
@@ -250,6 +244,7 @@ contract LockFarm is
             info.pendingReward -= claimedAmount;
             rewardAmount -= claimedAmount;
         }
+        return boostedAmount;
     }
 
     function safeRewardTransfer(address to, uint256 amount)

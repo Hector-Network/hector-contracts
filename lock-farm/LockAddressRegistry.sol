@@ -81,6 +81,10 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
         return _isFarm[farm];
     }
 
+    function setIsFarm(address farm, bool value) external override {
+        _isFarm[farm] = value;
+    }
+
     /**
      * @dev Returns an address by id
      * @return The address
