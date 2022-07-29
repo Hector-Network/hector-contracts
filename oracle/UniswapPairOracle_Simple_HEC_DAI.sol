@@ -220,7 +220,11 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
 
     // Check if update() can be called instead of wasting gas calling it
     function canUpdate(uint32 blockTimestamp) public view returns (bool) {
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast; // Overflow is desired
+        if (blockTimestamp <= blockTimestampLast) {
+            return false;
+        }
+
+        uint32 timeElapsed = blockTimestamp - blockTimestampLast;
         return (timeElapsed >= PERIOD);
     }
 
@@ -229,7 +233,12 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
         uint224 _price1Average,
         uint32 _blockTimestamp
     ) external onlyPolicy {
-        uint32 timeElapsed = _blockTimestamp - blockTimestampLast; // Overflow is desired
+        require(
+            _blockTimestamp > blockTimestampLast,
+            'UniswapPairOracle: INVALID_BLOCK_TIMESTAMP'
+        );
+
+        uint32 timeElapsed = _blockTimestamp - blockTimestampLast;
 
         // Ensure that at least one full period has passed since the last update
         require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
