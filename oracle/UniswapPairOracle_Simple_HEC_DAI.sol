@@ -218,16 +218,6 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
         ALLOW_STALE_CONSULTS = _allow_stale_consults;
     }
 
-    // Check if update() can be called instead of wasting gas calling it
-    function canUpdate(uint32 blockTimestamp) public view returns (bool) {
-        if (blockTimestamp <= blockTimestampLast) {
-            return false;
-        }
-
-        uint32 timeElapsed = blockTimestamp - blockTimestampLast;
-        return (timeElapsed >= PERIOD);
-    }
-
     function update(
         uint224 _price0Average,
         uint224 _price1Average,
@@ -237,11 +227,6 @@ contract UniswapPairOracle_Simple_HEC_DAI is IUniswapPairOracle, Ownable {
             _blockTimestamp > blockTimestampLast,
             'UniswapPairOracle: INVALID_BLOCK_TIMESTAMP'
         );
-
-        uint32 timeElapsed = _blockTimestamp - blockTimestampLast;
-
-        // Ensure that at least one full period has passed since the last update
-        require(timeElapsed >= PERIOD, 'UniswapPairOracle: PERIOD_NOT_ELAPSED');
 
         price0Average = FixedPoint.uq112x112(_price0Average);
         price1Average = FixedPoint.uq112x112(_price1Average);
