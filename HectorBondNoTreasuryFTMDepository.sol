@@ -936,7 +936,7 @@ contract HectorBondNoTreasuryFTMDepository is Ownable {
      *  @return price_ uint
      */
     function bondPrice() public view returns ( uint price_ ) {
-        price_ = IUniswapPairOracle( oracle ).consult( HEC, 1e9 );
+        price_ = IUniswapPairOracle( oracle ).consult( HEC, 1e9 ).div( 1e14 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;
         }
@@ -947,7 +947,7 @@ contract HectorBondNoTreasuryFTMDepository is Ownable {
      *  @return price_ uint
      */
     function _bondPrice() internal returns ( uint price_ ) {
-        price_ = IUniswapPairOracle( oracle ).consult( HEC, 1e9 );
+        price_ = IUniswapPairOracle( oracle ).consult( HEC, 1e9 ).div( 1e14 );
         if ( price_ < terms.minimumPrice ) {
             price_ = terms.minimumPrice;        
         } else if ( terms.minimumPrice != 0 ) {
