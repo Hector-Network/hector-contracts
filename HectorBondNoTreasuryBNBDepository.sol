@@ -392,7 +392,9 @@ library Counters {
 
         uint256 _value; // default: 0
     }
-
+    function init(Counter storage counter,uint256 _initValue) internal {
+        counter._value=_initValue;
+    }
     function current(Counter storage counter) internal view returns (uint256) {
         return counter._value;
     }
@@ -403,61 +405,6 @@ library Counters {
 
     function decrement(Counter storage counter) internal {
         counter._value = counter._value.sub(1);
-    }
-}
-
-abstract contract ERC20Permit is ERC20, IERC2612Permit {
-    using Counters for Counters.Counter;
-
-    mapping(address => Counters.Counter) private _nonces;
-
-    // keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
-    bytes32 public constant PERMIT_TYPEHASH = 0x6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c9;
-
-    bytes32 public DOMAIN_SEPARATOR;
-
-    constructor() {
-        uint256 chainID;
-        assembly {
-            chainID := chainid()
-        }
-
-        DOMAIN_SEPARATOR = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256(bytes(name())),
-                keccak256(bytes("1")), // Version
-                chainID,
-                address(this)
-            )
-        );
-    }
-
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) public virtual override {
-        require(block.timestamp <= deadline, "Permit: expired deadline");
-
-        bytes32 hashStruct =
-            keccak256(abi.encode(PERMIT_TYPEHASH, owner, spender, amount, _nonces[owner].current(), deadline));
-
-        bytes32 _hash = keccak256(abi.encodePacked(uint16(0x1901), DOMAIN_SEPARATOR, hashStruct));
-
-        address signer = ecrecover(_hash, v, r, s);
-        require(signer != address(0) && signer == owner, "ZeroSwapPermit: Invalid signature");
-
-        _nonces[owner].increment();
-        _approve(owner, spender, amount);
-    }
-
-    function nonces(address owner) public view override returns (uint256) {
-        return _nonces[owner].current();
     }
 }
 
@@ -589,7 +536,7 @@ interface IUniswapPairOracle {
 }
 
 contract HectorBondNoTreasuryBNBDepository is Ownable {
-
+    using Counters for Counters.Counter;
     using FixedPoint for *;
     using SafeERC20 for IERC20;
     using SafeMath for uint;
@@ -618,7 +565,12 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
 
-    mapping( address => Bond ) public bondInfo; // stores bond information for depositors
+    Counters.Counter public depositIdGenerator; //id for each deposit
+    mapping( address => mapping( uint=>uint ) ) public ownedDeposits; //each wallet owned index=>depositId
+    mapping( uint => uint ) public depositIndexes; //each depositId and its index in ownedDeposits
+    mapping( address => uint ) public depositCounts;  //each wallet total deposit count
+
+    mapping( uint => Bond ) public bondInfo; // stores bond information for depositId
 
     mapping( uint => uint) public lockingDiscounts; // stores discount in hundreths for locking periods ( 500 = 5% = 0.05 )
 
@@ -649,6 +601,7 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
         uint vesting; // Blocks left to vest
         uint lastBlockAt; // Last interaction
         uint pricePaid; // In DAI, for front end viewing
+        address depositor; //deposit address
     }
 
     // Info for incremental adjustments to control variable 
@@ -682,6 +635,7 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
         oracle = _oracle;
         
         name_ = _name;
+        depositIdGenerator.init(1);//id starts with 1 for better handling in mapping of case NOT FOUND
     }
 
     /**
@@ -791,15 +745,14 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
      *  @param _amount uint
      *  @param _maxPrice uint
      *  @param _lockingPeriod uint
-     *  @param _depositor address
      *  @return uint
      */
     function deposit( 
         uint _amount, 
         uint _maxPrice,
-        uint _lockingPeriod,
-        address _depositor
+        uint _lockingPeriod
     ) external returns ( uint ) {
+        address _depositor = msg.sender;
         require( _depositor != address(0), "Invalid address" );
 
         uint discount = lockingDiscounts[ _lockingPeriod ];
@@ -832,14 +785,21 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
         
         // total debt is increased
         totalDebt = totalDebt.add( value ); 
-                
+        
+        uint depositId=depositIdGenerator.current();
+        depositIdGenerator.increment();
         // depositor info is stored
-        bondInfo[ _depositor ] = Bond({ 
-            payout: bondInfo[ _depositor ].payout.add( payout ),
+        bondInfo[ depositId ] = Bond({ 
+            payout: payout,
             vesting: _lockingPeriod,
             lastBlockAt: block.timestamp,
-            pricePaid: priceInUSD
+            pricePaid: priceInUSD,
+            depositor: _depositor
         });
+        
+        ownedDeposits[_depositor][depositCounts[_depositor]]=depositId;
+        depositIndexes[depositId]=depositCounts[_depositor];
+        depositCounts[_depositor]=depositCounts[_depositor]+1;
 
         // indexed events are emitted
         emit BondCreated( _amount, payout, block.timestamp.add( _lockingPeriod ), priceInUSD );
@@ -851,16 +811,19 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
 
     /** 
      *  @notice redeem bond for user
-     *  @param _recipient address
+     *  @param _depositId uint
      *  @return uint
      */ 
-    function redeem( address _recipient ) external returns ( uint ) {        
-        Bond memory info = bondInfo[ _recipient ];
-        uint percentVested = percentVestedFor( _recipient ); // (blocks since last interaction / vesting term remaining)
+    function redeem( uint _depositId ) external returns ( uint ) {        
+        Bond memory info = bondInfo[ _depositId ];
+        address _recipient = info.depositor;
+        require(msg.sender==_recipient,"Cant redeem others bond");
+
+        uint percentVested = percentVestedFor( _depositId ); // (blocks since last interaction / vesting term remaining)
 
         require(percentVested >= 10000, "Not fully vested");
 
-        delete bondInfo[ _recipient ]; // delete user info
+        delete bondInfo[ _depositId ]; // delete user info
 
         totalRemainingPayout = totalRemainingPayout.sub( info.payout );  // total remaining payout is decreased
         
@@ -868,10 +831,28 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
 
         emit BondRedeemed( _recipient, info.payout, 0 ); // emit bond data
 
+        removeDepositId( _recipient, _depositId);
+
         return info.payout;
     }
 
+    function removeDepositId( address _recipient, uint _depositId) internal{
+        uint256 lastTokenIndex = depositCounts[_recipient] - 1;//underflow is intended
+        uint256 tokenIndex = depositIndexes[_depositId];
 
+        // When the token to delete is the last token, the swap operation is unnecessary
+        if (tokenIndex != lastTokenIndex) {
+            uint256 lastTokenId = ownedDeposits[_recipient][lastTokenIndex];
+
+            ownedDeposits[_recipient][tokenIndex] = lastTokenId; // Move the last token to the slot of the to-delete token
+            depositIndexes[lastTokenId] = tokenIndex; // Update the moved token's index
+        }
+
+        // This also deletes the contents at the last position of the array
+        delete depositIndexes[_depositId];
+        delete ownedDeposits[_recipient][lastTokenIndex];
+        depositCounts[_recipient]=depositCounts[_recipient]-1;
+    }
 
     
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
@@ -1007,11 +988,11 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
 
     /**
      *  @notice calculate how far into vesting a depositor is
-     *  @param _depositor address
+     *  @param _depositId uint
      *  @return percentVested_ uint
      */
-    function percentVestedFor( address _depositor ) public view returns ( uint percentVested_ ) {
-        Bond memory bond = bondInfo[ _depositor ];
+    function percentVestedFor( uint _depositId ) public view returns ( uint percentVested_ ) {
+        Bond memory bond = bondInfo[ _depositId ];
         uint timestampSinceLast = block.timestamp.sub( bond.lastBlockAt );
         uint vesting = bond.vesting;
 
@@ -1024,12 +1005,12 @@ contract HectorBondNoTreasuryBNBDepository is Ownable {
 
     /**
      *  @notice calculate amount of HEC available for claim by depositor
-     *  @param _depositor address
+     *  @param _depositId uint
      *  @return pendingPayout_ uint
      */
-    function pendingPayoutFor( address _depositor ) external view returns ( uint pendingPayout_ ) {
-        uint percentVested = percentVestedFor( _depositor );
-        uint payout = bondInfo[ _depositor ].payout;
+    function pendingPayoutFor( uint _depositId ) external view returns ( uint pendingPayout_ ) {
+        uint percentVested = percentVestedFor( _depositId );
+        uint payout = bondInfo[ _depositId ].payout;
 
         if ( percentVested >= 10000 ) {
             pendingPayout_ = payout;
