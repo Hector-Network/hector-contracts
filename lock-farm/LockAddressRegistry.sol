@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.7;
 
-import '@openzeppelin/contracts/access/Ownable.sol';
-import '@openzeppelin/contracts/utils/Counters.sol';
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Counters.sol";
 
-import './interfaces/ILockAddressRegistry.sol';
+import "./interfaces/ILockAddressRegistry.sol";
 
 contract LockAddressRegistry is Ownable, ILockAddressRegistry {
     using Counters for Counters.Counter;
 
-    bytes32 public constant ADMIN = 'ADMIN';
-    bytes32 public constant TOKEN_VAULT = 'TOKEN_VAULT';
-    bytes32 public constant FNFT = 'FNFT';
-    bytes32 public constant EMISSIONOR = 'EMISSIONOR';
+    bytes32 public constant ADMIN = "ADMIN";
+    bytes32 public constant TOKEN_VAULT = "TOKEN_VAULT";
+    bytes32 public constant FNFT = "FNFT";
+    bytes32 public constant EMISSIONOR = "EMISSIONOR";
 
     mapping(bytes32 => address) private _addresses;
 
@@ -77,12 +77,12 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
         _isFarm[farm] = true;
     }
 
-    function isFarm(address farm) external view override returns (bool) {
-        return _isFarm[farm];
+    function setIsFarm(address farm, bool value) external override onlyOwner {
+        _isFarm[farm] = value;
     }
 
-    function setIsFarm(address farm, bool value) external override {
-        _isFarm[farm] = value;
+    function isFarm(address farm) external view override returns (bool) {
+        return _isFarm[farm];
     }
 
     /**
