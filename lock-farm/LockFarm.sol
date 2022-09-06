@@ -24,22 +24,22 @@ contract LockFarm is
 {
     using SafeERC20 for IERC20;
 
-    IERC20 stakingToken;
+    IERC20 immutable stakingToken;
 
     uint256 public totalReward;
-    uint256 public totalRewardPeriod;
-    uint256 public beginRewardTimestamp;
     uint256 public totalTokenSupply;
     uint256 public totalTokenBoostedSupply;
     uint256 public accTokenPerShare;
-    uint256 public lastRewardTimestamp;
-    uint256 public rewardAmount;
+    uint256 public periodFinish;
+    uint256 public rewardRate;
+    uint256 public lastUpdateTime;
 
     uint256 public lockedStakeMaxMultiplier = 3e6; // 6 decimals of precision. 1x = 1000000
     uint256 public lockedStakeTimeForMaxMultiplier = 3 * 365 * 86400; // 3 years
-    uint256 public lockedStakeMinTime = 7 days;
+    uint256 public constant lockedStakeMinTime = 7 days;
 
     mapping(uint256 => FNFTInfo) public fnfts;
+    mapping(address => uint256) public userRemainingRewards;
 
     uint256 private constant MULTIPLIER_BASE = 1e6;
     uint256 private constant PRICE_PRECISION = 1e6;
@@ -69,8 +69,7 @@ contract LockFarm is
     {
         require(amount > 0, 'Farm: Invalid amount');
         require(
-            secs > 0 &&
-                secs >= lockedStakeMinTime &&
+            secs >= lockedStakeMinTime &&
                 secs <= lockedStakeTimeForMaxMultiplier,
             'Farm: Invalid secs'
         );
@@ -109,10 +108,9 @@ contract LockFarm is
         getTokenVault().withdraw(msg.sender, fnftId);
         FNFTInfo memory info = fnfts[fnftId];
 
-        processReward(msg.sender, fnftId);
+        uint256 boostedAmount = processReward(msg.sender, fnftId);
 
-        uint256 boostedAmount = (info.amount * info.multiplier) /
-            PRICE_PRECISION;
+        userRemainingRewards[msg.sender] += info.pendingReward;
 
         totalTokenSupply -= info.amount;
         totalTokenBoostedSupply -= boostedAmount;
@@ -127,18 +125,38 @@ contract LockFarm is
 
         updateFarm();
 
-        FNFTInfo storage info = fnfts[fnftId];
-
         processReward(msg.sender, fnftId);
+    }
 
-        uint256 boostedAmount = (info.amount * info.multiplier) /
-            PRICE_PRECISION;
-        info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
+    function claim() external nonReentrant whenNotPaused {
+        uint256 amount = userRemainingRewards[msg.sender];
+        require(amount > 0, 'Farm: no remaining rewards');
+
+        userRemainingRewards[msg.sender] =
+            amount -
+            safeRewardTransfer(msg.sender, amount);
     }
 
     ///////////////////////////////////////////////////////
     //                  VIEW FUNCTIONS                   //
     ///////////////////////////////////////////////////////
+
+    function lastTimeRewardApplicable() public view returns (uint256) {
+        return block.timestamp < periodFinish ? block.timestamp : periodFinish;
+    }
+
+    function rewardPerToken() public view returns (uint256) {
+        if (totalTokenBoostedSupply == 0) {
+            return accTokenPerShare;
+        }
+
+        uint256 multiplier = lastTimeRewardApplicable() - lastUpdateTime;
+        uint256 tokenReward = rewardRate * multiplier;
+
+        return
+            accTokenPerShare +
+            ((tokenReward * SHARE_MULTIPLIER) / totalTokenBoostedSupply);
+    }
 
     function stakingMultiplier(uint256 secs)
         public
@@ -158,26 +176,12 @@ contract LockFarm is
         view
         returns (uint256 reward)
     {
-        require(lastRewardTimestamp > 0, 'Farm: No reward yet');
-
-        uint256 accTokenPerShare_ = accTokenPerShare;
-        if (
-            block.timestamp > lastRewardTimestamp &&
-            totalTokenBoostedSupply != 0
-        ) {
-            uint256 multiplier = block.timestamp - lastRewardTimestamp;
-            uint256 tokenReward = (multiplier * totalReward) /
-                totalRewardPeriod;
-            accTokenPerShare_ += ((tokenReward * SHARE_MULTIPLIER) /
-                totalTokenBoostedSupply);
-        }
-
         FNFTInfo memory info = fnfts[fnftId];
         uint256 boostedAmount = (info.amount * info.multiplier) /
             PRICE_PRECISION;
 
         reward =
-            (boostedAmount * accTokenPerShare_) /
+            (boostedAmount * rewardPerToken()) /
             SHARE_MULTIPLIER +
             info.pendingReward -
             info.rewardDebt;
@@ -222,18 +226,34 @@ contract LockFarm is
     ///////////////////////////////////////////////////////
 
     function onRewardReceived(uint256 amount) internal virtual override {
-        uint256 end = getEmissionor().getEndTime();
+        updateFarm();
 
-        if (beginRewardTimestamp == 0) {
-            beginRewardTimestamp = block.timestamp;
-            lastRewardTimestamp = block.timestamp;
+        uint256 endTime = getEmissionor().getEndTime();
+        uint256 rewardsDuration;
+
+        if (periodFinish > 0) {
+            rewardsDuration = endTime - periodFinish;
+        } else {
+            rewardsDuration = endTime - block.timestamp + 1;
         }
 
+        if (block.timestamp >= periodFinish) {
+            rewardRate = amount / rewardsDuration;
+        } else {
+            uint256 remaining = periodFinish - block.timestamp;
+            uint256 leftover = remaining * rewardRate;
+            rewardRate = (amount + leftover) / rewardsDuration;
+        }
+
+        lastUpdateTime = block.timestamp;
+        periodFinish = endTime;
         totalReward += amount;
-        totalRewardPeriod = end - beginRewardTimestamp + 1;
     }
 
-    function processReward(address to, uint256 fnftId) internal {
+    function processReward(address to, uint256 fnftId)
+        internal
+        returns (uint256)
+    {
         FNFTInfo storage info = fnfts[fnftId];
         uint256 boostedAmount = (info.amount * info.multiplier) /
             PRICE_PRECISION;
@@ -248,8 +268,11 @@ contract LockFarm is
             emit Claim(to, fnftId, claimedAmount);
 
             info.pendingReward -= claimedAmount;
-            rewardAmount -= claimedAmount;
         }
+
+        info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
+
+        return boostedAmount;
     }
 
     function safeRewardTransfer(address to, uint256 amount)
@@ -272,26 +295,7 @@ contract LockFarm is
     }
 
     function updateFarm() internal {
-        if (
-            totalReward == 0 ||
-            totalRewardPeriod == 0 ||
-            lastRewardTimestamp == 0
-        ) {
-            return;
-        }
-        if (block.timestamp <= lastRewardTimestamp) {
-            return;
-        }
-        if (totalTokenBoostedSupply == 0) {
-            lastRewardTimestamp = block.timestamp;
-            return;
-        }
-
-        uint256 multiplier = block.timestamp - lastRewardTimestamp;
-        uint256 tokenReward = (multiplier * totalReward) / totalRewardPeriod;
-        rewardAmount += tokenReward;
-        accTokenPerShare += ((tokenReward * SHARE_MULTIPLIER) /
-            totalTokenBoostedSupply);
-        lastRewardTimestamp = block.timestamp;
+        accTokenPerShare = rewardPerToken();
+        lastUpdateTime = lastTimeRewardApplicable();
     }
 }
