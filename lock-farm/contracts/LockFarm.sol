@@ -93,6 +93,7 @@ contract LockFarm is
 
         FNFTInfo storage info = fnfts[fnftId];
         info.amount = amount;
+        info.secs = secs;
         info.multiplier = multiplier;
         info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
         info.pendingReward = 0;
@@ -185,6 +186,21 @@ contract LockFarm is
             SHARE_MULTIPLIER +
             info.pendingReward -
             info.rewardDebt;
+    }
+
+    function getFnfts(address owner)
+        external
+        view
+        returns (FNFTInfo[] memory infos)
+    {
+        uint256 balance = getFNFT().balanceOf(owner);
+
+        infos = new FNFTInfo[](balance);
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 fnftId = getFNFT().tokenOfOwnerByIndex(owner, i);
+            infos[i] = fnfts[fnftId];
+        }
     }
 
     ///////////////////////////////////////////////////////
