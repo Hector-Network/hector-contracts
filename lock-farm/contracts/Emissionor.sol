@@ -625,6 +625,25 @@ contract Emissionor is Ownable {
         return end;
     }
 
+    function getEmissionList()
+        public
+        view
+        returns (
+            uint256,
+            uint256[] memory,
+            uint256[] memory
+        )
+    {
+        uint256 length = emissionBegins.length;
+        uint256[] memory emissionAmounts = new uint256[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            emissionAmounts[i] = emissions[emissionBegins[i]].amount;
+        }
+
+        return (length, emissionBegins, emissionAmounts);
+    }
+
     /* ====== POLICY FUNCTIONS ====== */
 
     function setModerator(address moderator, bool approved) external onlyOwner {
