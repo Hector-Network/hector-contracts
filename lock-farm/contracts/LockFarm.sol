@@ -92,6 +92,7 @@ contract LockFarm is
         );
 
         FNFTInfo storage info = fnfts[fnftId];
+        info.id = fnftId;
         info.amount = amount;
         info.secs = secs;
         info.multiplier = multiplier;
