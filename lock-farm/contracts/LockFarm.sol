@@ -191,14 +191,16 @@ contract LockFarm is
     function getFnfts(address owner)
         external
         view
-        returns (FNFTInfo[] memory infos)
+        returns (uint256[] memory ids, FNFTInfo[] memory infos)
     {
         uint256 balance = getFNFT().balanceOf(owner);
 
+        ids = new uint256[](balance);
         infos = new FNFTInfo[](balance);
 
         for (uint256 i = 0; i < balance; i++) {
             uint256 fnftId = getFNFT().tokenOfOwnerByIndex(owner, i);
+            ids[i] = fnftId;
             infos[i] = fnfts[fnftId];
         }
     }
