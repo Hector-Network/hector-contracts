@@ -3,6 +3,7 @@ pragma solidity ^0.8.7;
 
 interface ILockFarm {
     struct FNFTInfo {
+        uint256 id;
         uint256 amount;
         uint256 secs;
         uint256 multiplier;
