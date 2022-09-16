@@ -48,11 +48,6 @@ contract TokenVault is
     	lockDisabled = true;
     }
 
-    function enableLock() external onlyOwner whenNotPaused {
-    	require(lockDisabled, "lock is enabled already");
-    	lockDisabled = false;
-    }
-
     ///////////////////////////////////////////////////////
     //               USER CALLED FUNCTIONS               //
     ///////////////////////////////////////////////////////
