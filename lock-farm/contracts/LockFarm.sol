@@ -24,6 +24,7 @@ contract LockFarm is
 {
     using SafeERC20 for IERC20;
 
+    string public name;
     IERC20 immutable stakingToken;
 
     uint256 public totalReward;
@@ -49,11 +50,13 @@ contract LockFarm is
 
     constructor(
         address provider,
+        string memory _name,
         address _stakingToken,
         address _rewardToken
     ) LockAccessControl(provider) {
         require(_stakingToken != address(0), 'Farm: Invalid staking token');
 
+        name = _name;
         stakingToken = IERC20(_stakingToken);
         rewardToken = _rewardToken;
     }
@@ -214,6 +217,10 @@ contract LockFarm is
 
     function unpause() external onlyOwner whenPaused {
         return _unpause();
+    }
+
+    function setName(string memory _name) external onlyOwner whenNotPaused {
+        name = _name;
     }
 
     function setMultipliers(
