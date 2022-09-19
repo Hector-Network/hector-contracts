@@ -97,6 +97,7 @@ contract LockFarm is
         FNFTInfo storage info = fnfts[fnftId];
         info.id = fnftId;
         info.amount = amount;
+        info.startTime = block.timestamp;
         info.secs = secs;
         info.multiplier = multiplier;
         info.rewardDebt = (boostedAmount * accTokenPerShare) / SHARE_MULTIPLIER;
