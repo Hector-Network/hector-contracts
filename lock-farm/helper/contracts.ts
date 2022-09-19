@@ -1,3 +1,4 @@
+import { RewardWeight } from './../types/contracts/RewardWeight.sol/RewardWeight';
 import {
   FNFT,
   LockAccessControl,
@@ -7,8 +8,9 @@ import {
   LockFarm,
   SLockFarm,
   RewardToken,
-  StakingToken,
-  Treasury,
+  WrappedToken,
+  HectorMinterMock,
+  Splitter,
 } from './../types';
 import { Contract } from 'ethers';
 
@@ -66,20 +68,26 @@ export const deployRewardToken = async () => {
 };
 
 export const deployStakingToken = async () => {
-  return await deployContract<StakingToken>('StakingToken', []);
+  return await deployContract<WrappedToken>('WrappedToken', [
+    'Hector',
+    'HEC',
+    '0x55639b1833Ddc160c18cA60f5d0eC9286201f525',
+  ]);
 };
 
-export const deployTreasury = async (reawrdToken: any) => {
-  return await deployContract<Treasury>('Treasury', [reawrdToken]);
+export const deployTreasury = async () => {
+  return await deployContract<HectorMinterMock>('HectorMinterMock', []);
 };
 
 export const deployLockFarm = async (
   provider: any,
+  name: any,
   stakingToken: any,
   rewardToken: any
 ) => {
   return await deployContract<LockFarm>('LockFarm', [
     provider,
+    name,
     stakingToken,
     rewardToken,
   ]);
@@ -95,4 +103,12 @@ export const deploySLockFarm = async (
     stakingToken,
     rewardToken,
   ]);
+};
+
+export const deployRewardWeight = async () => {
+  return await deployContract<RewardWeight>('RewardWeight', []);
+};
+
+export const deploySplitter = async (rewardWeightContract: any) => {
+  return await deployContract<Splitter>('Splitter', [rewardWeightContract]);
 };
