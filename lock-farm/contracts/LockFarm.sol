@@ -208,6 +208,23 @@ contract LockFarm is
         }
     }
 
+    function getAPR(uint256 amount, uint256 secs)
+        external
+        view
+        returns (uint256)
+    {
+        if (periodFinish <= block.timestamp) {
+            return 0;
+        }
+
+        uint256 multiplier = stakingMultiplier(secs);
+        uint256 boostedAmount = (amount * multiplier) / PRICE_PRECISION;
+
+        return
+            (365 * 24 * 3600 * boostedAmount * rewardRate * MULTIPLIER_BASE) /
+            ((boostedAmount + totalTokenBoostedSupply) * amount);
+    }
+
     ///////////////////////////////////////////////////////
     //               MANAGER CALLED FUNCTIONS            //
     ///////////////////////////////////////////////////////
