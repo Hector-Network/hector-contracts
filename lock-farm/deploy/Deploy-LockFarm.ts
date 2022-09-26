@@ -1,3 +1,4 @@
+import { deployRewardWeight, deploySplitter } from './../helper/contracts';
 import { ethers } from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
@@ -20,18 +21,22 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const deployer = signers[0];
 
   // Deploy StakingToken
-  const stakingToken = await deployStakingToken();
-  console.log('StakingToken: ', stakingToken.address);
+  const stakingTokenAddress = '0xc625fa79F79c34Dc38ed717161B76Be01975cf29';
+  // console.log('StakingToken: ', stakingToken.address);
 
-  await waitSeconds(60);
+  // await waitSeconds(60);
   // Deploy RewardToken
-  const rewardToken = await deployRewardToken();
-  console.log('RewardToken: ', rewardToken.address);
+  const rewardTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+  // console.log('RewardToken: ', rewardToken.address);
 
   await waitSeconds(60);
   // Deploy Treasury
-  const treasury = await deployTreasury(rewardToken.address);
+  const treasury = await deployTreasury();
   console.log('Treasury: ', treasury.address);
+  // Set Hector
+  try {
+    await treasury.setHector(rewardTokenAddress);
+  } catch (_) {}
 
   await waitSeconds(60);
   // Deploy LockAddressRegistry
@@ -52,29 +57,38 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Deploy LockFarm
   const lockFarm = await deployLockFarm(
     lockAddressRegistry.address,
-    stakingToken.address,
-    rewardToken.address
+    'LockFarm #1',
+    stakingTokenAddress,
+    rewardTokenAddress
   );
   console.log('LockFarm: ', lockFarm.address);
 
   await waitSeconds(60);
-  // Deploy sLockFarm
-  const sLockFarm = await deploySLockFarm(
-    lockAddressRegistry.address,
-    stakingToken.address,
-    rewardToken.address
-  );
-  console.log('sLockFarm: ', sLockFarm.address);
+  // Deploy RewardWeight
+  const rewardWeight = await deployRewardWeight();
+  try {
+    await rewardWeight.register(lockFarm.address, 400);
+  } catch (_) {}
+  console.log('RewardWeight: ', rewardWeight.address);
+
+  await waitSeconds(60);
+  // Deploy SplitterD
+  const splitter = await deploySplitter(rewardWeight.address);
+  console.log('Splitter: ', splitter.address);
+  // Register & Set Reward Token
+  try {
+    await splitter.setRewardToken(rewardTokenAddress);
+    await splitter.register(lockFarm.address);
+  } catch (_) {}
 
   await waitSeconds(60);
   // Deploy Emissionor
   // const treasuryAddress = '0x724c670d0215cC75d990b7D28604A84E1F1caa1c';
-  const splitterAddress = '0xBc8fC4220ac10ceA512743d3816AB972243E42AF';
   // const rewardTokenAddress = '0xBa5B18A16d54a9687EFE5eeEbc15c223b575aBfd';
   const emissionor = await deployEmissionor(
     treasury.address,
-    splitterAddress,
-    rewardToken.address
+    splitter.address,
+    rewardTokenAddress
   );
   console.log('Emissionor: ', emissionor.address);
 
@@ -89,32 +103,38 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     await waitSeconds(30);
     await lockAddressRegistry.addFarm(lockFarm.address);
-    await waitSeconds(30);
-    await lockAddressRegistry.addFarm(sLockFarm.address);
+  } catch (_) {}
+  // Set Reward Manager
+  try {
+    await treasury.setRewardManager(emissionor.address);
   } catch (_) {}
 
   // Verify
   await waitSeconds(10);
   console.log('=====> Verifing ....');
-  try {
-    await hre.run('verify:verify', {
-      address: stakingToken.address,
-      contract: 'contracts/mock/StakingToken.sol:StakingToken',
-      constructorArguments: [],
-    });
-  } catch (_) {}
-  try {
-    await hre.run('verify:verify', {
-      address: rewardToken.address,
-      contract: 'contracts/mock/RewardToken.sol:RewardToken',
-      constructorArguments: [],
-    });
-  } catch (_) {}
+  // try {
+  //   await hre.run('verify:verify', {
+  //     address: stakingToken.address,
+  //     contract: 'contracts/WrappedToken.sol:WrappedToken',
+  //     constructorArguments: [
+  //       'Hector',
+  //       'HEC',
+  //       '0x55639b1833Ddc160c18cA60f5d0eC9286201f525',
+  //     ],
+  //   });
+  // } catch (_) {}
+  // try {
+  //   await hre.run('verify:verify', {
+  //     address: rewardToken.address,
+  //     contract: 'contracts/mock/RewardToken.sol:RewardToken',
+  //     constructorArguments: [],
+  //   });
+  // } catch (_) {}
   try {
     await hre.run('verify:verify', {
       address: treasury.address,
-      contract: 'contracts/mock/Treasury.sol:Treasury',
-      constructorArguments: [rewardToken.address],
+      contract: 'contracts/mock/HectorMinterMock.sol:HectorMinterMock',
+      constructorArguments: [],
     });
   } catch (_) {}
   try {
@@ -144,20 +164,24 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contract: 'contracts/LockFarm.sol:LockFarm',
       constructorArguments: [
         lockAddressRegistry.address,
-        stakingToken.address,
-        rewardToken.address,
+        'LockFarm #1',
+        stakingTokenAddress,
+        rewardTokenAddress,
       ],
     });
   } catch (_) {}
   try {
     await hre.run('verify:verify', {
-      address: sLockFarm.address,
-      contract: 'contracts/sLockFarm.sol:sLockFarm',
-      constructorArguments: [
-        lockAddressRegistry.address,
-        stakingToken.address,
-        rewardToken.address,
-      ],
+      address: rewardWeight.address,
+      contract: 'contracts/RewardWeight.sol:RewardWeight',
+      constructorArguments: [],
+    });
+  } catch (_) {}
+  try {
+    await hre.run('verify:verify', {
+      address: rewardWeight.address,
+      contract: 'contracts/SplitterDistributor.sol:Splitter',
+      constructorArguments: [rewardWeight.address],
     });
   } catch (_) {}
   try {
@@ -166,8 +190,8 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contract: 'contracts/Emissionor.sol:Emissionor',
       constructorArguments: [
         treasury.address,
-        splitterAddress,
-        rewardToken.address,
+        splitter.address,
+        rewardTokenAddress,
       ],
     });
   } catch (_) {}
