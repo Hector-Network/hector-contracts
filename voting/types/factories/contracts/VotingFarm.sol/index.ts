@@ -3,4 +3,5 @@
 /* eslint-disable */
 export { FNFT__factory } from "./FNFT__factory";
 export { LockFarm__factory } from "./LockFarm__factory";
+export { SpookyLP__factory } from "./SpookyLP__factory";
 export { VotingFarm__factory } from "./VotingFarm__factory";

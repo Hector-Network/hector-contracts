@@ -3,4 +3,5 @@
 /* eslint-disable */
 export type { FNFT } from "./FNFT";
 export type { LockFarm } from "./LockFarm";
+export type { SpookyLP } from "./SpookyLP";
 export type { VotingFarm } from "./VotingFarm";

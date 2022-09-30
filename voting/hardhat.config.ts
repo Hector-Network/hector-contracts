@@ -18,11 +18,6 @@ export default {
       },
     },
   },
-  // contractSizer: {
-  //   alphaSort: true,
-  //   runOnCompile: true,
-  //   disambiguatePaths: false,
-  // },
   namedAccounts: {
     deployer: {
       default: 0,
@@ -73,7 +68,7 @@ export default {
     imports: 'imports',
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.FTM_API_KEY,
   },
   mocha: {
     timeout: 100000,

@@ -30,31 +30,29 @@ import type {
 export interface VotingFarmInterface extends utils.Interface {
   functions: {
     "HEC()": FunctionFragment;
-    "MIN_HEC_FOR_VERIFY()": FunctionFragment;
     "addFarmForOwner(address)": FunctionFragment;
     "admin()": FunctionFragment;
     "canVote()": FunctionFragment;
     "deprecateFarm(address)": FunctionFragment;
-    "distribute(uint256,uint256)": FunctionFragment;
-    "distributeDelay()": FunctionFragment;
     "fNFT()": FunctionFragment;
     "farmStatus(address)": FunctionFragment;
     "farmVote(address,uint256)": FunctionFragment;
     "farmWeights(address)": FunctionFragment;
     "getFarms()": FunctionFragment;
+    "getFarmsLength()": FunctionFragment;
+    "getFarmsWeights()": FunctionFragment;
     "getWeightByUser(address)": FunctionFragment;
-    "hasDistributed(address)": FunctionFragment;
-    "lastDistribute()": FunctionFragment;
     "lastVote(address)": FunctionFragment;
     "length()": FunctionFragment;
     "lockFarm()": FunctionFragment;
-    "lockedBalance()": FunctionFragment;
-    "lockedTotalWeight()": FunctionFragment;
-    "preDistribute()": FunctionFragment;
+    "maxPercentage()": FunctionFragment;
     "reset()": FunctionFragment;
     "resurrectFarm(address)": FunctionFragment;
     "revote(address)": FunctionFragment;
     "setAdmin(address)": FunctionFragment;
+    "setConfiguration(address,address,address)": FunctionFragment;
+    "setMaxPercentageFarm(uint256)": FunctionFragment;
+    "setTestMode()": FunctionFragment;
     "totalWeight()": FunctionFragment;
     "usedWeights(address)": FunctionFragment;
     "vote(address[],uint256[])": FunctionFragment;
@@ -65,31 +63,29 @@ export interface VotingFarmInterface extends utils.Interface {
   getFunction(
     nameOrSignatureOrTopic:
       | "HEC"
-      | "MIN_HEC_FOR_VERIFY"
       | "addFarmForOwner"
       | "admin"
       | "canVote"
       | "deprecateFarm"
-      | "distribute"
-      | "distributeDelay"
       | "fNFT"
       | "farmStatus"
       | "farmVote"
       | "farmWeights"
       | "getFarms"
+      | "getFarmsLength"
+      | "getFarmsWeights"
       | "getWeightByUser"
-      | "hasDistributed"
-      | "lastDistribute"
       | "lastVote"
       | "length"
       | "lockFarm"
-      | "lockedBalance"
-      | "lockedTotalWeight"
-      | "preDistribute"
+      | "maxPercentage"
       | "reset"
       | "resurrectFarm"
       | "revote"
       | "setAdmin"
+      | "setConfiguration"
+      | "setMaxPercentageFarm"
+      | "setTestMode"
       | "totalWeight"
       | "usedWeights"
       | "vote"
@@ -99,10 +95,6 @@ export interface VotingFarmInterface extends utils.Interface {
 
   encodeFunctionData(functionFragment: "HEC", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "MIN_HEC_FOR_VERIFY",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
     functionFragment: "addFarmForOwner",
     values: [PromiseOrValue<string>]
   ): string;
@@ -111,14 +103,6 @@ export interface VotingFarmInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "deprecateFarm",
     values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "distribute",
-    values: [PromiseOrValue<BigNumberish>, PromiseOrValue<BigNumberish>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "distributeDelay",
-    values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "fNFT", values?: undefined): string;
   encodeFunctionData(
@@ -135,16 +119,16 @@ export interface VotingFarmInterface extends utils.Interface {
   ): string;
   encodeFunctionData(functionFragment: "getFarms", values?: undefined): string;
   encodeFunctionData(
+    functionFragment: "getFarmsLength",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "getFarmsWeights",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "getWeightByUser",
     values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "hasDistributed",
-    values: [PromiseOrValue<string>]
-  ): string;
-  encodeFunctionData(
-    functionFragment: "lastDistribute",
-    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "lastVote",
@@ -153,15 +137,7 @@ export interface VotingFarmInterface extends utils.Interface {
   encodeFunctionData(functionFragment: "length", values?: undefined): string;
   encodeFunctionData(functionFragment: "lockFarm", values?: undefined): string;
   encodeFunctionData(
-    functionFragment: "lockedBalance",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "lockedTotalWeight",
-    values?: undefined
-  ): string;
-  encodeFunctionData(
-    functionFragment: "preDistribute",
+    functionFragment: "maxPercentage",
     values?: undefined
   ): string;
   encodeFunctionData(functionFragment: "reset", values?: undefined): string;
@@ -176,6 +152,22 @@ export interface VotingFarmInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "setAdmin",
     values: [PromiseOrValue<string>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setConfiguration",
+    values: [
+      PromiseOrValue<string>,
+      PromiseOrValue<string>,
+      PromiseOrValue<string>
+    ]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setMaxPercentageFarm",
+    values: [PromiseOrValue<BigNumberish>]
+  ): string;
+  encodeFunctionData(
+    functionFragment: "setTestMode",
+    values?: undefined
   ): string;
   encodeFunctionData(
     functionFragment: "totalWeight",
@@ -197,10 +189,6 @@ export interface VotingFarmInterface extends utils.Interface {
 
   decodeFunctionResult(functionFragment: "HEC", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "MIN_HEC_FOR_VERIFY",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
     functionFragment: "addFarmForOwner",
     data: BytesLike
   ): Result;
@@ -208,11 +196,6 @@ export interface VotingFarmInterface extends utils.Interface {
   decodeFunctionResult(functionFragment: "canVote", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "deprecateFarm",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(functionFragment: "distribute", data: BytesLike): Result;
-  decodeFunctionResult(
-    functionFragment: "distributeDelay",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "fNFT", data: BytesLike): Result;
@@ -224,30 +207,22 @@ export interface VotingFarmInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "getFarms", data: BytesLike): Result;
   decodeFunctionResult(
+    functionFragment: "getFarmsLength",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "getFarmsWeights",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "getWeightByUser",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "hasDistributed",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "lastDistribute",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "lastVote", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "length", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "lockFarm", data: BytesLike): Result;
   decodeFunctionResult(
-    functionFragment: "lockedBalance",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "lockedTotalWeight",
-    data: BytesLike
-  ): Result;
-  decodeFunctionResult(
-    functionFragment: "preDistribute",
+    functionFragment: "maxPercentage",
     data: BytesLike
   ): Result;
   decodeFunctionResult(functionFragment: "reset", data: BytesLike): Result;
@@ -257,6 +232,18 @@ export interface VotingFarmInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(functionFragment: "revote", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "setAdmin", data: BytesLike): Result;
+  decodeFunctionResult(
+    functionFragment: "setConfiguration",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setMaxPercentageFarm",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "setTestMode",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(
     functionFragment: "totalWeight",
     data: BytesLike
@@ -274,18 +261,22 @@ export interface VotingFarmInterface extends utils.Interface {
     "FarmDeprecated(address)": EventFragment;
     "FarmResurrected(address)": EventFragment;
     "FarmVoted(address)": EventFragment;
-    "PreDistributed(uint256)": EventFragment;
+    "SetAdmin(address,address)": EventFragment;
+    "SetConfiguration(address)": EventFragment;
+    "SetMaxPercentageFarm(uint256,address)": EventFragment;
   };
 
   getEvent(nameOrSignatureOrTopic: "FarmAddedByOwner"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FarmDeprecated"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FarmResurrected"): EventFragment;
   getEvent(nameOrSignatureOrTopic: "FarmVoted"): EventFragment;
-  getEvent(nameOrSignatureOrTopic: "PreDistributed"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SetAdmin"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SetConfiguration"): EventFragment;
+  getEvent(nameOrSignatureOrTopic: "SetMaxPercentageFarm"): EventFragment;
 }
 
 export interface FarmAddedByOwnerEventObject {
-  tokenLP: string;
+  farm: string;
 }
 export type FarmAddedByOwnerEvent = TypedEvent<
   [string],
@@ -296,7 +287,7 @@ export type FarmAddedByOwnerEventFilter =
   TypedEventFilter<FarmAddedByOwnerEvent>;
 
 export interface FarmDeprecatedEventObject {
-  tokenLP: string;
+  farm: string;
 }
 export type FarmDeprecatedEvent = TypedEvent<
   [string],
@@ -306,7 +297,7 @@ export type FarmDeprecatedEvent = TypedEvent<
 export type FarmDeprecatedEventFilter = TypedEventFilter<FarmDeprecatedEvent>;
 
 export interface FarmResurrectedEventObject {
-  tokenLP: string;
+  farm: string;
 }
 export type FarmResurrectedEvent = TypedEvent<
   [string],
@@ -322,15 +313,36 @@ export type FarmVotedEvent = TypedEvent<[string], FarmVotedEventObject>;
 
 export type FarmVotedEventFilter = TypedEventFilter<FarmVotedEvent>;
 
-export interface PreDistributedEventObject {
-  spiritRewards: BigNumber;
+export interface SetAdminEventObject {
+  oldAdmin: string;
+  newAdmin: string;
 }
-export type PreDistributedEvent = TypedEvent<
-  [BigNumber],
-  PreDistributedEventObject
+export type SetAdminEvent = TypedEvent<[string, string], SetAdminEventObject>;
+
+export type SetAdminEventFilter = TypedEventFilter<SetAdminEvent>;
+
+export interface SetConfigurationEventObject {
+  admin: string;
+}
+export type SetConfigurationEvent = TypedEvent<
+  [string],
+  SetConfigurationEventObject
 >;
 
-export type PreDistributedEventFilter = TypedEventFilter<PreDistributedEvent>;
+export type SetConfigurationEventFilter =
+  TypedEventFilter<SetConfigurationEvent>;
+
+export interface SetMaxPercentageFarmEventObject {
+  percentage: BigNumber;
+  admin: string;
+}
+export type SetMaxPercentageFarmEvent = TypedEvent<
+  [BigNumber, string],
+  SetMaxPercentageFarmEventObject
+>;
+
+export type SetMaxPercentageFarmEventFilter =
+  TypedEventFilter<SetMaxPercentageFarmEvent>;
 
 export interface VotingFarm extends BaseContract {
   connect(signerOrProvider: Signer | Provider | string): this;
@@ -361,10 +373,8 @@ export interface VotingFarm extends BaseContract {
   functions: {
     HEC(overrides?: CallOverrides): Promise<[string]>;
 
-    MIN_HEC_FOR_VERIFY(overrides?: CallOverrides): Promise<[BigNumber]>;
-
     addFarmForOwner(
-      _tokenLP: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -373,17 +383,9 @@ export interface VotingFarm extends BaseContract {
     canVote(overrides?: CallOverrides): Promise<[boolean]>;
 
     deprecateFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
-
-    distribute(
-      _start: PromiseOrValue<BigNumberish>,
-      _end: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
-
-    distributeDelay(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     fNFT(overrides?: CallOverrides): Promise<[string]>;
 
@@ -405,17 +407,14 @@ export interface VotingFarm extends BaseContract {
 
     getFarms(overrides?: CallOverrides): Promise<[string[]]>;
 
+    getFarmsLength(overrides?: CallOverrides): Promise<[BigNumber]>;
+
+    getFarmsWeights(overrides?: CallOverrides): Promise<[BigNumber[]]>;
+
     getWeightByUser(
       owner: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
-
-    hasDistributed(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<[boolean]>;
-
-    lastDistribute(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     lastVote(
       arg0: PromiseOrValue<string>,
@@ -426,20 +425,14 @@ export interface VotingFarm extends BaseContract {
 
     lockFarm(overrides?: CallOverrides): Promise<[string]>;
 
-    lockedBalance(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    lockedTotalWeight(overrides?: CallOverrides): Promise<[BigNumber]>;
-
-    preDistribute(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<ContractTransaction>;
+    maxPercentage(overrides?: CallOverrides): Promise<[BigNumber]>;
 
     reset(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
     resurrectFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -450,6 +443,22 @@ export interface VotingFarm extends BaseContract {
 
     setAdmin(
       _admin: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setConfiguration(
+      _fnft: PromiseOrValue<string>,
+      _hec: PromiseOrValue<string>,
+      _lockFarm: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setMaxPercentageFarm(
+      _percentage: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<ContractTransaction>;
+
+    setTestMode(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<ContractTransaction>;
 
@@ -477,10 +486,8 @@ export interface VotingFarm extends BaseContract {
 
   HEC(overrides?: CallOverrides): Promise<string>;
 
-  MIN_HEC_FOR_VERIFY(overrides?: CallOverrides): Promise<BigNumber>;
-
   addFarmForOwner(
-    _tokenLP: PromiseOrValue<string>,
+    _farm: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -489,17 +496,9 @@ export interface VotingFarm extends BaseContract {
   canVote(overrides?: CallOverrides): Promise<boolean>;
 
   deprecateFarm(
-    _token: PromiseOrValue<string>,
+    _farm: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
-
-  distribute(
-    _start: PromiseOrValue<BigNumberish>,
-    _end: PromiseOrValue<BigNumberish>,
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
-
-  distributeDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
   fNFT(overrides?: CallOverrides): Promise<string>;
 
@@ -521,17 +520,14 @@ export interface VotingFarm extends BaseContract {
 
   getFarms(overrides?: CallOverrides): Promise<string[]>;
 
+  getFarmsLength(overrides?: CallOverrides): Promise<BigNumber>;
+
+  getFarmsWeights(overrides?: CallOverrides): Promise<BigNumber[]>;
+
   getWeightByUser(
     owner: PromiseOrValue<string>,
     overrides?: CallOverrides
   ): Promise<BigNumber>;
-
-  hasDistributed(
-    arg0: PromiseOrValue<string>,
-    overrides?: CallOverrides
-  ): Promise<boolean>;
-
-  lastDistribute(overrides?: CallOverrides): Promise<BigNumber>;
 
   lastVote(
     arg0: PromiseOrValue<string>,
@@ -542,20 +538,14 @@ export interface VotingFarm extends BaseContract {
 
   lockFarm(overrides?: CallOverrides): Promise<string>;
 
-  lockedBalance(overrides?: CallOverrides): Promise<BigNumber>;
-
-  lockedTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
-
-  preDistribute(
-    overrides?: Overrides & { from?: PromiseOrValue<string> }
-  ): Promise<ContractTransaction>;
+  maxPercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
   reset(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
   resurrectFarm(
-    _token: PromiseOrValue<string>,
+    _farm: PromiseOrValue<string>,
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -566,6 +556,22 @@ export interface VotingFarm extends BaseContract {
 
   setAdmin(
     _admin: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setConfiguration(
+    _fnft: PromiseOrValue<string>,
+    _hec: PromiseOrValue<string>,
+    _lockFarm: PromiseOrValue<string>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setMaxPercentageFarm(
+    _percentage: PromiseOrValue<BigNumberish>,
+    overrides?: Overrides & { from?: PromiseOrValue<string> }
+  ): Promise<ContractTransaction>;
+
+  setTestMode(
     overrides?: Overrides & { from?: PromiseOrValue<string> }
   ): Promise<ContractTransaction>;
 
@@ -593,10 +599,8 @@ export interface VotingFarm extends BaseContract {
   callStatic: {
     HEC(overrides?: CallOverrides): Promise<string>;
 
-    MIN_HEC_FOR_VERIFY(overrides?: CallOverrides): Promise<BigNumber>;
-
     addFarmForOwner(
-      _tokenLP: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<string>;
 
@@ -605,17 +609,9 @@ export interface VotingFarm extends BaseContract {
     canVote(overrides?: CallOverrides): Promise<boolean>;
 
     deprecateFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
-
-    distribute(
-      _start: PromiseOrValue<BigNumberish>,
-      _end: PromiseOrValue<BigNumberish>,
-      overrides?: CallOverrides
-    ): Promise<void>;
-
-    distributeDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     fNFT(overrides?: CallOverrides): Promise<string>;
 
@@ -637,17 +633,14 @@ export interface VotingFarm extends BaseContract {
 
     getFarms(overrides?: CallOverrides): Promise<string[]>;
 
+    getFarmsLength(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getFarmsWeights(overrides?: CallOverrides): Promise<BigNumber[]>;
+
     getWeightByUser(
       owner: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
-
-    hasDistributed(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<boolean>;
-
-    lastDistribute(overrides?: CallOverrides): Promise<BigNumber>;
 
     lastVote(
       arg0: PromiseOrValue<string>,
@@ -658,16 +651,12 @@ export interface VotingFarm extends BaseContract {
 
     lockFarm(overrides?: CallOverrides): Promise<string>;
 
-    lockedBalance(overrides?: CallOverrides): Promise<BigNumber>;
-
-    lockedTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
-
-    preDistribute(overrides?: CallOverrides): Promise<void>;
+    maxPercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
     reset(overrides?: CallOverrides): Promise<void>;
 
     resurrectFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
 
@@ -680,6 +669,20 @@ export interface VotingFarm extends BaseContract {
       _admin: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<void>;
+
+    setConfiguration(
+      _fnft: PromiseOrValue<string>,
+      _hec: PromiseOrValue<string>,
+      _lockFarm: PromiseOrValue<string>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setMaxPercentageFarm(
+      _percentage: PromiseOrValue<BigNumberish>,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    setTestMode(overrides?: CallOverrides): Promise<void>;
 
     totalWeight(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -704,29 +707,42 @@ export interface VotingFarm extends BaseContract {
   };
 
   filters: {
-    "FarmAddedByOwner(address)"(tokenLP?: null): FarmAddedByOwnerEventFilter;
-    FarmAddedByOwner(tokenLP?: null): FarmAddedByOwnerEventFilter;
+    "FarmAddedByOwner(address)"(farm?: null): FarmAddedByOwnerEventFilter;
+    FarmAddedByOwner(farm?: null): FarmAddedByOwnerEventFilter;
 
-    "FarmDeprecated(address)"(tokenLP?: null): FarmDeprecatedEventFilter;
-    FarmDeprecated(tokenLP?: null): FarmDeprecatedEventFilter;
+    "FarmDeprecated(address)"(farm?: null): FarmDeprecatedEventFilter;
+    FarmDeprecated(farm?: null): FarmDeprecatedEventFilter;
 
-    "FarmResurrected(address)"(tokenLP?: null): FarmResurrectedEventFilter;
-    FarmResurrected(tokenLP?: null): FarmResurrectedEventFilter;
+    "FarmResurrected(address)"(farm?: null): FarmResurrectedEventFilter;
+    FarmResurrected(farm?: null): FarmResurrectedEventFilter;
 
     "FarmVoted(address)"(owner?: null): FarmVotedEventFilter;
     FarmVoted(owner?: null): FarmVotedEventFilter;
 
-    "PreDistributed(uint256)"(spiritRewards?: null): PreDistributedEventFilter;
-    PreDistributed(spiritRewards?: null): PreDistributedEventFilter;
+    "SetAdmin(address,address)"(
+      oldAdmin?: null,
+      newAdmin?: null
+    ): SetAdminEventFilter;
+    SetAdmin(oldAdmin?: null, newAdmin?: null): SetAdminEventFilter;
+
+    "SetConfiguration(address)"(admin?: null): SetConfigurationEventFilter;
+    SetConfiguration(admin?: null): SetConfigurationEventFilter;
+
+    "SetMaxPercentageFarm(uint256,address)"(
+      percentage?: null,
+      admin?: null
+    ): SetMaxPercentageFarmEventFilter;
+    SetMaxPercentageFarm(
+      percentage?: null,
+      admin?: null
+    ): SetMaxPercentageFarmEventFilter;
   };
 
   estimateGas: {
     HEC(overrides?: CallOverrides): Promise<BigNumber>;
 
-    MIN_HEC_FOR_VERIFY(overrides?: CallOverrides): Promise<BigNumber>;
-
     addFarmForOwner(
-      _tokenLP: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -735,17 +751,9 @@ export interface VotingFarm extends BaseContract {
     canVote(overrides?: CallOverrides): Promise<BigNumber>;
 
     deprecateFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
-
-    distribute(
-      _start: PromiseOrValue<BigNumberish>,
-      _end: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
-
-    distributeDelay(overrides?: CallOverrides): Promise<BigNumber>;
 
     fNFT(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -767,17 +775,14 @@ export interface VotingFarm extends BaseContract {
 
     getFarms(overrides?: CallOverrides): Promise<BigNumber>;
 
+    getFarmsLength(overrides?: CallOverrides): Promise<BigNumber>;
+
+    getFarmsWeights(overrides?: CallOverrides): Promise<BigNumber>;
+
     getWeightByUser(
       owner: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
-
-    hasDistributed(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<BigNumber>;
-
-    lastDistribute(overrides?: CallOverrides): Promise<BigNumber>;
 
     lastVote(
       arg0: PromiseOrValue<string>,
@@ -788,20 +793,14 @@ export interface VotingFarm extends BaseContract {
 
     lockFarm(overrides?: CallOverrides): Promise<BigNumber>;
 
-    lockedBalance(overrides?: CallOverrides): Promise<BigNumber>;
-
-    lockedTotalWeight(overrides?: CallOverrides): Promise<BigNumber>;
-
-    preDistribute(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<BigNumber>;
+    maxPercentage(overrides?: CallOverrides): Promise<BigNumber>;
 
     reset(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
     resurrectFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -812,6 +811,22 @@ export interface VotingFarm extends BaseContract {
 
     setAdmin(
       _admin: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setConfiguration(
+      _fnft: PromiseOrValue<string>,
+      _hec: PromiseOrValue<string>,
+      _lockFarm: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setMaxPercentageFarm(
+      _percentage: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<BigNumber>;
+
+    setTestMode(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<BigNumber>;
 
@@ -840,12 +855,8 @@ export interface VotingFarm extends BaseContract {
   populateTransaction: {
     HEC(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    MIN_HEC_FOR_VERIFY(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     addFarmForOwner(
-      _tokenLP: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -854,17 +865,9 @@ export interface VotingFarm extends BaseContract {
     canVote(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     deprecateFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
-
-    distribute(
-      _start: PromiseOrValue<BigNumberish>,
-      _end: PromiseOrValue<BigNumberish>,
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
-
-    distributeDelay(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     fNFT(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
@@ -886,17 +889,14 @@ export interface VotingFarm extends BaseContract {
 
     getFarms(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
+    getFarmsLength(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
+    getFarmsWeights(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     getWeightByUser(
       owner: PromiseOrValue<string>,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
-
-    hasDistributed(
-      arg0: PromiseOrValue<string>,
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
-    lastDistribute(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     lastVote(
       arg0: PromiseOrValue<string>,
@@ -907,20 +907,14 @@ export interface VotingFarm extends BaseContract {
 
     lockFarm(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
-    lockedBalance(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    lockedTotalWeight(overrides?: CallOverrides): Promise<PopulatedTransaction>;
-
-    preDistribute(
-      overrides?: Overrides & { from?: PromiseOrValue<string> }
-    ): Promise<PopulatedTransaction>;
+    maxPercentage(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     reset(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
     resurrectFarm(
-      _token: PromiseOrValue<string>,
+      _farm: PromiseOrValue<string>,
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -931,6 +925,22 @@ export interface VotingFarm extends BaseContract {
 
     setAdmin(
       _admin: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setConfiguration(
+      _fnft: PromiseOrValue<string>,
+      _hec: PromiseOrValue<string>,
+      _lockFarm: PromiseOrValue<string>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setMaxPercentageFarm(
+      _percentage: PromiseOrValue<BigNumberish>,
+      overrides?: Overrides & { from?: PromiseOrValue<string> }
+    ): Promise<PopulatedTransaction>;
+
+    setTestMode(
       overrides?: Overrides & { from?: PromiseOrValue<string> }
     ): Promise<PopulatedTransaction>;
 

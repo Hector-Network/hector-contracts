@@ -12,5 +12,7 @@ export type { FNFT } from "./contracts/VotingFarm.sol/FNFT";
 export { FNFT__factory } from "./factories/contracts/VotingFarm.sol/FNFT__factory";
 export type { LockFarm } from "./contracts/VotingFarm.sol/LockFarm";
 export { LockFarm__factory } from "./factories/contracts/VotingFarm.sol/LockFarm__factory";
+export type { SpookyLP } from "./contracts/VotingFarm.sol/SpookyLP";
+export { SpookyLP__factory } from "./factories/contracts/VotingFarm.sol/SpookyLP__factory";
 export type { VotingFarm } from "./contracts/VotingFarm.sol/VotingFarm";
 export { VotingFarm__factory } from "./factories/contracts/VotingFarm.sol/VotingFarm__factory";
