@@ -128,9 +128,6 @@ contract VotingFarm is ReentrancyGuard {
         bool flag = true;
         address prevFarm = _farms[0];
 
-        // Compare inputted farms to old farms
-        if (_farms.length == getFarmsLength()) flag = false;
-
         // Check new inputted address is already existed on Voting farms array
         for (uint256 i = 1; i < _farms.length; i++) {
             if (prevFarm == _farms[i]) {
@@ -182,31 +179,11 @@ contract VotingFarm is ReentrancyGuard {
         return flag;
     }
 
-    // Adjusts _owner's votes according to latest _owner's HEC balance
-    function revote(address _owner) public {
-        address[] memory _farmVote = farmVote[_owner];
-        uint256 _farmCnt = _farmVote.length;
-        uint256[] memory _weights = new uint256[](_farmCnt);
-        uint256 _prevUsedWeight = usedWeights[_owner];
-        uint256 _weight = getWeightByUser(_owner);
-
-        for (uint256 i = 0; i < _farmCnt; i++) {
-            // other addresses to stop them from gaming the system with outdated votes that dont lose voting power
-            uint256 _prevWeight = votes[_owner][_farmVote[i]];
-            _weights[i] = (_prevWeight * _weight) / _prevUsedWeight;
-        }
-
-        _vote(_owner, _farmVote, _weights);
-    }
-
     function _vote(
         address _owner,
         address[] memory _farmVote,
         uint256[] memory _weights
     ) internal {
-        require(validFarms(_farmVote), 'Invalid Farms');
-        require(validPercentageForFarms(_weights), 'Invalid weights');
-
         uint256 _farmCnt = _farmVote.length;
         uint256 _weight = getWeightByUser(_owner);
         uint256 _totalVoteWeight = 0;
@@ -215,7 +192,7 @@ contract VotingFarm is ReentrancyGuard {
         for (uint256 i = 0; i < _farmCnt; i++) {
             _totalVoteWeight = _totalVoteWeight.add(_weights[i]);
         }
-        require(_totalVoteWeight == 100, 'Invalid percentage');
+        require(_totalVoteWeight == 100, 'Weights total percentage is not 100%');
         _reset(_owner);
 
         for (uint256 i = 0; i < _farmCnt; i++) {
@@ -232,6 +209,7 @@ contract VotingFarm is ReentrancyGuard {
         }
 
         usedWeights[_owner] = _usedWeight;
+        lastVote[msg.sender] = block.timestamp;
         emit FarmVoted(_owner);
     }
 
@@ -278,8 +256,14 @@ contract VotingFarm is ReentrancyGuard {
         external
         hasVoted(msg.sender)
     {
-        require(_farmVote.length == _weights.length);
-        lastVote[msg.sender] = block.timestamp;
+        require(
+            _farmVote.length == _weights.length,
+            'Farms and Weights length size are difference'
+        );
+        require(_farmVote.length == getFarmsLength(), 'Invalid Farms length');
+        require(validFarms(_farmVote), 'Invalid Farms');
+        require(validPercentageForFarms(_weights), 'One of Weights exceeded max limit');
+        
         _vote(msg.sender, _farmVote, _weights);
     }
 

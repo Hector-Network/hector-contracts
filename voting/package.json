@@ -8,7 +8,7 @@
     "hardhat:kovan": "hardhat --network kovan",
     "compile": "hardhat compile",
     "size": "hardhat size-contracts",
-    "test": "hardhat test",
+    "test": "hardhat test --network ftmtest",
     "deploy:kovan": "hardhat deploy --network kovan",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
     "deploy:ftm": "hardhat deploy --network ftm",
