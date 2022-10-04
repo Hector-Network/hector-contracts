@@ -1,33 +1,27 @@
+import { gWei } from './../helper/utils';
 import { deployRewardWeight, deploySplitter } from './../helper/contracts';
 import { ethers } from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
-  deployStakingToken,
-  deployRewardToken,
   deployTreasury,
   deployLockAddressRegistry,
   deployFNFT,
   deployTokenVault,
   deployLockFarm,
-  deploySLockFarm,
   deployEmissionor,
   waitSeconds,
 } from '../helper';
+import { emitStartTimestamp, emitAmounts } from './config';
+import { BigNumber } from 'ethers';
 
 const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const signers = await ethers.getSigners();
   const deployer = signers[0];
 
-  // Deploy StakingToken
-  const stakingTokenAddress = '0xc625fa79F79c34Dc38ed717161B76Be01975cf29';
-  // console.log('StakingToken: ', stakingToken.address);
-
-  // await waitSeconds(60);
-  // Deploy RewardToken
+  const stakingTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
   const rewardTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
-  // console.log('RewardToken: ', rewardToken.address);
 
   await waitSeconds(60);
   // Deploy Treasury
@@ -83,14 +77,22 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   await waitSeconds(60);
   // Deploy Emissionor
-  // const treasuryAddress = '0x724c670d0215cC75d990b7D28604A84E1F1caa1c';
-  // const rewardTokenAddress = '0xBa5B18A16d54a9687EFE5eeEbc15c223b575aBfd';
   const emissionor = await deployEmissionor(
     treasury.address,
     splitter.address,
     rewardTokenAddress
   );
   console.log('Emissionor: ', emissionor.address);
+  try {
+    await emissionor.initialize(
+      emitStartTimestamp,
+      emitAmounts.map((amount) => gWei(amount)),
+      emitAmounts.reduce(
+        (sum, current) => sum.add(gWei(current)),
+        BigNumber.from(0)
+      )
+    );
+  } catch (_) {}
 
   await waitSeconds(60);
   // Register Addressses
@@ -112,24 +114,6 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Verify
   await waitSeconds(10);
   console.log('=====> Verifing ....');
-  // try {
-  //   await hre.run('verify:verify', {
-  //     address: stakingToken.address,
-  //     contract: 'contracts/WrappedToken.sol:WrappedToken',
-  //     constructorArguments: [
-  //       'Hector',
-  //       'HEC',
-  //       '0x55639b1833Ddc160c18cA60f5d0eC9286201f525',
-  //     ],
-  //   });
-  // } catch (_) {}
-  // try {
-  //   await hre.run('verify:verify', {
-  //     address: rewardToken.address,
-  //     contract: 'contracts/mock/RewardToken.sol:RewardToken',
-  //     constructorArguments: [],
-  //   });
-  // } catch (_) {}
   try {
     await hre.run('verify:verify', {
       address: treasury.address,
