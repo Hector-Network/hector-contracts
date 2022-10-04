@@ -9,4 +9,4 @@ export const emitAmounts = [
   1398, 1399, 1053, 1054, 1054, 1055, 1055, 1056, 1056, 1056, 795, 795, 795,
   795, 796, 796, 796, 796,
 ];
-export const emitStartTimestamp = 1000;
+export const emitStartTimestamp = 1665486000; /// Tue Oct 11 2022 11:00:00 GMT+0000
