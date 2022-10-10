@@ -60,7 +60,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Deploy RewardWeight
   const rewardWeight = await deployRewardWeight();
   try {
-    await rewardWeight.register(lockFarm.address, 400);
+    await rewardWeight.register(lockFarm.address, 10000);
   } catch (_) {}
   console.log('RewardWeight: ', rewardWeight.address);
 
