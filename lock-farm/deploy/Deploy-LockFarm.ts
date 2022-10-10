@@ -50,7 +50,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Deploy LockFarm
   const lockFarm = await deployLockFarm(
     lockAddressRegistry.address,
-    'LockFarm #1',
+    'HEC Farm',
     stakingTokenAddress,
     rewardTokenAddress
   );
