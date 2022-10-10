@@ -20,10 +20,9 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const signers = await ethers.getSigners();
   const deployer = signers[0];
 
-  const stakingTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
-  const rewardTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+  const stakingTokenAddress = '0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0';
+  const rewardTokenAddress = '0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0';
 
-  await waitSeconds(60);
   // Deploy Treasury
   const treasury = await deployTreasury();
   console.log('Treasury: ', treasury.address);
