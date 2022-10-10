@@ -11,15 +11,13 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const signers = await ethers.getSigners();
   const deployer = signers[0];
 
-  const _fnft =  "0xD13B8382fF3c1628547c91C001f8d97c21413671";
+  const _fnft =  "0x669CD4d138669740D8c5a4417B6a7599bfe5434A";
   const _hec = "0x55639b1833Ddc160c18cA60f5d0eC9286201f525";
-  const _lockFarm = "0x3b503F665039d532bef21E6Df3Ed474f4d810eF6";
+  const _lockFarm = "0x6Bd2b014547d7e1b05fDe0CB62c8717216c6E9ec";
 
   // Deploy VotingFarm
   const votingFarm = await deployVotingFarm(
-    _fnft,
     _hec,
-    _lockFarm
   );
   console.log('VotingFarm: ', votingFarm.address);
 
@@ -30,9 +28,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       address: votingFarm.address,
       contract: 'contracts/VotingFarm.sol:VotingFarm',
       constructorArguments: [
-        _fnft,
         _hec,
-        _lockFarm
       ],
     });
   } catch (_) {}

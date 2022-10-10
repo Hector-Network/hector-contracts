@@ -9,9 +9,7 @@ import {
   IERC20,
   IERC20__factory,
   LockFarm__factory,
-  SpookyLP__factory,
   FNFT__factory,
-  SpookyLP,
 } from '../types';
 
 import {
@@ -23,27 +21,30 @@ describe('VotingFarm Test', async () => {
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
 
-  let fnft: FNFT;
-  let lockFarm: LockFarm;
+  let fnft1: FNFT;
+  let fnft2: FNFT;
+  let farm1: LockFarm;
+  let farm2: LockFarm;
+
   let hec: IERC20;
-  let farm1: SpookyLP;
-  let farm2: SpookyLP;
   let votingFarm: VotingFarm;
 
-  let _fnft = '0xD13B8382fF3c1628547c91C001f8d97c21413671';
   let _hec = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
-  let _lockFarm = '0x3b503F665039d532bef21E6Df3Ed474f4d810eF6';
 
-  let _lp1 = '0x1E6D7ecCB5981AA700789Af7541c0E9aE5deCA43';
-  let _lp2 = '0xeF08AaA32a53a7C892d912fc37282ebC8c21316c';
-  let _fakeFarm = '0x3b503F665039d532bef21E6Df3Ed474f4d810eF6';
+  let _farm1 = '0x6Bd2b014547d7e1b05fDe0CB62c8717216c6E9ec';
+  let _fnft1 = '0x669CD4d138669740D8c5a4417B6a7599bfe5434A';
 
-  let votingFarmsData = [_lp1, _lp2];
-  let votingWeightsData = ['30', '70'];
+  let _farm2 = '0x6Bd2b014547d7e1b05fDe0CB62c8717216c6E9ec';
+  let _fnft2 = '0x669CD4d138669740D8c5a4417B6a7599bfe5434A';
 
-  let votingFakeFarmsData = [_lp1, _lp1];
-  let votingFakeFarmsData1 = [_lp1, _lp2, _fakeFarm];
-  let votingFakeWeightsData = ['20', '70'];
+  let _fakeFarm = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+
+  let votingFarmsData = [_farm1];
+  let votingWeightsData = ['100'];
+
+  let votingFakeFarmsData = [_fakeFarm];
+  let votingFakeFarmsData1 = [_farm1, _farm2, _fakeFarm];
+  let votingFakeWeightsData = ['101'];
   let votingFakeWeightsData1 = ['30', '70', '10'];
 
   before(async () => {
@@ -53,53 +54,51 @@ describe('VotingFarm Test', async () => {
     alice = signers[1];
     bob = signers[2];
 
-    // FNFT
-    fnft = FNFT__factory.connect(_fnft, deployer);
-    console.log('FNFT: ', fnft.address);
+    // FNFT1
+    fnft1 = FNFT__factory.connect(_fnft1, deployer);
+    console.log('FNFT: ', fnft1.address);
 
     // HEC
     hec = IERC20__factory.connect(_hec, deployer);
     console.log('HEC: ', hec.address);
 
-    // LockFarm
-    lockFarm = LockFarm__factory.connect(_lockFarm, deployer);
-    console.log('LockFarm: ', lockFarm.address);
-
     // Farm1
-    farm1 = SpookyLP__factory.connect(_lp1, deployer);
+    farm1 = LockFarm__factory.connect(_farm1, deployer);
     console.log('Farm1: ', farm1.address);
 
     // Farm2
-    farm2 = SpookyLP__factory.connect(_lp2, deployer);
+    farm2 = LockFarm__factory.connect(_farm2, deployer);
     console.log('Farm2: ', farm2.address);
 
     // VotingFarm
-    votingFarm = await deployVotingFarm(_fnft, _hec, _lockFarm);
+    votingFarm = await deployVotingFarm(_hec);
     console.log('VotingFarm: ', votingFarm.address);
+
+    console.log('Deployer: ', deployer.address);
+    console.log('Alice: ', alice.address);
+
+    await votingFarm.connect(deployer).addLockFarmForOwner(farm1.address, _fnft1);
+    await votingFarm.connect(deployer).setMaxPercentageFarm(200);
+
   });
 
-  describe('#1: AddFarmForOwner', async () => {
+  describe('#1: AddLockFarmForOwner', async () => {
     it('Should set the right owner', async function () {
       await expect(
-        votingFarm.connect(deployer).addFarmForOwner(farm1.address)
-      ).to.be.not.revertedWith('!admin');
-    });
-
-    it('Should set the valid farm', async function () {
-      await expect(votingFarm.connect(deployer).addFarmForOwner(_fakeFarm)).to
-        .be.reverted;
+        votingFarm.connect(alice).addLockFarmForOwner(farm1.address, _fnft1)
+      ).to.be.revertedWith('!admin');
     });
 
     it('Should set the non-existed farm', async function () {
       await expect(
-        votingFarm.connect(deployer).addFarmForOwner(farm1.address)
+        votingFarm.connect(deployer).addLockFarmForOwner(farm1.address, _fnft1)
       ).to.be.revertedWith('Already existed farm');
     });
+    
   });
 
   describe('#2: Vote', async () => {
     it('Failed - inputted weights total percentage is not 100%', async function () {
-      await votingFarm.connect(deployer).addFarmForOwner(farm2.address);
       await expect(
         votingFarm
           .connect(deployer)
@@ -112,7 +111,7 @@ describe('VotingFarm Test', async () => {
       await expect(
         votingFarm.connect(deployer).vote(votingFarmsData, votingWeightsData)
       ).to.be.revertedWith('One of Weights exceeded max limit');
-      await votingFarm.connect(deployer).setMaxPercentageFarm(80);
+      await votingFarm.connect(deployer).setMaxPercentageFarm(200);
     });
 
     it('Failed - inputted farms and weights length size are difference', async function () {
@@ -141,49 +140,30 @@ describe('VotingFarm Test', async () => {
     });
   });
 
-  describe('#3: setAdmin', async () => {
-    it('Failed - only admin can change admin', async function () {
-      await expect(
-        votingFarm.connect(deployer).setAdmin(deployer.address)
-      ).to.be.not.revertedWith('!admin');
-    });
-
-    it('Compare - admin after set', async function () {
-      await votingFarm.connect(deployer).setAdmin(deployer.address);
-      expect(deployer.address).to.equal(
-        await votingFarm.connect(deployer).admin()
-      );
-    });
-  });
-
-  describe('#4: setConfiguration', async () => {
+  describe('#3: setConfiguration', async () => {
     it('Failed - only admin can set configuration', async function () {
       await expect(
         votingFarm
           .connect(alice)
-          .setConfiguration(fnft.address, hec.address, lockFarm.address)
-      ).to.be.not.revertedWith('!admin');
+          .setConfiguration(hec.address)
+      ).to.be.revertedWith('!admin');
     });
 
     it('Compare - configurations after set', async function () {
-      const tfnft = fnft.address;
       const thec = hec.address;
-      const tlockFarm = lockFarm.address;
       await votingFarm
         .connect(deployer)
-        .setConfiguration(fnft.address, hec.address, lockFarm.address);
+        .setConfiguration(hec.address);
 
-      expect(tfnft).to.equal(await votingFarm.connect(deployer).fNFT());
       expect(thec).to.equal(await votingFarm.connect(deployer).HEC());
-      expect(tlockFarm).to.equal(await votingFarm.connect(deployer).lockFarm());
     });
   });
 
-  describe('#5: setMaxPercentageFarm', async () => {
+  describe('#4: setMaxPercentageFarm', async () => {
     it('Failed - only admin can set max percentage of the farms', async function () {
       await expect(
         votingFarm.connect(alice).setMaxPercentageFarm('60')
-      ).to.be.not.revertedWith('!admin');
+      ).to.be.revertedWith('!admin');
     });
 
     it('Compare - max percentage after set', async function () {
@@ -194,12 +174,12 @@ describe('VotingFarm Test', async () => {
     });
   });
 
-  describe('#6: setVoteDelay', async () => {
+  describe('#5: setVoteDelay', async () => {
     it('Failed - only admin can set vote delay time', async function () {
       const voteDelay = 60;
       await expect(
         votingFarm.connect(alice).setVoteDelay(voteDelay)
-      ).to.be.not.revertedWith('!admin');
+      ).to.be.revertedWith('!admin');
     });
 
     it('Compare - vote delay time after set', async function () {
@@ -207,6 +187,21 @@ describe('VotingFarm Test', async () => {
       await votingFarm.connect(deployer).setVoteDelay(voteDelay);
       const voteDelay1 = await votingFarm.connect(deployer).voteDelay();
       expect(voteDelay).to.equal(voteDelay1);
+    });
+  });
+
+  describe('#6: setAdmin', async () => {
+    it('Failed - only admin can change admin', async function () {
+      await expect(
+        votingFarm.connect(alice).setAdmin(alice.address)
+      ).to.be.revertedWith('!admin');
+    });
+
+    it('Compare - admin after set', async function () {
+      await votingFarm.connect(deployer).setAdmin(alice.address);
+      expect(alice.address).to.equal(
+        await votingFarm.connect(alice).admin()
+      );
     });
   });
 });

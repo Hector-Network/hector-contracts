@@ -19,6 +19,8 @@ interface LockFarm {
             uint256,
             uint256
         );
+    
+    function pendingReward(uint256 fnftId) external view returns(uint256 reward);
 }
 
 interface FNFT {
@@ -30,40 +32,29 @@ interface FNFT {
         returns (uint256);
 }
 
-interface SpookyLP {
-    function name() external view returns (string memory);
-
-    function symbol() external view returns (string memory);
-
-    function token0() external view returns (address token0);
-
-    function token1() external view returns (address token1);
-}
-
 contract VotingFarm is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
     IERC20 public HEC; // HEC
-    FNFT public fNFT; // FNFT
-    LockFarm public lockFarm; // LockFarm
 
     address public admin; //Admin address to manage farms like add/deprecate/resurrect
 
     uint256 public totalWeight; // total weights of the farms
-    uint256 public maxPercentage = 80; // max percentage for each farm
+    uint256 public maxPercentage = 100; // max percentage for each farm
 
     // Time delays
     uint256 public voteDelay = 604800; // Production Mode
     mapping(address => uint256) public lastVote; // msg.sender => time of users last vote
 
-    mapping(address => uint256) public farmWeights; // farm => weight
+    mapping(LockFarm => uint256) public farmWeights; // farm => weight
 
-    address[] internal farms;
-    mapping(address => bool) public farmStatus; // farm => bool : false = deprecated
+    LockFarm[] internal farms;
+    mapping(LockFarm => bool) public farmStatus; // farm => bool : false = deprecated
 
-    mapping(address => mapping(address => uint256)) public votes; // msg.sender => votes
-    mapping(address => address[]) public farmVote; // msg.sender => farms
+    mapping(address => mapping(LockFarm => uint256)) public votes; // msg.sender => votes
+    mapping(address => LockFarm[]) public farmVote; // msg.sender => farms
+    mapping(LockFarm => FNFT) public fnft; // farm => fnft
     mapping(address => uint256) public usedWeights; // msg.sender => total voting weights of user
 
     // Modifiers
@@ -76,26 +67,30 @@ contract VotingFarm is ReentrancyGuard {
     }
 
     constructor(
-        address _fnft,
-        address _hec,
-        address _lockFarm
+        address _hec
     ) {
-        fNFT = FNFT(_fnft);
         HEC = IERC20(_hec);
         admin = msg.sender;
-        lockFarm = LockFarm(_lockFarm);
     }
 
-    function getFarms() public view returns (address[] memory) {
-        address[] memory tempFarms = new address[](farms.length);
+    function getFarms() public view returns (LockFarm[] memory) {
+        LockFarm[] memory tempFarms = new LockFarm[](farms.length);
         for (uint256 i = 0; i < farms.length; i++) {
             if (farmStatus[farms[i]]) tempFarms[i] = farms[i];
         }
         return tempFarms;
     }
 
+    function getFarmsByIndex(uint256 index) public view returns (LockFarm) {
+        LockFarm[] memory tempFarms = new LockFarm[](farms.length);
+        for (uint256 i = 0; i < farms.length; i++) {
+            if (farmStatus[farms[i]]) tempFarms[i] = farms[i];
+        }
+        return tempFarms[index];
+    }
+
     function getFarmsLength() public view returns (uint256) {
-        address[] memory _farms = getFarms();
+        LockFarm[] memory _farms = getFarms();
         return _farms.length;
     }
 
@@ -106,11 +101,11 @@ contract VotingFarm is ReentrancyGuard {
 
     // Reset votes to 0
     function _reset(address _owner) internal {
-        address[] storage _farmVote = farmVote[_owner];
+        LockFarm[] storage _farmVote = farmVote[_owner];
         uint256 _farmVoteCnt = _farmVote.length;
 
         for (uint256 i = 0; i < _farmVoteCnt; i++) {
-            address _farm = _farmVote[i];
+            LockFarm _farm = _farmVote[i];
             uint256 _votes = votes[_owner][_farm];
 
             if (_votes > 0) {
@@ -124,9 +119,9 @@ contract VotingFarm is ReentrancyGuard {
     }
 
     // Verify farms array is valid
-    function validFarms(address[] memory _farms) internal view returns (bool) {
+    function validFarms(LockFarm[] memory _farms) internal view returns (bool) {
         bool flag = true;
-        address prevFarm = _farms[0];
+        LockFarm prevFarm = _farms[0];
 
         // Check new inputted address is already existed on Voting farms array
         for (uint256 i = 1; i < _farms.length; i++) {
@@ -148,10 +143,11 @@ contract VotingFarm is ReentrancyGuard {
         return flag;
     }
 
+
     // Check farm is already existed when admin added
-    function validFarm(address _farm) internal view returns (bool) {
+    function validFarm(LockFarm _farm) internal view returns (bool) {
         bool flag = true;
-        address[] memory _farms = getFarms();
+        LockFarm[] memory _farms = getFarms();
 
         // Check new inputted address is already existed on Voting farms array
         for (uint256 i = 0; i < _farms.length; i++) {
@@ -181,7 +177,7 @@ contract VotingFarm is ReentrancyGuard {
 
     function _vote(
         address _owner,
-        address[] memory _farmVote,
+        LockFarm[] memory _farmVote,
         uint256[] memory _weights
     ) internal {
         uint256 _farmCnt = _farmVote.length;
@@ -192,11 +188,15 @@ contract VotingFarm is ReentrancyGuard {
         for (uint256 i = 0; i < _farmCnt; i++) {
             _totalVoteWeight = _totalVoteWeight.add(_weights[i]);
         }
-        require(_totalVoteWeight == 100, 'Weights total percentage is not 100%');
+        require(
+            _totalVoteWeight == 100,
+            'Weights total percentage is not 100%'
+        );
         _reset(_owner);
+        
 
         for (uint256 i = 0; i < _farmCnt; i++) {
-            address _farm = _farmVote[i];
+            LockFarm _farm = _farmVote[i];
             uint256 _farmWeight = _weights[i].mul(_weight).div(
                 _totalVoteWeight
             );
@@ -214,26 +214,33 @@ contract VotingFarm is ReentrancyGuard {
     }
 
     // Can vote by owner
-    function canVote() public view returns (bool) {
-        uint256 time = block.timestamp - lastVote[msg.sender];
-        uint256 userWeight = getWeightByUser(msg.sender);
+    function canVote(address owner) public view returns (bool) {
+        // Check Farm is existed
+        if(getFarmsLength() == 0) return false;
+
+        uint256 time = block.timestamp - lastVote[owner];
+        uint256 userWeight = getWeightByUser(owner);
         if (userWeight > 0 && time > voteDelay) return true;
         else return false;
     }
 
     function getWeightByUser(address owner) public view returns (uint256) {
         uint256 hecBalance = HEC.balanceOf(owner);
-        uint256 fnftBalance = fNFT.balanceOf(owner);
         uint256 hecAmountByFNFT = 0;
         uint256 totalWeightByUser = 0;
 
-        // Get All Balance By user both of HEC and FNFT
-        for (uint256 i = 0; i < fnftBalance; i++) {
-            uint256 tokenOfOwnerByIndex = fNFT.tokenOfOwnerByIndex(owner, i);
-            (, uint256 _hecAmount, , , , , ) = lockFarm.fnfts(
-                tokenOfOwnerByIndex
-            );
-            hecAmountByFNFT += _hecAmount;
+        for(uint256 i = 0; i < getFarmsLength(); i++) {
+            LockFarm _lockFarm = getFarmsByIndex(i);
+            FNFT fNFT = fnft[_lockFarm];
+            uint256 fnftBalance = fNFT.balanceOf(owner);
+            // Get All Balance By user both of HEC and FNFT
+            for (uint256 j = 0; j < fnftBalance; j++) {
+                uint256 tokenOfOwnerByIndex = fNFT.tokenOfOwnerByIndex(owner, j);
+                (, uint256 _hecAmount, , , , , ) = _lockFarm.fnfts(
+                    tokenOfOwnerByIndex
+                );
+                hecAmountByFNFT += _hecAmount;
+            }
         }
 
         totalWeightByUser = hecBalance.add(hecAmountByFNFT);
@@ -243,7 +250,7 @@ contract VotingFarm is ReentrancyGuard {
 
     // Get each farm's weights percentage
     function getFarmsWeights() external view returns (uint256[] memory) {
-        address[] memory _validFarms = getFarms();
+        LockFarm[] memory _validFarms = getFarms();
         uint256[] memory _validFarmsWeights = new uint256[](_validFarms.length);
         for (uint256 i = 0; i < _validFarms.length; i++) {
             _validFarmsWeights[i] = farmWeights[_validFarms[i]];
@@ -251,8 +258,48 @@ contract VotingFarm is ReentrancyGuard {
         return _validFarmsWeights;
     }
 
+    // Get current locked Hec balance for each user
+    function getCurrentLockedHEC(address owner) external view returns (uint256) {
+        uint256 hecAmountByFNFT = 0;
+
+        for(uint256 i = 0; i < getFarmsLength(); i++) {
+            LockFarm _lockFarm = getFarmsByIndex(i);
+            FNFT fNFT = fnft[_lockFarm];
+            uint256 fnftBalance = fNFT.balanceOf(owner);
+            // Get All Balance By user both of HEC and FNFT
+            for (uint256 j = 0; j < fnftBalance; j++) {
+                uint256 tokenOfOwnerByIndex = fNFT.tokenOfOwnerByIndex(owner, j);
+                (, uint256 _hecAmount, , , , , ) = _lockFarm.fnfts(
+                    tokenOfOwnerByIndex
+                );
+                hecAmountByFNFT += _hecAmount;
+            }
+        }
+
+        return hecAmountByFNFT;
+    }
+
+    // Get current claimable balance for each user
+    function getClaimableHEC(address owner) external view returns (uint256) {
+        uint256 totalPendingReward = 0;
+
+        for(uint256 i = 0; i < getFarmsLength(); i++) {
+            LockFarm _lockFarm = getFarmsByIndex(i);
+            FNFT fNFT = fnft[_lockFarm];
+            uint256 fnftBalance = fNFT.balanceOf(owner);
+            // Get All Balance By user both of HEC and FNFT
+            for (uint256 j = 0; j < fnftBalance; j++) {
+                uint256 tokenOfOwnerByIndex = fNFT.tokenOfOwnerByIndex(owner, j);
+                uint256 pendingReward = _lockFarm.pendingReward(tokenOfOwnerByIndex);
+                totalPendingReward += pendingReward;
+            }
+        }
+
+        return totalPendingReward;
+    }
+
     // Vote with HEC on a farm
-    function vote(address[] calldata _farmVote, uint256[] calldata _weights)
+    function vote(LockFarm[] calldata _farmVote, uint256[] calldata _weights)
         external
         hasVoted(msg.sender)
     {
@@ -262,8 +309,11 @@ contract VotingFarm is ReentrancyGuard {
         );
         require(_farmVote.length == getFarmsLength(), 'Invalid Farms length');
         require(validFarms(_farmVote), 'Invalid Farms');
-        require(validPercentageForFarms(_weights), 'One of Weights exceeded max limit');
-        
+        require(
+            validPercentageForFarms(_weights),
+            'One of Weights exceeded max limit'
+        );
+
         _vote(msg.sender, _farmVote, _weights);
     }
 
@@ -273,30 +323,21 @@ contract VotingFarm is ReentrancyGuard {
         emit SetAdmin(admin, _admin);
     }
 
-    // Verify the LP token
-    function verifyFarm(address _farm) internal view returns (bool) {
-        SpookyLP _spookyLP = SpookyLP(_farm);
-        if (
-            _spookyLP.token0() != address(0) && _spookyLP.token1() != address(0)
-        ) return true;
-        else return false;
-    }
+    // Add new lock farm
+    function addLockFarmForOwner(LockFarm _lockFarm, FNFT _fnft) external returns (LockFarm) {
+        require(msg.sender == admin, '!admin');
+        require(validFarm(_lockFarm), 'Already existed farm');
 
-    // Add new farm
-    function addFarmForOwner(address _farm) external returns (address) {
-        require((msg.sender == admin), '!admin');
-        require(verifyFarm(_farm), 'Invalid farm added');
-        require(validFarm(_farm), 'Already existed farm');
+        farms.push(_lockFarm);
+        farmStatus[_lockFarm] = true;
+        fnft[_lockFarm] = _fnft;
 
-        farms.push(_farm);
-        farmStatus[_farm] = true;
-
-        emit FarmAddedByOwner(_farm);
-        return _farm;
+        emit FarmAddedByOwner(_lockFarm);
+        return _lockFarm;
     }
 
     // Deprecate existing farm
-    function deprecateFarm(address _farm) external {
+    function deprecateFarm(LockFarm _farm) external {
         require((msg.sender == admin), '!admin');
         require(farmStatus[_farm], 'farm is not active');
         farmStatus[_farm] = false;
@@ -304,28 +345,19 @@ contract VotingFarm is ReentrancyGuard {
     }
 
     // Bring Deprecated farm back into use
-    function resurrectFarm(address _farm) external {
+    function resurrectFarm(LockFarm _farm) external {
         require((msg.sender == admin), '!admin');
         require(!farmStatus[_farm], 'farm is active');
         farmStatus[_farm] = true;
         emit FarmResurrected(_farm);
     }
 
-    // Length of Farms
-    function length() external view returns (uint256) {
-        return farms.length;
-    }
-
     // Set configuration
     function setConfiguration(
-        address _fnft,
-        address _hec,
-        address _lockFarm
+        address _hec
     ) external {
         require((msg.sender == admin), '!admin');
-        fNFT = FNFT(_fnft);
         HEC = IERC20(_hec);
-        lockFarm = LockFarm(_lockFarm);
         emit SetConfiguration(msg.sender);
     }
 
@@ -344,9 +376,9 @@ contract VotingFarm is ReentrancyGuard {
     }
 
     event FarmVoted(address owner);
-    event FarmAddedByOwner(address farm);
-    event FarmDeprecated(address farm);
-    event FarmResurrected(address farm);
+    event FarmAddedByOwner(LockFarm farm);
+    event FarmDeprecated(LockFarm farm);
+    event FarmResurrected(LockFarm farm);
     event SetConfiguration(address admin);
     event SetMaxPercentageFarm(uint256 percentage, address admin);
     event SetVoteDelay(uint256 voteDelay, address admin);

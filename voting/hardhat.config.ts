@@ -57,7 +57,7 @@ export default {
     },
     ftmtest: {
       url: process.env.FTMTEST_NET_API_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.PRIVATE_KEY, process.env.PRIVATE_KEY_ALICE],
       chainId: 4002,
       saveDeployments: true,
     },

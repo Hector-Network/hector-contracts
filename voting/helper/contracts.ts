@@ -23,13 +23,9 @@ export const deployContract = async <ContractType extends Contract>(
 };
 
 export const deployVotingFarm = async (
-  _fnft: any,
   _hec: any,
-  _lockFarm: any
 ) => {
   return await deployContract<VotingFarm>('VotingFarm', [
-    _fnft,
     _hec,
-    _lockFarm
   ]);
 };
