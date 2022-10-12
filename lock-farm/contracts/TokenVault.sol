@@ -23,13 +23,11 @@ contract TokenVault is
 
     mapping(uint256 => FNFTConfig) private fnfts;
 
-    bool public lockDisabled;
+    mapping(address => bool) public lockDisabled;
 
     /* ======= CONSTRUCTOR ======= */
 
-    constructor(address provider) LockAccessControl(provider) {
-    	lockDisabled = false;
-    }
+    constructor(address provider) LockAccessControl(provider) {}
 
     ///////////////////////////////////////////////////////
     //               MANAGER CALLED FUNCTIONS            //
@@ -43,11 +41,19 @@ contract TokenVault is
         return _unpause();
     }
 
-    function disableLock() external onlyOwner whenNotPaused {
-    	require(!lockDisabled, "lock is disabled already");
-    	lockDisabled = true;
+    function disableLock(address _lockFarm) external onlyOwner whenNotPaused {
+        require(!lockDisabled[_lockFarm], 'lock is disabled already');
+        lockDisabled[_lockFarm] = true;
     }
 
+<<<<<<< HEAD
+=======
+    function enableLock(address _lockFarm) external onlyOwner whenNotPaused {
+        require(lockDisabled[_lockFarm], 'lock is enabled already');
+        lockDisabled[_lockFarm] = false;
+    }
+
+>>>>>>> 978635f (update: LockFarm rewardRate & TokenVault lockDisabled)
     ///////////////////////////////////////////////////////
     //               USER CALLED FUNCTIONS               //
     ///////////////////////////////////////////////////////
@@ -101,7 +107,10 @@ contract TokenVault is
 
         FNFTConfig memory fnftConfig = fnfts[fnftId];
 
-        require(lockDisabled || fnftConfig.endTime <= block.timestamp, 'TokenVault: locked');
+        require(
+            lockDisabled[msg.sender] || fnftConfig.endTime <= block.timestamp,
+            'TokenVault: locked'
+        );
 
         getFNFT().burn(fnftId);
 

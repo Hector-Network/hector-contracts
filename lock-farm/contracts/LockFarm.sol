@@ -273,14 +273,14 @@ contract LockFarm is
 
         if (block.timestamp >= periodFinish) {
             rewardRate = amount / rewardsDuration;
+            periodFinish = endTime;
         } else {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
-            rewardRate = (amount + leftover) / rewardsDuration;
+            rewardRate = (amount + leftover) / remaining;
         }
 
         lastUpdateTime = block.timestamp;
-        periodFinish = endTime;
         totalReward += amount;
     }
 
