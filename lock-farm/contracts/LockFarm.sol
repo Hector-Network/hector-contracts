@@ -134,6 +134,15 @@ contract LockFarm is
         processReward(msg.sender, fnftId);
     }
 
+    function claimAll() external nonReentrant whenNotPaused {
+        uint256 balance = getFNFT().balanceOf(msg.sender);
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 fnftId = getFNFT().tokenOfOwnerByIndex(msg.sender, i);
+            processReward(msg.sender, fnftId);
+        }
+    }
+
     function claim() external nonReentrant whenNotPaused {
         uint256 amount = userRemainingRewards[msg.sender];
         require(amount > 0, 'Farm: no remaining rewards');
