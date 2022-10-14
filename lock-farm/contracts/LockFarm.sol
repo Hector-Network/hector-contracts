@@ -217,6 +217,26 @@ contract LockFarm is
         }
     }
 
+    function getAllFnfts(uint256 offset, uint256 size)
+        external
+        view
+        returns (FNFTInfo[] memory infos)
+    {
+        uint256 totalSupply = getFNFT().totalSupply();
+        uint256 size_ = size;
+
+        if (offset + size > totalSupply) {
+            size_ = totalSupply - offset;
+        }
+
+        infos = new FNFTInfo[](size_);
+
+        for (uint256 i = offset; i < offset + size_; i++) {
+            uint256 fnftId = getFNFT().tokenByIndex(i);
+            infos[i] = fnfts[fnftId];
+        }
+    }
+
     function getAPR() external view returns (uint256) {
         if (totalTokenSupply == 0) {
             return 0;
