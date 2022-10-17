@@ -35,6 +35,14 @@ contract LockAccessControl is Ownable {
         _;
     }
 
+    modifier onlyRegistry() {
+        require(
+            _msgSender() == address(addressProvider),
+            'AccessControl: Invalid registry'
+        );
+        _;
+    }
+
     ///////////////////////////////////////////////////////
     //               MANAGER CALLED FUNCTIONS            //
     ///////////////////////////////////////////////////////

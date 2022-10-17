@@ -134,15 +134,6 @@ contract LockFarm is
         processReward(msg.sender, fnftId);
     }
 
-    function claimAll() external nonReentrant whenNotPaused {
-        uint256 balance = getFNFT().balanceOf(msg.sender);
-
-        for (uint256 i = 0; i < balance; i++) {
-            uint256 fnftId = getFNFT().tokenOfOwnerByIndex(msg.sender, i);
-            processReward(msg.sender, fnftId);
-        }
-    }
-
     function claim() external nonReentrant whenNotPaused {
         uint256 amount = userRemainingRewards[msg.sender];
         require(amount > 0, 'Farm: no remaining rewards');
@@ -150,6 +141,20 @@ contract LockFarm is
         userRemainingRewards[msg.sender] =
             amount -
             safeRewardTransfer(msg.sender, amount);
+    }
+
+    function claimAll() external nonReentrant whenNotPaused {
+        _claimAll(msg.sender);
+    }
+
+    function claimAll(address owner)
+        external
+        override
+        onlyRegistry
+        nonReentrant
+        whenNotPaused
+    {
+        _claimAll(owner);
     }
 
     ///////////////////////////////////////////////////////
@@ -360,5 +365,14 @@ contract LockFarm is
     function updateFarm() internal {
         accTokenPerShare = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
+    }
+
+    function _claimAll(address owner) internal {
+        uint256 balance = getFNFT().balanceOf(owner);
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 fnftId = getFNFT().tokenOfOwnerByIndex(owner, i);
+            processReward(owner, fnftId);
+        }
     }
 }

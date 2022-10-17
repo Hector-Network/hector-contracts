@@ -32,4 +32,6 @@ interface ILockFarm {
         uint256 lockedStakeMaxMultiplier,
         uint256 lockedStakeTimeForMaxMultiplier
     );
+
+    function claimAll(address owner) external;
 }
