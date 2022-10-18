@@ -236,8 +236,8 @@ contract LockFarm is
 
         infos = new FNFTInfo[](size_);
 
-        for (uint256 i = offset; i < offset + size_; i++) {
-            uint256 fnftId = getFNFT().tokenByIndex(i);
+        for (uint256 i = 0; i < size_; i++) {
+            uint256 fnftId = getFNFT().tokenByIndex(i + offset);
             infos[i] = fnfts[fnftId];
         }
     }
