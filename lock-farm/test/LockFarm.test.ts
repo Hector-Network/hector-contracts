@@ -88,6 +88,7 @@ describe('LockFarm test', async () => {
     // LockFarm
     lockFarm = await deployLockFarm(
       lockAddressRegistry.address,
+      'LockFarm #1',
       stakingToken.address,
       rewardToken.address
     );

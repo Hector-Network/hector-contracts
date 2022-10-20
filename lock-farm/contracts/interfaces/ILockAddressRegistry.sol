@@ -29,6 +29,8 @@ interface ILockAddressRegistry {
 
     function addFarm(address farm) external;
 
+    function setIsFarm(address farm, bool value) external;
+
     function isFarm(address farm) external view returns (bool);
 
     function getAddress(bytes32 id) external view returns (address);
