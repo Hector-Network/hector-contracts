@@ -143,6 +143,20 @@ contract LockFarm is
             safeRewardTransfer(msg.sender, amount);
     }
 
+    function claimAll() external nonReentrant whenNotPaused {
+        _claimAll(msg.sender);
+    }
+
+    function claimAll(address owner)
+        external
+        override
+        onlyRegistry
+        nonReentrant
+        whenNotPaused
+    {
+        _claimAll(owner);
+    }
+
     ///////////////////////////////////////////////////////
     //                  VIEW FUNCTIONS                   //
     ///////////////////////////////////////////////////////
@@ -204,6 +218,26 @@ contract LockFarm is
 
         for (uint256 i = 0; i < balance; i++) {
             uint256 fnftId = getFNFT().tokenOfOwnerByIndex(owner, i);
+            infos[i] = fnfts[fnftId];
+        }
+    }
+
+    function getAllFnfts(uint256 offset, uint256 size)
+        external
+        view
+        returns (FNFTInfo[] memory infos)
+    {
+        uint256 totalSupply = getFNFT().totalSupply();
+        uint256 size_ = size;
+
+        if (offset + size > totalSupply) {
+            size_ = totalSupply - offset;
+        }
+
+        infos = new FNFTInfo[](size_);
+
+        for (uint256 i = 0; i < size_; i++) {
+            uint256 fnftId = getFNFT().tokenByIndex(i + offset);
             infos[i] = fnfts[fnftId];
         }
     }
@@ -273,14 +307,14 @@ contract LockFarm is
 
         if (block.timestamp >= periodFinish) {
             rewardRate = amount / rewardsDuration;
+            periodFinish = endTime;
         } else {
             uint256 remaining = periodFinish - block.timestamp;
             uint256 leftover = remaining * rewardRate;
-            rewardRate = (amount + leftover) / rewardsDuration;
+            rewardRate = (amount + leftover) / remaining;
         }
 
         lastUpdateTime = block.timestamp;
-        periodFinish = endTime;
         totalReward += amount;
     }
 
@@ -331,5 +365,14 @@ contract LockFarm is
     function updateFarm() internal {
         accTokenPerShare = rewardPerToken();
         lastUpdateTime = lastTimeRewardApplicable();
+    }
+
+    function _claimAll(address owner) internal {
+        uint256 balance = getFNFT().balanceOf(owner);
+
+        for (uint256 i = 0; i < balance; i++) {
+            uint256 fnftId = getFNFT().tokenOfOwnerByIndex(owner, i);
+            processReward(owner, fnftId);
+        }
     }
 }

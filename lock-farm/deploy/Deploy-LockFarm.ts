@@ -1,35 +1,29 @@
+import { gWei } from './../helper/utils';
 import { deployRewardWeight, deploySplitter } from './../helper/contracts';
 import { ethers } from 'hardhat';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 
 import {
-  deployStakingToken,
-  deployRewardToken,
   deployTreasury,
   deployLockAddressRegistry,
   deployFNFT,
   deployTokenVault,
   deployLockFarm,
-  deploySLockFarm,
   deployEmissionor,
   waitSeconds,
 } from '../helper';
+import { emitStartTimestamp, emitAmounts } from './config';
+import { BigNumber } from 'ethers';
+import { LockFarm } from '../types';
 
 const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const signers = await ethers.getSigners();
   const deployer = signers[0];
 
-  // Deploy StakingToken
-  const stakingTokenAddress = '0xc625fa79F79c34Dc38ed717161B76Be01975cf29';
-  // console.log('StakingToken: ', stakingToken.address);
-
-  // await waitSeconds(60);
-  // Deploy RewardToken
+  const stakingTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
   const rewardTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
-  // console.log('RewardToken: ', rewardToken.address);
 
-  await waitSeconds(60);
   // Deploy Treasury
   const treasury = await deployTreasury();
   console.log('Treasury: ', treasury.address);
@@ -57,17 +51,49 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Deploy LockFarm
   const lockFarm = await deployLockFarm(
     lockAddressRegistry.address,
-    'LockFarm #1',
+    'HEC Farm #1',
     stakingTokenAddress,
     rewardTokenAddress
   );
-  console.log('LockFarm: ', lockFarm.address);
+  console.log('LockFarm: #1', lockFarm.address);
+  const lockFarm2 = await deployLockFarm(
+    lockAddressRegistry.address,
+    'HEC Farm #2',
+    stakingTokenAddress,
+    rewardTokenAddress
+  );
+  console.log('LockFarm: #2', lockFarm2.address);
+  const lockFarm3 = await deployLockFarm(
+    lockAddressRegistry.address,
+    'HEC Farm #3',
+    stakingTokenAddress,
+    rewardTokenAddress
+  );
+  console.log('LockFarm: #3', lockFarm3.address);
+  const lockFarm4 = await deployLockFarm(
+    lockAddressRegistry.address,
+    'HEC Farm #4',
+    stakingTokenAddress,
+    rewardTokenAddress
+  );
+  console.log('LockFarm: #4', lockFarm4.address);
+  const lockFarm5 = await deployLockFarm(
+    lockAddressRegistry.address,
+    'HEC Farm #5',
+    stakingTokenAddress,
+    rewardTokenAddress
+  );
+  console.log('LockFarm: #5', lockFarm5.address);
 
   await waitSeconds(60);
   // Deploy RewardWeight
   const rewardWeight = await deployRewardWeight();
   try {
-    await rewardWeight.register(lockFarm.address, 400);
+    await rewardWeight.register(lockFarm.address, 2000);
+    await rewardWeight.register(lockFarm2.address, 2000);
+    await rewardWeight.register(lockFarm3.address, 2000);
+    await rewardWeight.register(lockFarm4.address, 2000);
+    await rewardWeight.register(lockFarm5.address, 2000);
   } catch (_) {}
   console.log('RewardWeight: ', rewardWeight.address);
 
@@ -79,18 +105,32 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   try {
     await splitter.setRewardToken(rewardTokenAddress);
     await splitter.register(lockFarm.address);
+    await splitter.register(lockFarm2.address);
+    await splitter.register(lockFarm3.address);
+    await splitter.register(lockFarm4.address);
+    await splitter.register(lockFarm5.address);
   } catch (_) {}
 
   await waitSeconds(60);
   // Deploy Emissionor
-  // const treasuryAddress = '0x724c670d0215cC75d990b7D28604A84E1F1caa1c';
-  // const rewardTokenAddress = '0xBa5B18A16d54a9687EFE5eeEbc15c223b575aBfd';
   const emissionor = await deployEmissionor(
     treasury.address,
     splitter.address,
     rewardTokenAddress
   );
   console.log('Emissionor: ', emissionor.address);
+  try {
+    await emissionor.initialize(
+      emitStartTimestamp,
+      emitAmounts.map((amount) => gWei(amount)),
+      emitAmounts.reduce(
+        (sum, current) => sum.add(gWei(current)),
+        BigNumber.from(0)
+      )
+    );
+  } catch (error) {
+    console.error(error);
+  }
 
   await waitSeconds(60);
   // Register Addressses
@@ -103,6 +143,10 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     );
     await waitSeconds(30);
     await lockAddressRegistry.addFarm(lockFarm.address);
+    await lockAddressRegistry.addFarm(lockFarm2.address);
+    await lockAddressRegistry.addFarm(lockFarm3.address);
+    await lockAddressRegistry.addFarm(lockFarm4.address);
+    await lockAddressRegistry.addFarm(lockFarm5.address);
   } catch (_) {}
   // Set Reward Manager
   try {
@@ -112,24 +156,6 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // Verify
   await waitSeconds(10);
   console.log('=====> Verifing ....');
-  // try {
-  //   await hre.run('verify:verify', {
-  //     address: stakingToken.address,
-  //     contract: 'contracts/WrappedToken.sol:WrappedToken',
-  //     constructorArguments: [
-  //       'Hector',
-  //       'HEC',
-  //       '0x55639b1833Ddc160c18cA60f5d0eC9286201f525',
-  //     ],
-  //   });
-  // } catch (_) {}
-  // try {
-  //   await hre.run('verify:verify', {
-  //     address: rewardToken.address,
-  //     contract: 'contracts/mock/RewardToken.sol:RewardToken',
-  //     constructorArguments: [],
-  //   });
-  // } catch (_) {}
   try {
     await hre.run('verify:verify', {
       address: treasury.address,
@@ -164,7 +190,55 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       contract: 'contracts/LockFarm.sol:LockFarm',
       constructorArguments: [
         lockAddressRegistry.address,
-        'LockFarm #1',
+        'HEC Farm #1',
+        stakingTokenAddress,
+        rewardTokenAddress,
+      ],
+    });
+  } catch (_) {}
+  try {
+    await hre.run('verify:verify', {
+      address: lockFarm2.address,
+      contract: 'contracts/LockFarm.sol:LockFarm',
+      constructorArguments: [
+        lockAddressRegistry.address,
+        'HEC Farm #2',
+        stakingTokenAddress,
+        rewardTokenAddress,
+      ],
+    });
+  } catch (_) {}
+  try {
+    await hre.run('verify:verify', {
+      address: lockFarm3.address,
+      contract: 'contracts/LockFarm.sol:LockFarm',
+      constructorArguments: [
+        lockAddressRegistry.address,
+        'HEC Farm #3',
+        stakingTokenAddress,
+        rewardTokenAddress,
+      ],
+    });
+  } catch (_) {}
+  try {
+    await hre.run('verify:verify', {
+      address: lockFarm4.address,
+      contract: 'contracts/LockFarm.sol:LockFarm',
+      constructorArguments: [
+        lockAddressRegistry.address,
+        'HEC Farm #4',
+        stakingTokenAddress,
+        rewardTokenAddress,
+      ],
+    });
+  } catch (_) {}
+  try {
+    await hre.run('verify:verify', {
+      address: lockFarm5.address,
+      contract: 'contracts/LockFarm.sol:LockFarm',
+      constructorArguments: [
+        lockAddressRegistry.address,
+        'HEC Farm #5',
         stakingTokenAddress,
         rewardTokenAddress,
       ],
@@ -179,7 +253,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   } catch (_) {}
   try {
     await hre.run('verify:verify', {
-      address: rewardWeight.address,
+      address: splitter.address,
       contract: 'contracts/SplitterDistributor.sol:Splitter',
       constructorArguments: [rewardWeight.address],
     });
