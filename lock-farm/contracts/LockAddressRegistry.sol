@@ -1,18 +1,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.7;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import '@openzeppelin/contracts/access/Ownable.sol';
+import '@openzeppelin/contracts/utils/Counters.sol';
+import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
-import "./interfaces/ILockAddressRegistry.sol";
+import './interfaces/ILockAddressRegistry.sol';
+import './interfaces/ILockFarm.sol';
 
-contract LockAddressRegistry is Ownable, ILockAddressRegistry {
+contract LockAddressRegistry is Ownable, ReentrancyGuard, ILockAddressRegistry {
     using Counters for Counters.Counter;
 
-    bytes32 public constant ADMIN = "ADMIN";
-    bytes32 public constant TOKEN_VAULT = "TOKEN_VAULT";
-    bytes32 public constant FNFT = "FNFT";
-    bytes32 public constant EMISSIONOR = "EMISSIONOR";
+    bytes32 public constant ADMIN = 'ADMIN';
+    bytes32 public constant TOKEN_VAULT = 'TOKEN_VAULT';
+    bytes32 public constant FNFT = 'FNFT';
+    bytes32 public constant EMISSIONOR = 'EMISSIONOR';
 
     mapping(bytes32 => address) private _addresses;
 
@@ -91,5 +93,18 @@ contract LockAddressRegistry is Ownable, ILockAddressRegistry {
      */
     function getAddress(bytes32 id) public view override returns (address) {
         return _addresses[id];
+    }
+
+    ///////////////////////////////////////////////////////
+    //               USER CALLED FUNCTIONS               //
+    ///////////////////////////////////////////////////////
+
+    function claimAll() external nonReentrant {
+        for (uint256 i = 0; i < _farmIndexTracker.current(); i++) {
+            address farm = _farms[i];
+            if (_isFarm[farm]) {
+                ILockFarm(farm).claimAll(msg.sender);
+            }
+        }
     }
 }

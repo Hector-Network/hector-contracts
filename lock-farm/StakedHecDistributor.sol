@@ -600,28 +600,19 @@ contract StakedHecDistributor is RewardReceiver {
     using SafeMath for uint256;
 
     /* ====== VARIABLES ====== */
-    IRewardReceiver public sHecLockFarm;
     address public stakingContract;
     address public emmissionorContract;
     
     uint public nextEpochBlock;
     uint public epochLength; //28800s per 8 hrs
-    uint public remainingTimeUntilNextDistribution;
-    uint public startingTimeinSeconds; //keep track of the starting time when reward is distributed
-    uint public remainingTimeInSeconds;
+    uint public emissionEndTime;
     uint totalRewardsForRebaseStaking;
-    uint totalSentForRebaseStaking; //Tracking rewards sent to staking
-    uint totalSentForLockFarm;      //Tracking rewards sent to lock farms
-    
+    uint totalSentForRebaseStaking; //Tracking rewards sent to staking    
 
     event RewardsDistributed( address indexed caller, address indexed recipient, uint amount );
 
 
-    constructor(address _sHecLockFarm, address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
-        //Set sHecLockFarm address for distribution
-        require( _sHecLockFarm != address(0) );
-        sHecLockFarm = IRewardReceiver(_sHecLockFarm);
-
+    constructor(address  _rewardToken, address _stakingContract, address _emmissionorContract, uint _epochLength, uint _nextEpochBlock) {
         require( _rewardToken != address(0) );
         rewardToken = _rewardToken;
 
@@ -646,34 +637,21 @@ contract StakedHecDistributor is RewardReceiver {
         //the distribute function can be invoked multiple times within one epoch 
         //but will only send rewards once per epoch at the very first invocation 
         //of the new epoch
-        if ( nextEpochBlock <= block.number ) {
-            nextEpochBlock = nextEpochBlock.add(epochLength); // set next epoch block
+        if (nextEpochBlock < block.number) {
+            uint blockInEpoch = (block.number - nextEpochBlock) % epochLength;
+            nextEpochBlock = block.number- blockInEpoch + nextEpochBlock;
 
-            uint amountPerEpoch;
             uint currentTime = block.timestamp;
-            uint timeLapsed = currentTime.sub(startingTimeinSeconds);
+            uint amountPerEpoch = (totalRewardsForRebaseStaking * (nextEpochBlock - currentTime)) / (emissionEndTime - currentTime);
 
-            if (currentTime < remainingTimeInSeconds) {
-                amountPerEpoch = epochLength.mul(totalRewardsForRebaseStaking).div(remainingTimeInSeconds);
+            if (amountPerEpoch > 0) {
+                 //update remaining reward amount
+                accountingForStaking(amountPerEpoch);
 
-                 //update remaining seconds 
-                 updateTimerForRebase(currentTime, remainingTimeInSeconds.sub(timeLapsed));                
-            }                
-            else {  //edge case
-                //Get the remaining reward
-                amountPerEpoch = totalRewardsForRebaseStaking;
+                distributeRewards(stakingContract, amountPerEpoch);
 
-                //Reset timer
-                updateTimerForRebase(0, 0);
-            }
-                
-            //update remaining reward amount
-            accountingForStaking(amountPerEpoch);
-
-            distributeRewards(stakingContract, amountPerEpoch);
-
-            emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
-
+                emit RewardsDistributed( msg.sender, stakingContract, amountPerEpoch);
+            }    
             return true;
 
         } else return false;        
@@ -685,7 +663,7 @@ contract StakedHecDistributor is RewardReceiver {
         @notice send epoch reward to staking contract
      */
     function distributeRewards( address _recipient, uint _amount ) internal {
-        IERC20(rewardToken).approve(_recipient, _amount);
+        //IERC20(rewardToken).approve(_recipient, _amount);
 
         IERC20(rewardToken).safeTransfer( _recipient, _amount );       
     } 
@@ -698,48 +676,17 @@ contract StakedHecDistributor is RewardReceiver {
         totalRewardsForRebaseStaking = totalRewardsForRebaseStaking.sub(amount);
     }
 
-     function updateTimerForRebase(uint start, uint end) internal {
-        startingTimeinSeconds = start;
-
-        //Get the last second of the current week
-        remainingTimeInSeconds = end;
-    }
-
     /**
         @notice pushing weekly distributed rewards from splitter to staking and sHecLockFarm
         @param weeklyDistributedAmount uint
      */
     function onRewardReceived(uint weeklyDistributedAmount) internal override {
-        remainingTimeUntilNextDistribution =  getEndTimeFromEmmissionor();
-        require(remainingTimeUntilNextDistribution > 0, "Distribution timer is not set");
-       
-        uint sHecTotalSupply = IERC20(rewardToken).totalSupply();
-
-        //Get the total sHec boosted for all wallets in sHec locked farm
-        uint totalsHecBoost = IsHecLockFarm(address(sHecLockFarm)).totalTokenBoostedSupply();
-
-        //Calculate the rewards distributed to sHec Lock Farm
-        uint totalWeeklysHecLockFarm = weeklyDistributedAmount.mul(totalsHecBoost).div(sHecTotalSupply.add(totalsHecBoost));
-
-        require(totalWeeklysHecLockFarm > 0, "No rewards avail for sHec Lock Farm");
-
-        IERC20(rewardToken).approve(address(sHecLockFarm), totalWeeklysHecLockFarm);
-        totalSentForLockFarm = totalSentForLockFarm.add(totalWeeklysHecLockFarm);
-
-        //Distribute rewards to sHec Lock farm
-        IRewardReceiver(sHecLockFarm).receiveReward(totalWeeklysHecLockFarm);
-
-        emit RewardsDistributed( msg.sender, address(sHecLockFarm), totalWeeklysHecLockFarm);
+        emissionEndTime =  getEndTimeFromEmmissionor();
+        require(emissionEndTime > 0, "Distribution timer is not set");
 
         //Calculate the rewards distributed to rebase 
-        uint totalWeeklyRewardsStaking = weeklyDistributedAmount.sub(totalWeeklysHecLockFarm);
-
-        totalRewardsForRebaseStaking += totalWeeklyRewardsStaking;
+        totalRewardsForRebaseStaking += weeklyDistributedAmount;
         require(totalRewardsForRebaseStaking > 0, "No rewards avail for rebase"); 
-
-        //Start the clock for rebasing
-        uint startTime = block.timestamp;
-        updateTimerForRebase(startTime, remainingTimeUntilNextDistribution); 
     }
 
    /* ====== VIEW FUNCTIONS ====== */
@@ -752,11 +699,6 @@ contract StakedHecDistributor is RewardReceiver {
     
     
     /* ====== POLICY FUNCTIONS ====== */
-
-    function setSHecLockFarm(address _sHecLockFarm) external onlyOwner(){
-        require(_sHecLockFarm != address(0));
-        sHecLockFarm = IRewardReceiver(_sHecLockFarm);
-    }
 
     function setStakingContract(address _stakingContract) external onlyOwner(){
         require(_stakingContract != address(0));
