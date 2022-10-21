@@ -46,14 +46,11 @@ contract TokenVault is
         lockDisabled[_lockFarm] = true;
     }
 
-<<<<<<< HEAD
-=======
     function enableLock(address _lockFarm) external onlyOwner whenNotPaused {
         require(lockDisabled[_lockFarm], 'lock is enabled already');
         lockDisabled[_lockFarm] = false;
     }
 
->>>>>>> 978635f (update: LockFarm rewardRate & TokenVault lockDisabled)
     ///////////////////////////////////////////////////////
     //               USER CALLED FUNCTIONS               //
     ///////////////////////////////////////////////////////
