@@ -903,7 +903,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     address public immutable HEC; // token given as payment for bond
     address public immutable DAO; // receives profit share from bond
-    address public immutable bondPricing; // bond price oracles
+    address public bondPricing; // bond price oracles
 
     address[] public principles; // tokens used to create bond
     mapping(address => bool) public isPrinciple; // is token used to create bond
@@ -1217,6 +1217,12 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         require(total == ONEinBPS, 'the sum of weightBps should be 10000');
         feeRecipients = recipients;
         feeWeightBps = weightBps;
+    }
+
+    function updateBondPricing(address _bondPricing) external onlyPolicy {
+        require(_bondPricing != address(0), 'Invalid address');
+
+        bondPricing = _bondPricing;
     }
 
     function open() external onlyPolicy {
