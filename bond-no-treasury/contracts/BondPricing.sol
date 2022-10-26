@@ -62,10 +62,14 @@ contract BondPricing is Ownable {
     /* ======== STATE VARIABLES ======== */
 
     Oracle[] public oracles; // uniswap twap oracle
+    uint constant NOT_FOUND = 99999;
+
+    event AddOracleEvent(address _oracle, address _token0, address _token1 );
+    event UpdateOracleEvent(address oldOracle, address newOracle );
+    event DeleteOracleEvent(address currentToken0, address currentToken1 );
 
     struct Oracle {
         address oracleAddress; // address of oracle contract
-        string chain; // 
         address token0; // oracle's first token
         address token1; // oracle's second token
     }
@@ -75,14 +79,15 @@ contract BondPricing is Ownable {
     /**
      *  @notice create new Oracle
      *  @param _oracle address
-     *  @param _chain string
      *  @param _token0 address
      *  @param _token1 address
      */
-    function addOracle ( address _oracle, string memory _chain, address _token0, address _token1 ) external onlyPolicy() {
+    function addOracle ( address _oracle, address _token0, address _token1 ) external onlyPolicy() {
         require( _oracle != address(0) );
         require( _token0 != address(0) );
         require( _token1 != address(0) );
+
+        require(_oracleExists(_token0, _token1) == NOT_FOUND, "Oracle with this pair already exists.");
 
         IUniswapPairOracle oracle = IUniswapPairOracle( _oracle );
         require( oracle.token0() == _token0, "Invalid token0");
@@ -90,12 +95,54 @@ contract BondPricing is Ownable {
 
         Oracle memory o = Oracle ({
             oracleAddress: _oracle,
-            chain: _chain,
             token0: _token0,
             token1: _token1
         });
 
         oracles.push(o);  
+        emit AddOracleEvent(_oracle, _token0, _token1);
+    }
+
+    /**
+     *  @notice Update oracle address
+     *  @param newOracleAddress address
+     *  @param currentToken0 address
+     *  @param currentToken1 address
+     */
+    function updateOracle ( address newOracleAddress, address currentToken0, address currentToken1 ) external onlyPolicy() {
+        require( newOracleAddress != address(0) );
+        require( currentToken0 != address(0) );
+        require( currentToken1 != address(0) );
+
+        uint index = _oracleExists(currentToken0, currentToken1);
+        require(index != NOT_FOUND, "Oracle does not exist");
+
+         IUniswapPairOracle oracle = IUniswapPairOracle( newOracleAddress );
+        require( oracle.token0() == currentToken0, "Invalid token0");
+        require( oracle.token1() == currentToken1, "Invalid token1");
+
+        address oldOracle = oracles[index].oracleAddress;
+        //updating 
+        oracles[index].oracleAddress = newOracleAddress;
+
+        emit UpdateOracleEvent(oldOracle, newOracleAddress);
+    }
+
+    /**
+     *  @notice Delete existing Oracle
+     *  @param _token0 address
+     *  @param _token1 address
+     */
+    function deleteOracle ( address _token0, address _token1 ) external onlyPolicy() {
+        require( _token0 != address(0) );
+        require( _token1 != address(0) );
+
+        uint index = _oracleExists(_token0, _token1);
+        require(index != NOT_FOUND, "Oracle does not exist");
+
+        _deleteOracle(index);
+
+        emit DeleteOracleEvent(_token0, _token1);
     }
 
     /* ======== USER FUNCTIONS ======== */
@@ -111,13 +158,41 @@ contract BondPricing is Ownable {
 
         for (uint i = 0; i < oracles.length; i++) {
             Oracle memory o = oracles[i];
+
             IUniswapPairOracle oracle = IUniswapPairOracle( o.oracleAddress );
 
             if (oracle.token0() == _token0 && oracle.token1() == _token1) {
-                _oracle = o.oracleAddress;
-                break;
+                 _oracle = o.oracleAddress;
+                 break;
             }
+            
         }
         return _oracle;
+    }
+
+    function oracleExists(address _token0, address _token1) view external returns (uint index) {
+        index = _oracleExists(_token0, _token1);
+    }
+
+    function _oracleExists(address _token0, address _token1) view internal returns (uint index) {
+        index = NOT_FOUND ;
+
+        for (uint i = 0; i < oracles.length; i++) {
+            Oracle memory o = oracles[i];
+
+            IUniswapPairOracle oracle = IUniswapPairOracle( o.oracleAddress );
+
+            if (oracle.token0() == _token0 && oracle.token1() == _token1) {
+                index = i;
+                break;
+            }
+            
+        }
+    }
+
+    function _deleteOracle(uint index) internal {
+        require(index < oracles.length);
+        oracles[index] = oracles[oracles.length-1];
+        oracles.pop();
     }
 }
