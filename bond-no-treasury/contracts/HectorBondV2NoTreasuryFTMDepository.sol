@@ -791,77 +791,11 @@ interface IUniswapPairOracle {
     function token1() external view returns (address);
 }
 
-contract BondPricing is Ownable {
-    /* ======== STATE VARIABLES ======== */
-
-    Oracle[] public oracles; // uniswap twap oracle
-
-    struct Oracle {
-        address oracleAddress; // address of oracle contract
-        string chain; //
-        address token0; // oracle's first token
-        address token1; // oracle's second token
-    }
-
-    /* ======== POLICY FUNCTIONS ======== */
-
-    /**
-     *  @notice create new Oracle
-     *  @param _oracle address
-     *  @param _chain string
-     *  @param _token0 address
-     *  @param _token1 address
-     */
-    function addOracle(
-        address _oracle,
-        string memory _chain,
-        address _token0,
-        address _token1
-    ) external onlyPolicy {
-        require(_oracle != address(0));
-        require(_token0 != address(0));
-        require(_token1 != address(0));
-
-        IUniswapPairOracle oracle = IUniswapPairOracle(_oracle);
-        require(oracle.token0() == _token0, 'Invalid token0');
-        require(oracle.token1() == _token1, 'Invalid token1');
-
-        Oracle memory o = Oracle({
-            oracleAddress: _oracle,
-            chain: _chain,
-            token0: _token0,
-            token1: _token1
-        });
-
-        oracles.push(o);
-    }
-
-    /* ======== USER FUNCTIONS ======== */
-
-    /**
-     *  @notice Find existing oracle
-     *  @param _token0 address
-     *  @param _token1 address
-     *  @return address
-     */
+interface IBondPricing {
     function findOracle(address _token0, address _token1)
         external
         view
-        returns (address)
-    {
-        address _oracle = address(0);
-
-        for (uint256 i = 0; i < oracles.length; i++) {
-            Oracle memory o = oracles[i];
-            IUniswapPairOracle oracle = IUniswapPairOracle(o.oracleAddress);
-
-            if (oracle.token0() == _token0 && oracle.token1() == _token1) {
-                _oracle = o.oracleAddress;
-                break;
-            }
-        }
-        return _oracle;
-    }
+        returns (address);
 }
 
 contract HectorBondV2NoTreasuryFTMDepository is Ownable {
@@ -874,7 +808,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     event BondCreated(
         uint256 depositId,
-        address principle,
+        address principal,
         uint256 deposit,
         uint256 indexed payout,
         uint256 indexed expires,
@@ -887,7 +821,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 remaining
     );
     event BondPriceChanged(
-        address principle,
+        address principal,
         uint256 indexed priceInUSD,
         uint256 indexed internalPrice,
         uint256 indexed debtRatio
@@ -901,12 +835,14 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable HEC; // token given as payment for bond
+    address public immutable rewardToken; // token given as payment for bond
     address public immutable DAO; // receives profit share from bond
     address public bondPricing; // bond price oracles
 
-    address[] public principles; // tokens used to create bond
-    mapping(address => bool) public isPrinciple; // is token used to create bond
+    uint256 immutable rewardUnit; // HEC: 1e9, WETH: 1e18
+
+    address[] public principals; // tokens used to create bond
+    mapping(address => bool) public isPrincipal; // is token used to create bond
 
     Terms public terms; // stores terms for new bonds
     Adjust public adjustment; // stores adjustment to BCV data
@@ -924,8 +860,8 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     uint256 public totalDebt; // total value of outstanding bonds; used for pricing
     uint256 public lastDecay; // reference block for debt decay
 
-    uint256 public totalRemainingPayout; // total remaining HEC payout for bonding
-    mapping(address => uint256) public totalPrinciples; // total principle bonded through this depository
+    uint256 public totalRemainingPayout; // total remaining rewardToken payout for bonding
+    mapping(address => uint256) public totalPrincipals; // total principal bonded through this depository
 
     string public name; // name of this bond
 
@@ -944,26 +880,24 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     uint256[] public feeWeightBps;
     mapping(address => uint256) feeWeightFor; // feeRecipient=>feeWeight
 
-    bool _bondFinished;
-
     /* ======== STRUCTS ======== */
 
     // Info for creating new bonds
     struct Terms {
         uint256 controlVariable; // scaling variable for price
         uint256 vestingTerm; // in blocks
-        uint256 minimumPrice; // vs principle value , 4 decimals 0.15 = 1500
+        uint256 minimumPrice; // vs principal value , 4 decimals 0.15 = 1500
         uint256 maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
         uint256 fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
         uint256 maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-        uint256 totalSupply; // HEC total supply
+        uint256 totalSupply; // rewardToken total supply
     }
 
     // Info for bond holder
     struct Bond {
         uint256 depositId; // deposit Id
-        address principle; // token used to create bond
-        uint256 payout; // HEC remaining to be paid
+        address principal; // token used to create bond
+        uint256 payout; // rewardToken remaining to be paid
         uint256 vesting; // Blocks left to vest
         uint256 lastBlockAt; // Last interaction
         uint256 pricePaid; // In DAI, for front end viewing
@@ -983,24 +917,25 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     constructor(
         string memory _name,
-        address _HEC,
+        address _rewardToken,
         address _DAO,
         address _bondPricing
     ) {
-        require(_HEC != address(0));
-        HEC = _HEC;
+        require(_rewardToken != address(0));
+        rewardToken = _rewardToken;
         require(_DAO != address(0));
         DAO = _DAO;
         require(_bondPricing != address(0));
         bondPricing = _bondPricing;
 
         name = _name;
+        rewardUnit = 10**(IERC20(_rewardToken).decimals());
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
     }
 
     /* ======== MODIFIER ======== */
-    modifier onlyPrinciple(address _principle) {
-        require(isPrinciple[_principle], 'Invalid principle');
+    modifier onlyPrincipal(address _principal) {
+        require(isPrincipal[_principal], 'Invalid principal');
         _;
     }
 
@@ -1089,7 +1024,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     /**
      *  @notice initialize deposit token types, should be stable coins
      */
-    function initializeDepositTokens(address[] memory _principles)
+    function initializeDepositTokens(address[] memory _principals)
         external
         onlyPolicy
     {
@@ -1097,14 +1032,14 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         initialized[CONFIG.DEPOSIT_TOKEN] = true;
 
         require(
-            _principles.length > 0,
-            'principles need to contain at least one token'
+            _principals.length > 0,
+            'principals need to contain at least one token'
         );
 
-        principles = _principles;
+        principals = _principals;
 
-        for (uint256 i = 0; i < _principles.length; i++) {
-            isPrinciple[_principles[i]] = true;
+        for (uint256 i = 0; i < _principals.length; i++) {
+            isPrincipal[_principals[i]] = true;
         }
     }
 
@@ -1225,14 +1160,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         bondPricing = _bondPricing;
     }
 
-    function open() external onlyPolicy {
-        _bondFinished = false;
-    }
-
-    function close() external onlyPolicy {
-        _bondFinished = true;
-    }
-
     /**
      *  @notice set control variable adjustment
      *  @param _addition bool
@@ -1259,18 +1186,18 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /**
      *  @notice deposit bond
-     *  @param _principle address
+     *  @param _principal address
      *  @param _amount uint
      *  @param _maxPrice uint
      *  @param _lockingPeriod uint
      *  @return uint
      */
     function deposit(
-        address _principle,
+        address _principal,
         uint256 _amount,
         uint256 _maxPrice,
         uint256 _lockingPeriod
-    ) external onlyPrinciple(_principle) returns (uint256) {
+    ) external onlyPrincipal(_principal) returns (uint256) {
         require(_amount > 0, 'Amount zero');
 
         uint256 discount = lockingDiscounts[_lockingPeriod];
@@ -1279,12 +1206,12 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         decayDebt();
         require(totalDebt <= terms.maxDebt, 'Max capacity reached');
 
-        uint256 priceInUSD = bondPriceInUSD(_principle)
+        uint256 priceInUSD = bondPriceInUSD(_principal)
             .mul(10000 - discount)
             .div(10000); // Stored in bond info
 
         {
-            uint256 nativePrice = _bondPrice(_principle)
+            uint256 nativePrice = _bondPrice(_principal)
                 .mul(10000 - discount)
                 .div(10000);
             require(
@@ -1293,27 +1220,28 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
             ); // slippage protection
         }
 
-        uint256 value = _amount.mul(10**IERC20(HEC).decimals()).div(
-            10**IERC20(_principle).decimals()
+        uint256 value = _amount.mul(rewardUnit).div(
+            10**IERC20(_principal).decimals()
         );
-        uint256 payout = payoutFor(_principle, value, discount); // payout to bonder is computed
+        uint256 payout = payoutFor(_principal, value, discount); // payout to bonder is computed
 
-        require(payout >= 10000000, 'Bond too small'); // must be > 0.01 HEC ( underflow protection )
+        require(payout >= (rewardUnit / 100), 'Bond too small'); // must be > 0.01 rewardToken ( underflow protection )
         require(payout <= maxPayout(), 'Bond too large'); // size protection because there is no slippage
 
         // total remaining payout is increased
         totalRemainingPayout = totalRemainingPayout.add(payout);
         require(
-            totalRemainingPayout <= IERC20(HEC).balanceOf(address(this)),
-            'Insufficient HEC'
-        ); // has enough HEC balance for payout
+            totalRemainingPayout <=
+                IERC20(rewardToken).balanceOf(address(this)),
+            'Insufficient rewardToken'
+        ); // has enough rewardToken balance for payout
 
         /**
-            principle is transferred
+            principal is transferred
          */
-        IERC20(_principle).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20(_principal).safeTransferFrom(msg.sender, address(this), _amount);
 
-        totalPrinciples[_principle] = totalPrinciples[_principle].add(_amount);
+        totalPrincipals[_principal] = totalPrincipals[_principal].add(_amount);
 
         // total debt is increased
         totalDebt = totalDebt.add(value);
@@ -1323,7 +1251,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         // depositor info is stored
         bondInfo[depositId] = Bond({
             depositId: depositId,
-            principle: _principle,
+            principal: _principal,
             payout: payout,
             vesting: _lockingPeriod,
             lastBlockAt: block.timestamp,
@@ -1338,21 +1266,21 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         // indexed events are emitted
         emit BondCreated(
             depositId,
-            _principle,
+            _principal,
             _amount,
             payout,
             block.timestamp.add(_lockingPeriod),
             priceInUSD
         );
         emit BondPriceChanged(
-            _principle,
-            bondPriceInUSD(_principle),
-            _bondPrice(_principle),
+            _principal,
+            bondPriceInUSD(_principal),
+            _bondPrice(_principal),
             debtRatio()
         );
 
         adjust(); // control variable is adjusted
-        processFee(_principle, _amount); // distribute fee
+        processFee(_principal, _amount); // distribute fee
 
         return payout;
     }
@@ -1375,7 +1303,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
         totalRemainingPayout = totalRemainingPayout.sub(info.payout); // total remaining payout is decreased
 
-        IERC20(HEC).transfer(_recipient, info.payout); // send payout
+        IERC20(rewardToken).transfer(_recipient, info.payout); // send payout
 
         emit BondRedeemed(_depositId, _recipient, info.payout, 0); // emit bond data
 
@@ -1384,27 +1312,25 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         return info.payout;
     }
 
-    function claimFee(address _principle, address feeRecipient) external {
+    function claimFee(address _principal, address feeRecipient) external {
         require(
             feeRecipient != fundRecipient,
             'can only claim fee for recipient'
         );
 
-        uint256 fee = tokenBalances[_principle][feeRecipient];
-        require(fee > 0, 'no fee for principle and feeRecipient');
+        uint256 fee = tokenBalances[_principal][feeRecipient];
+        require(fee > 0, 'no fee for principal and feeRecipient');
 
-        IERC20(_principle).safeTransfer(feeRecipient, fee);
-        tokenBalances[_principle][feeRecipient] = 0;
+        IERC20(_principal).safeTransfer(feeRecipient, fee);
+        tokenBalances[_principal][feeRecipient] = 0;
     }
 
-    function claimFund(address _principle) external {
-        require(bondFinished(), 'fund can only be claimed when finished');
-
-        uint256 fund = tokenBalances[_principle][fundRecipient];
+    function claimFund(address _principal) external {
+        uint256 fund = tokenBalances[_principal][fundRecipient];
         require(fund > 0, 'no fund is available for fundRecipient');
 
-        IERC20(_principle).safeTransfer(fundRecipient, fund);
-        tokenBalances[_principle][fundRecipient] = 0;
+        IERC20(_principal).safeTransfer(fundRecipient, fund);
+        tokenBalances[_principal][fundRecipient] = 0;
     }
 
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
@@ -1433,19 +1359,19 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     /**
      *  @notice process fee on deposit
      */
-    function processFee(address _principle, uint256 _amount) internal {
+    function processFee(address _principal, uint256 _amount) internal {
         require(
             initialized[CONFIG.DEPOSIT_TOKEN] &&
                 initialized[CONFIG.FEE_RECIPIENT] &&
                 initialized[CONFIG.FUND_RECIPIENT],
-            'please complete initialize for FeeRecipient/Principles/FundRecipient'
+            'please complete initialize for FeeRecipient/Principals/FundRecipient'
         );
 
         uint256 fee = _amount.mul(feeBps).div(ONEinBPS);
-        tokenBalances[_principle][fundRecipient] += _amount.sub(fee);
+        tokenBalances[_principal][fundRecipient] += _amount.sub(fee);
         uint256 theLast = fee;
         for (uint256 i = 0; i < feeRecipients.length - 1; i++) {
-            tokenBalances[_principle][feeRecipients[i]] += fee
+            tokenBalances[_principal][feeRecipients[i]] += fee
                 .mul(feeWeightBps[i])
                 .div(ONEinBPS);
             theLast = theLast.sub(fee.mul(feeWeightBps[i]).div(ONEinBPS));
@@ -1455,7 +1381,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
                 fee.mul(feeWeightBps[feeWeightBps.length - 1]).div(ONEinBPS),
             'fee calculation error'
         );
-        tokenBalances[_principle][
+        tokenBalances[_principal][
             feeRecipients[feeRecipients.length - 1]
         ] += theLast;
     }
@@ -1512,17 +1438,17 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /**
      *  @notice calculate interest due for new bond
-     *  @param _principle address
+     *  @param _principal address
      *  @param _value uint
      *  @param _discount uint
      *  @return uint
      */
     function payoutFor(
-        address _principle,
+        address _principal,
         uint256 _value,
         uint256 _discount
     ) public view returns (uint256) {
-        uint256 nativePrice = bondPrice(_principle).mul(10000 - _discount).div(
+        uint256 nativePrice = bondPrice(_principal).mul(10000 - _discount).div(
             10000
         );
 
@@ -1534,16 +1460,21 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /**
      *  @notice calculate current bond price
-     *  @param _principle address
+     *  @param _principal address
      *  @return price_ uint
      */
-    function bondPrice(address _principle)
+    function bondPrice(address _principal)
         public
         view
         returns (uint256 price_)
     {
-        address oracle = BondPricing(bondPricing).findOracle(_principle, HEC);
-        price_ = IUniswapPairOracle(oracle).consult(HEC, 1e9).div(1e14);
+        address oracle = IBondPricing(bondPricing).findOracle(
+            rewardToken,
+            _principal
+        );
+        price_ = IUniswapPairOracle(oracle)
+            .consult(rewardToken, rewardUnit)
+            .div(10**(IERC20(_principal).decimals() - 4));
         if (price_ < terms.minimumPrice) {
             price_ = terms.minimumPrice;
         }
@@ -1551,12 +1482,17 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /**
      *  @notice calculate current bond price and remove floor if above
-     *  @param _principle address
+     *  @param _principal address
      *  @return price_ uint
      */
-    function _bondPrice(address _principle) internal returns (uint256 price_) {
-        address oracle = BondPricing(bondPricing).findOracle(_principle, HEC);
-        price_ = IUniswapPairOracle(oracle).consult(HEC, 1e9).div(1e14);
+    function _bondPrice(address _principal) internal returns (uint256 price_) {
+        address oracle = IBondPricing(bondPricing).findOracle(
+            rewardToken,
+            _principal
+        );
+        price_ = IUniswapPairOracle(oracle)
+            .consult(rewardToken, rewardUnit)
+            .div(10**(IERC20(_principal).decimals() - 4));
         if (price_ < terms.minimumPrice) {
             price_ = terms.minimumPrice;
         } else if (terms.minimumPrice != 0) {
@@ -1565,28 +1501,28 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     }
 
     /**
-     *  @notice converts bond price to DAI value
-     *  @param _principle address
+
+
      *  @return price_ uint
      */
-    function bondPriceInUSD(address _principle)
+    function bondPriceInUSD(address _principal)
         public
         view
         returns (uint256 price_)
     {
-        price_ = bondPrice(_principle)
-            .mul(10**IERC20(_principle).decimals())
+        price_ = bondPrice(_principal)
+            .mul(10**IERC20(_principal).decimals())
             .div(1e4);
     }
 
     /**
-     *  @notice calculate current ratio of debt to HEC supply
+     *  @notice calculate current ratio of debt to rewardToken supply
      *  @return debtRatio_ uint
      */
     function debtRatio() public view returns (uint256 debtRatio_) {
         uint256 supply = terms.totalSupply;
         debtRatio_ = FixedPoint
-            .fraction(currentDebt().mul(1e9), supply)
+            .fraction(currentDebt().mul(rewardUnit), supply)
             .decode112with18()
             .div(1e18);
     }
@@ -1641,7 +1577,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     }
 
     /**
-     *  @notice calculate amount of HEC available for claim by depositor
+     *  @notice calculate amount of rewardToken available for claim by depositor
      *  @param _depositId uint
      *  @return pendingPayout_ uint
      */
@@ -1661,24 +1597,46 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     }
 
     /**
-     *  @notice show all tokens used to create bond
-     *  @return principles_ principles
-     *  @return totalPrinciples_ total principles
+     *  @notice return minimum principal amount to deposit
+     *  @param _principal address
+     *  @param _discount uint
+     *  @param amount_ principal amount
      */
-    function allPrinciples()
+    function minimumPrincipalAmount(address _principal, uint256 _discount)
+        external
+        view
+        onlyPrincipal(_principal)
+        returns (uint256 amount_)
+    {
+        uint256 nativePrice = bondPrice(_principal).mul(10000 - _discount).div(
+            10000
+        );
+
+        amount_ = (rewardUnit / 100)
+            .mul(nativePrice)
+            .mul(10**IERC20(_principal).decimals())
+            .div(10**(4 + IERC20(rewardToken).decimals()));
+    }
+
+    /**
+     *  @notice show all tokens used to create bond
+     *  @return principals_ principals
+     *  @return totalPrincipals_ total principals
+     */
+    function allPrincipals()
         external
         view
         returns (
-            address[] memory principles_,
-            uint256[] memory totalPrinciples_
+            address[] memory principals_,
+            uint256[] memory totalPrincipals_
         )
     {
-        principles_ = principles;
+        principals_ = principals;
 
-        uint256 length = principles.length;
-        totalPrinciples_ = new uint256[](length);
+        uint256 length = principals.length;
+        totalPrincipals_ = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
-            totalPrinciples_[i] = totalPrinciples[principles[i]];
+            totalPrincipals_[i] = totalPrincipals[principals[i]];
         }
     }
 
@@ -1725,19 +1683,15 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         }
     }
 
-    function bondFinished() public view returns (bool _finished) {
-        _finished = _bondFinished;
-    }
-
     /* ======= AUXILLIARY ======= */
 
     /**
-     *  @notice allow anyone to send lost tokens (excluding principle or HEC) to the DAO
+     *  @notice allow anyone to send lost tokens (excluding principal or rewardToken) to the DAO
      *  @return bool
      */
     function withdrawToken(address _token) external onlyPolicy returns (bool) {
         uint256 amount = IERC20(_token).balanceOf(address(this));
-        if (_token == HEC) {
+        if (_token == rewardToken) {
             amount = amount.sub(totalRemainingPayout);
         }
         IERC20(_token).safeTransfer(DAO, amount);
