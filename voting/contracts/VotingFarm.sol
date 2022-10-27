@@ -612,7 +612,7 @@ contract VotingFarm is ReentrancyGuard {
 		uint256[] memory _validFarmsWeights = new uint256[](_validFarms.length);
 
 		for (uint256 i = 0; i < _validFarms.length; i++) {
-			_validFarmsWeights[i] = farmWeights[_validFarms[i]].div(totalWeight).mul(10000);
+			_validFarmsWeights[i] = farmWeights[_validFarms[i]].mul(10000).div(totalWeight);
 		}
 
 		return (_validFarms, _validFarmsWeights);
