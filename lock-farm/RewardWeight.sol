@@ -140,9 +140,10 @@ contract RewardWeight is Ownable {
         external
         onlyOwner
     {
-        require(receiver != address(0), 'Must be greater than 0');
-        uint256 currentWeightTotal = getTotalWeightPercentage();
+        require(receiver != address(0), 'Invalid receiver');
+        require(weightPercentage > 0, 'Must be greater than 0');
 
+        uint256 currentWeightTotal = getTotalWeightPercentage();
         require(
             weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal,
             'Total percentage must be less than 100%'
@@ -182,27 +183,52 @@ contract RewardWeight is Ownable {
         @param receiver address
         @param weightPercentage uint
      */
-    function setRewardWeight(address receiver, uint256 weightPercentage)
+    function updateRewardWeight(address receiver, uint256 weightPercentage)
         external
         onlyMod
     {
+        require(receiver != address(0), 'Invalid receiver');
         require(weightPercentage > 0, 'Must be greater than 0');
 
-        uint256 currentWeightTotal = getTotalWeightPercentage();
         uint256 oldValue = receiversInfo[receiver].rewardWeightPercentage;
+        receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
 
-        if (receiversInfo[receiver].isActive) {
-            currentWeightTotal -= oldValue;
-        }
-
+        uint256 currentWeightTotal = getTotalWeightPercentage();
         require(
-            weightPercentage <= MAX_PERCENTAGE_VALUE - currentWeightTotal,
+            currentWeightTotal <= MAX_PERCENTAGE_VALUE,
             'Total percentage must be less than 100%'
         );
 
-        receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
-
         emit SetRewardWeightContractEvent(receiver, oldValue, weightPercentage);
+    }
+
+    /**
+        @notice Update weight percentage for receiver contracts (100%=10000, 40%=4000, 4%=400)
+        @param _receivers address array
+        @param _weightPercentages uint array
+     */
+    function updateRewardWeights(
+        address[] memory _receivers,
+        uint256[] memory _weightPercentages
+    ) external onlyMod {
+        uint256 length = _receivers.length;
+        require(length == _weightPercentages.length, 'Length should match');
+
+        for (uint256 i = 0; i < length; i++) {
+            address receiver = _receivers[i];
+            uint256 weightPercentage = _weightPercentages[i];
+
+            require(receiver != address(0), 'Invalid receiver');
+            require(weightPercentage > 0, 'Must be greater than 0');
+
+            receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
+        }
+
+        uint256 currentWeightTotal = getTotalWeightPercentage();
+        require(
+            currentWeightTotal <= MAX_PERCENTAGE_VALUE,
+            'Total percentage must be less than 100%'
+        );
     }
 
     /**
@@ -249,7 +275,7 @@ contract RewardWeight is Ownable {
     /**
         @notice Get weight percentage from all receiver contracts (100%=10000, 40%=4000, 4%=400)
      */
-    function getAllRewardWeight()
+    function getAllRewardWeights()
         external
         view
         returns (
