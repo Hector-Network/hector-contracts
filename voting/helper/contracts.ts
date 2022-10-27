@@ -25,12 +25,13 @@ export const deployContract = async <ContractType extends Contract>(
 export const deployVotingFarm = async (
   _hec: any,
   _sHec: any,
+  _wsHec: any,
   _usdc: any,
   _spookySwapFactory: any,
   _spookySwapRotuer: any,
   _tokenVault: any,
 ) => {
   return await deployContract<VotingFarm>('VotingFarm', [
-    _hec, _sHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault
+    _hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault
   ]);
 };

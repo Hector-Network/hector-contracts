@@ -7,6 +7,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const prod_mode = false;
 	const _hec = prod_mode ? '' : '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
 	const _sHec = prod_mode ? '' : '0x71264c23604fa78D1eFcc32af1c73714F33dCdb4';
+	const _wsHec = prod_mode ? '' : '0x6225eeA79a0baF0c7e368Db4de1e8066589815B1';
 	const _usdc = prod_mode ? '' : '0x6f3da9C6700cAfBAb0323cF344F58C54B3ddB66b';
 	const _spookySwapFactory = prod_mode ? '' : '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 	const _spookySwapRotuer = prod_mode ? '' : '0xa6AD18C2aC47803E193F75c3677b14BF19B94883';
@@ -14,7 +15,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const _tokenVault = prod_mode ? '' : '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
 
 	// Deploy VotingFarm
-	const votingFarm = await deployVotingFarm(_hec, _sHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault);
+	const votingFarm = await deployVotingFarm(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault);
 	console.log('VotingFarm: ', votingFarm.address);
 	await waitSeconds(10);
 
@@ -39,6 +40,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 				'0x9391abd498Ecb2Be226e446a76a8b9C61932856C',
 				'0x0112F57a5EF77b7D074D7213127Df8E907D017bE',
 		  ];
+
 	const stakingToken = prod_mode
 		? [
 				'0x55639b1833Ddc160c18cA60f5d0eC9286201f525',
@@ -74,7 +76,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 		await hre.run('verify:verify', {
 			address: votingFarm.address,
 			contract: 'contracts/VotingFarm.sol:VotingFarm',
-			constructorArguments: [_hec, _sHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault],
+			constructorArguments: [_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault],
 		});
 	} catch (_) {}
 };
