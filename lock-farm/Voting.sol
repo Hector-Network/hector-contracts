@@ -20,15 +20,13 @@ contract Voting {
     }
     
     function updateFarmRewardWeight(address[] farms, uint[] weightBps) internal override{
-
-        uint rewardWeight = IRewardWeight(rewardWeightContract).getRewardWeight(address(receiver));
        
        require(farms.length>0,"there shall be at least one farm");
         require(farms.length==weightBps.length,"number of farms and number of weightBps should match");
 
         for(uint i=0;i<farms.length;i++){
             require(weightBps[i]>0,"all weight in weightBps should be greater than 0");
-            IRewardWeight(rewardWeightContract).setRewardWeight(farms[i], weightBps[i]);
+            rewardWeightContract.setRewardWeight(farms[i], weightBps[i]);
         }
     }
 
