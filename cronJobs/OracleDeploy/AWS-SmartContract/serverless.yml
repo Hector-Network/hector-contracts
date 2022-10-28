@@ -1,0 +1,26 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: twap
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-2
+  timeout: 30
+  environment:
+    RPC_URL: https://rpc.ftm.tools
+    DEFAULT_GAS_PRICE: 6000000000000  
+    GAS_LIMIT: 90000
+    PRIVATE_KEY: 'METAMASK_PRIVATEKEY'
+    FROM_ADDRESS: 'METAMASK_WALLET'
+
+functions:
+  exec:
+    handler: functions/exec.handler    
+    events:
+      - schedule: rate(62 minutes)
+      # - schedule: cron(0 12 * * ? *) # 12PM UTC
+      # See example: https://www.serverless.com/examples/aws-node-scheduled-cron
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin
