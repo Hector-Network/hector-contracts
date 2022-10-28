@@ -475,12 +475,12 @@ contract Voting is ReentrancyGuard {
 		for (uint256 i = 0; i < getFarmsLength(); i++) {
 			LockFarm _lockFarm = getFarmsByIndex(i);
 			FNFT fNFT = FNFT(fnft[_lockFarm]);
-			if (canVoteByFNFT[fNFT]) {
+			if (canVoteByFNFT[fNFT] && canVoteByERC20[stakingToken[_lockFarm]]) {
 				FNFTInfo[] memory fInfo = _lockFarm.getFnfts(owner);
 				for (uint256 j = 0; j < fInfo.length; j++) {
 					uint256 lastVoted = lastVotedByFNFT[fNFT][fInfo[j].id]; // time of the last voted
 					uint256 time = block.timestamp - lastVoted;
-					if (time < voteDelay) {
+					if (time > voteDelay && fInfo[j].amount > 0) {
 						flag = true;
 						break;
 					}
@@ -492,7 +492,9 @@ contract Voting is ReentrancyGuard {
 
 	// Check Locked FNFT in voting
 	function getCurrentLockedFNFT(address owner, LockFarm _lockFarm) internal view returns (uint256 _lockedFNFBalance) {
+		if (!canVoteByERC20[stakingToken[_lockFarm]]) return 0;
 		uint256 lockedFNFTBalance = 0;
+
 		// Check FNFT Balance
 		FNFT fNFT = fnft[_lockFarm];
 		if (canVoteByFNFT[fNFT]) {
@@ -599,7 +601,8 @@ contract Voting is ReentrancyGuard {
 			address _stakingToken = tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
 			uint256 _stakingAmount = tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
 			uint256 time = block.timestamp - lastVoted;
-			if (time > voteDelay) {
+			IERC20 _stakingERC20Token = IERC20(_stakingToken);
+			if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
 				fnftInfos[i] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
 			}
 		}
@@ -646,6 +649,7 @@ contract Voting is ReentrancyGuard {
 		if (address(_stakingToken) != address(0) && _amount > 0) {
 			uint256 allowance = _stakingToken.allowance(msg.sender, address(this));
 			require(allowance > _amount, 'ERC20: transfer amount exceeds allowance');
+			require(canVoteByERC20[_stakingToken], 'Deposited ERC20 token is not allowed for voting');
 		}
 		// Vote
 		_vote(msg.sender, _farmVote, _weights, _stakingToken, _amount, _fnft, _fnftIds);
