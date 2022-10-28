@@ -91,7 +91,7 @@ describe("Voting Test", async () => {
   describe("#2: Vote", async () => {
 
     it("Failed - user can't vote", async function () {
-      expect(false).to.equal(await Voting.connect(alice).canVote(alice.address));
+      expect(true).to.equal(await Voting.connect(deployer).canVote(deployer.address));
     });
 
     it("Failed - inputted weights total percentage is not 100%", async function () {
