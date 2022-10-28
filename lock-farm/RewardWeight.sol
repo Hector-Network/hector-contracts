@@ -75,6 +75,13 @@ contract Ownable is IOwnable {
     }
 }
 
+interface IVotingFarm {
+    function getFarmsWeightPercentages()
+        external
+        view
+        returns (address[] memory _farms, uint256[] memory _weightPercentages);
+}
+
 contract RewardWeight is Ownable {
     struct ReceiverPoolInfo {
         uint256 rewardWeightPercentage; //100%=10000, 40%=4000, 4%=400
@@ -87,6 +94,7 @@ contract RewardWeight is Ownable {
     uint8 MAX_RECEIVER_CONTRACTS = 20;
     uint8 MAX_RECEIVER_CONTRACTS_ALLOWED = 51;
 
+    address public votingFarm;
     mapping(address => bool) public moderators; //moderators array
 
     //Triggered When registering a new reward contract
@@ -108,7 +116,10 @@ contract RewardWeight is Ownable {
 
     /* ====== CONSTRUCTOR ====== */
 
-    constructor() {
+    constructor(address _votingFarm) {
+        require(_votingFarm != address(0));
+
+        votingFarm = _votingFarm;
         moderators[msg.sender] = true;
     }
 
@@ -120,6 +131,15 @@ contract RewardWeight is Ownable {
     }
 
     /* ====== POLICY FUNCTIONS ====== */
+
+    /**
+        @notice update voting farm
+        @param _votingFarm address
+     */
+    function updateVotingFarm(address _votingFarm) external onlyOwner {
+        require(_votingFarm != address(0), 'Invalid address');
+        votingFarm = _votingFarm;
+    }
 
     /**
         @notice add or remove moderator
@@ -203,32 +223,14 @@ contract RewardWeight is Ownable {
     }
 
     /**
-        @notice Update weight percentage for receiver contracts (100%=10000, 40%=4000, 4%=400)
-        @param _receivers address array
-        @param _weightPercentages uint array
+        @notice Update weight percentage for farms
      */
-    function updateRewardWeights(
-        address[] memory _receivers,
-        uint256[] memory _weightPercentages
-    ) external onlyMod {
-        uint256 length = _receivers.length;
-        require(length == _weightPercentages.length, 'Length should match');
-
-        for (uint256 i = 0; i < length; i++) {
-            address receiver = _receivers[i];
-            uint256 weightPercentage = _weightPercentages[i];
-
-            require(receiver != address(0), 'Invalid receiver');
-            require(weightPercentage > 0, 'Must be greater than 0');
-
-            receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
-        }
-
-        uint256 currentWeightTotal = getTotalWeightPercentage();
-        require(
-            currentWeightTotal <= MAX_PERCENTAGE_VALUE,
-            'Total percentage must be less than 100%'
-        );
+    function updateFarmsWeightPercentages() external onlyMod {
+        (
+            address[] memory _farms,
+            uint256[] memory _weightPercentages
+        ) = IVotingFarm(votingFarm).getFarmsWeightPercentages();
+        updateRewardWeights(_farms, _weightPercentages);
     }
 
     /**
@@ -316,5 +318,34 @@ contract RewardWeight is Ownable {
             ];
             if (info.isActive) total += info.rewardWeightPercentage;
         }
+    }
+
+    /**
+        @notice Update weight percentage for receiver contracts (100%=10000, 40%=4000, 4%=400)
+        @param _receivers address array
+        @param _weightPercentages uint array
+     */
+    function updateRewardWeights(
+        address[] memory _receivers,
+        uint256[] memory _weightPercentages
+    ) internal {
+        uint256 length = _receivers.length;
+        require(length == _weightPercentages.length, 'Length should match');
+
+        for (uint256 i = 0; i < length; i++) {
+            address receiver = _receivers[i];
+            uint256 weightPercentage = _weightPercentages[i];
+
+            require(receiver != address(0), 'Invalid receiver');
+            require(weightPercentage > 0, 'Must be greater than 0');
+
+            receiversInfo[receiver].rewardWeightPercentage = weightPercentage;
+        }
+
+        uint256 currentWeightTotal = getTotalWeightPercentage();
+        require(
+            currentWeightTotal <= MAX_PERCENTAGE_VALUE,
+            'Total percentage must be less than 100%'
+        );
     }
 }
