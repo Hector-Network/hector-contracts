@@ -1,0 +1,17 @@
+{
+  "name": "CronJobs",
+  "version": "1.0.0",
+  "description": "Run blockchain cronjobs",
+  "author": "Michael Nguyen",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "ethers": "^5.5.4",
+    "node-fetch": "^2.6.7",
+    "serverless": "^3.23.0"
+  },
+  "devDependencies": {
+    "serverless-mocha-plugin": "^1.12.0",
+    "serverless-offline": "^11.1.3",
+    "serverless-offline-scheduler": "^0.5.0"
+  }
+}

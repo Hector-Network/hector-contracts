@@ -1,0 +1,15 @@
+{
+  "name": "Oracle twap",
+  "version": "1.0.0",
+  "description": "Update twap oracle",
+  "author": "Michael Nguyen",
+  "dependencies": {
+    "ethers": "^5.5.4",
+    "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "serverless-mocha-plugin": "^1.12.0",
+    "serverless-offline": "^5.12.1",
+    "serverless-offline-scheduler": "^0.3.8"
+  }
+}

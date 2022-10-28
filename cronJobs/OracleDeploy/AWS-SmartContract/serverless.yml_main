@@ -1,0 +1,27 @@
+org: <your org from serverless>
+app: <app name from serverless>
+service: twapMultichain
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-2
+  timeout: 30
+  environment:
+    FTM_RPC_URL: https://rpc.ftm.tools
+    BSC_RPC_URL: https://bsc-dataseed1.binance.org
+    DEFAULT_GAS_PRICE: 9000000000                             
+    GAS_LIMIT: 90000
+    DEFAULT_GAS_PRICE_BSC: 5000000000      
+    GAS_LIMIT_BSC: 70000
+    PRIVATE_KEY: 'METAMASK PRIVATE KEY'
+functions:
+  exec:
+    handler: functions/exec.handler    
+    events:
+      - schedule: rate(62 minutes)
+      # - schedule: cron(0 12 * * ? *) # 12PM UTC
+      # See example: https://www.serverless.com/examples/aws-node-scheduled-cron
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin
