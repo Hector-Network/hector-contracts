@@ -1,0 +1,34 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: cronJobs
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-2
+  timeout: 30
+  environment:
+    FTM_RPC_URL: https://rpc.ftm.tools
+    BSC_RPC_URL: https://bsc-dataseed1.binance.org
+    DEFAULT_GAS_PRICE: 9000000000                             
+    GAS_LIMIT: 900000
+    DEFAULT_GAS_PRICE_BSC: 5000000000      
+    GAS_LIMIT_BSC: 70000
+    PRIVATE_KEY: 'WALLET PRIVATE KEY'
+
+custom:
+  emitRewardSchedule: cron(0 0 ? * THU *) # Run every Thu 12AM UTC
+  # - schedule: cron(0 12 * * ? *) # 12PM UTC - cron(0 0 * * Thu *)
+  # - schedule: rate(62 minutes)
+  # See example: https://www.serverless.com/examples/aws-node-scheduled-cron
+
+functions:
+  Emissionor:
+    handler: functions/Emissionor.handler    
+    events:
+      - schedule: ${self:custom.emitRewardSchedule}
+
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin
