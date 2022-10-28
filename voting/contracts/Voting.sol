@@ -693,14 +693,20 @@ contract Voting is ReentrancyGuard {
 	function setConfiguration(
 		address _hec,
 		address _sHec,
+		address _wsHec,
+		address _usdc,
 		SpookySwapFactory _spookySwapFactory,
-		SpookySwapRouter _spookySwapRouter
+		SpookySwapRouter _spookySwapRouter,
+		TokenVault _tokenVault
 	) external {
 		require((msg.sender == admin), '!admin');
 		HEC = IERC20(_hec);
 		sHEC = IERC20(_sHec);
+		wsHec = wsHEC(_wsHec);
+		USDC = IERC20(_usdc);
 		spookySwapRouter = _spookySwapRouter;
 		spookySwapFactory = _spookySwapFactory;
+		tokenVault = _tokenVault;
 		emit SetConfiguration(msg.sender);
 	}
 
