@@ -70,7 +70,7 @@ typings/
 .yarn-integrity
 
 # dotenv environment variables file
-#.env
+.env
 .env.test
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -138,4 +138,4 @@ Temporary Items
 ### Serverless ###
 # Ignore build directory
 .serverless
-#serverless.yml
+serverless.yml
