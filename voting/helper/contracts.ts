@@ -1,5 +1,5 @@
 import {
-  VotingFarm
+  Voting
 } from './../types';
 import { Contract } from 'ethers';
 
@@ -22,7 +22,7 @@ export const deployContract = async <ContractType extends Contract>(
   return contract;
 };
 
-export const deployVotingFarm = async (
+export const deployVoting = async (
   _hec: any,
   _sHec: any,
   _wsHec: any,
@@ -31,7 +31,7 @@ export const deployVotingFarm = async (
   _spookySwapRotuer: any,
   _tokenVault: any,
 ) => {
-  return await deployContract<VotingFarm>('VotingFarm', [
+  return await deployContract<Voting>('Voting', [
     _hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault
   ]);
 };
