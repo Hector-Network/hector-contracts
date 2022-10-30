@@ -89,10 +89,6 @@ contract BondPricing is Ownable {
 
         require(_oracleExists(_token0, _token1) == NOT_FOUND, "Oracle with this pair already exists.");
 
-        IUniswapPairOracle oracle = IUniswapPairOracle( _oracle );
-        require( oracle.token0() == _token0, "Invalid token0");
-        require( oracle.token1() == _token1, "Invalid token1");
-
         Oracle memory o = Oracle ({
             oracleAddress: _oracle,
             token0: _token0,
@@ -116,10 +112,6 @@ contract BondPricing is Ownable {
 
         uint index = _oracleExists(currentToken0, currentToken1);
         require(index != NOT_FOUND, "Oracle does not exist");
-
-         IUniswapPairOracle oracle = IUniswapPairOracle( newOracleAddress );
-        require( oracle.token0() == currentToken0, "Invalid token0");
-        require( oracle.token1() == currentToken1, "Invalid token1");
 
         address oldOracle = oracles[index].oracleAddress;
         //updating 
@@ -148,7 +140,7 @@ contract BondPricing is Ownable {
     /* ======== USER FUNCTIONS ======== */
 
      /**
-     *  @notice Find existing oracle
+     *  @notice Find existing oracle from token pair
      *  @param _token0 address
      *  @param _token1 address
      *  @return address
@@ -156,17 +148,12 @@ contract BondPricing is Ownable {
     function findOracle(address _token0, address _token1) external view returns ( address ) {
         address _oracle = address(0);
 
-        for (uint i = 0; i < oracles.length; i++) {
-            Oracle memory o = oracles[i];
-
-            IUniswapPairOracle oracle = IUniswapPairOracle( o.oracleAddress );
-
-            if (oracle.token0() == _token0 && oracle.token1() == _token1) {
-                 _oracle = o.oracleAddress;
-                 break;
-            }
-            
+        uint index = _oracleExists(_token0, _token1);
+        
+        if (index != NOT_FOUND) {
+            _oracle = oracles[index].oracleAddress;
         }
+
         return _oracle;
     }
 
@@ -178,11 +165,8 @@ contract BondPricing is Ownable {
         index = NOT_FOUND ;
 
         for (uint i = 0; i < oracles.length; i++) {
-            Oracle memory o = oracles[i];
-
-            IUniswapPairOracle oracle = IUniswapPairOracle( o.oracleAddress );
-
-            if (oracle.token0() == _token0 && oracle.token1() == _token1) {
+            Oracle memory oracle = oracles[i];
+            if (oracle.token0 == _token0 && oracle.token1 == _token1) {
                 index = i;
                 break;
             }
