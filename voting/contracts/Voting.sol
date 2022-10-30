@@ -212,7 +212,7 @@ contract Voting is ReentrancyGuard {
 				}
 			}
 		}
-		require(flag, 'You voted in the last 7 days');
+		require(flag, 'You voted in the last voted period days');
 		_;
 	}
 
@@ -348,7 +348,7 @@ contract Voting is ReentrancyGuard {
 		}
 		require(_totalVotePercentage == 100, 'Weights total percentage is not 100%');
 
-		// Reset every tern for old data
+		// Reset every term for old data
 		reset();
 
 		for (uint256 i = 0; i < _farmVote.length; i++) {
@@ -379,12 +379,17 @@ contract Voting is ReentrancyGuard {
 		// Check Farm is existed
 		if (getFarmsLength() == 0) return false;
 		// Check status by user
-		bool _checkBalance = checkBalance(owner);
-		// Check FNFT is already voted
-		bool _checkVotedFNFT = checkVotedFNFT(owner);
-		if (!_checkBalance && !_checkVotedFNFT) return false;
-		if (_checkBalance || !_checkVotedFNFT) return true;
-		else return false;
+		bool _checkBalanceFNFT = checkBalanceFNFT(owner);
+		bool _checkBalanceStakingToken = checkBalanceStakingToken(owner);
+
+		if (!_checkBalanceFNFT && !_checkBalanceStakingToken) return false;
+		else if (_checkBalanceStakingToken) return true;
+		else if (_checkBalanceFNFT) {
+			bool _checkVotedFNFT = checkVotedFNFT(owner);
+
+			if (_checkVotedFNFT) return true;
+			return false;
+		} else return false;
 	}
 
 	// Can withdraw by owner
@@ -436,7 +441,7 @@ contract Voting is ReentrancyGuard {
 	}
 
 	// Check Locked FNFT in voting
-	function checkBalance(address owner) internal view returns (bool _flag) {
+	function checkBalanceFNFT(address owner) internal view returns (bool _flag) {
 		bool flag = false;
 		// FNFT balance
 		for (uint256 i = 0; i < getFarmsLength(); i++) {
@@ -447,6 +452,11 @@ contract Voting is ReentrancyGuard {
 				break;
 			}
 		}
+		return flag;
+	}
+
+	function checkBalanceStakingToken(address owner) internal view returns (bool _flag) {
+		bool flag = false;
 		// ERC20 balance
 		for (uint256 i = 0; i < getFarmsLength(); i++) {
 			LockFarm _lockFarm = getFarmsByIndex(i);
@@ -465,12 +475,12 @@ contract Voting is ReentrancyGuard {
 		for (uint256 i = 0; i < getFarmsLength(); i++) {
 			LockFarm _lockFarm = getFarmsByIndex(i);
 			FNFT fNFT = FNFT(fnft[_lockFarm]);
-			if (canVoteByFNFT[fNFT]) {
+			if (canVoteByFNFT[fNFT] && canVoteByERC20[stakingToken[_lockFarm]]) {
 				FNFTInfo[] memory fInfo = _lockFarm.getFnfts(owner);
 				for (uint256 j = 0; j < fInfo.length; j++) {
 					uint256 lastVoted = lastVotedByFNFT[fNFT][fInfo[j].id]; // time of the last voted
 					uint256 time = block.timestamp - lastVoted;
-					if (time < voteDelay) {
+					if (time > voteDelay && fInfo[j].amount > 0) {
 						flag = true;
 						break;
 					}
@@ -482,7 +492,9 @@ contract Voting is ReentrancyGuard {
 
 	// Check Locked FNFT in voting
 	function getCurrentLockedFNFT(address owner, LockFarm _lockFarm) internal view returns (uint256 _lockedFNFBalance) {
+		if (!canVoteByERC20[stakingToken[_lockFarm]]) return 0;
 		uint256 lockedFNFTBalance = 0;
+
 		// Check FNFT Balance
 		FNFT fNFT = fnft[_lockFarm];
 		if (canVoteByFNFT[fNFT]) {
@@ -589,7 +601,8 @@ contract Voting is ReentrancyGuard {
 			address _stakingToken = tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
 			uint256 _stakingAmount = tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
 			uint256 time = block.timestamp - lastVoted;
-			if (time > voteDelay) {
+			IERC20 _stakingERC20Token = IERC20(_stakingToken);
+			if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
 				fnftInfos[i] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
 			}
 		}
@@ -627,6 +640,7 @@ contract Voting is ReentrancyGuard {
 		FNFT _fnft,
 		uint256[] memory _fnftIds
 	) external hasVoted(msg.sender, _fnft, _fnftIds) {
+		require(canVote(msg.sender), "Can't participate in voting system");
 		require(_farmVote.length == _weights.length, 'Farms and Weights length size are difference');
 		require(_farmVote.length == getFarmsLength(), 'Invalid Farms length');
 		require(validFarms(_farmVote), 'Invalid Farms');
@@ -635,6 +649,7 @@ contract Voting is ReentrancyGuard {
 		if (address(_stakingToken) != address(0) && _amount > 0) {
 			uint256 allowance = _stakingToken.allowance(msg.sender, address(this));
 			require(allowance > _amount, 'ERC20: transfer amount exceeds allowance');
+			require(canVoteByERC20[_stakingToken], 'Deposited ERC20 token is not allowed for voting');
 		}
 		// Vote
 		_vote(msg.sender, _farmVote, _weights, _stakingToken, _amount, _fnft, _fnftIds);
