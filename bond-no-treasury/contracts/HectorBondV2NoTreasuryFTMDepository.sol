@@ -820,18 +820,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 payout,
         uint256 remaining
     );
-    event BondPriceChanged(
-        address principal,
-        uint256 indexed priceInUSD,
-        uint256 indexed internalPrice,
-        uint256 indexed debtRatio
-    );
-    event ControlVariableAdjustment(
-        uint256 initialBCV,
-        uint256 newBCV,
-        uint256 adjustment,
-        bool addition
-    );
 
     /* ======== STATE VARIABLES ======== */
 
@@ -843,9 +831,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     address[] public principals; // tokens used to create bond
     mapping(address => bool) public isPrincipal; // is token used to create bond
-
-    Terms public terms; // stores terms for new bonds
-    Adjust public adjustment; // stores adjustment to BCV data
 
     Counters.Counter public depositIdGenerator; // id for each deposit
     mapping(address => mapping(uint256 => uint256)) public ownedDeposits; // each wallet owned index=>depositId
@@ -862,6 +847,8 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     uint256 public totalRemainingPayout; // total remaining rewardToken payout for bonding
     mapping(address => uint256) public totalPrincipals; // total principal bonded through this depository
+
+    uint256 public minimumPrice; //min price
 
     string public name; // name of this bond
 
@@ -882,17 +869,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /* ======== STRUCTS ======== */
 
-    // Info for creating new bonds
-    struct Terms {
-        uint256 controlVariable; // scaling variable for price
-        uint256 vestingTerm; // in blocks
-        uint256 minimumPrice; // vs principal value , 4 decimals 0.15 = 1500
-        uint256 maxPayout; // in thousandths of a %. i.e. 500 = 0.5%
-        uint256 fee; // as % of bond payout, in hundreths. ( 500 = 5% = 0.05 for every 1 paid)
-        uint256 maxDebt; // 9 decimal debt ratio, max % total supply created as debt
-        uint256 totalSupply; // rewardToken total supply
-    }
-
     // Info for bond holder
     struct Bond {
         uint256 depositId; // deposit Id
@@ -902,15 +878,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 lastBlockAt; // Last interaction
         uint256 pricePaid; // In DAI, for front end viewing
         address depositor; //deposit address
-    }
-
-    // Info for incremental adjustments to control variable
-    struct Adjust {
-        bool add; // addition or subtraction
-        uint256 rate; // increment
-        uint256 target; // BCV when adjustment finished
-        uint256 buffer; // minimum length (in blocks) between adjustments
-        uint256 lastBlock; // block when last adjustment made
     }
 
     /* ======== INITIALIZATION ======== */
@@ -940,40 +907,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     }
 
     /* ======== INIT FUNCTIONS ======== */
-
-    /**
-     *  @notice initializes bond parameters
-     *  @param _controlVariable uint
-     *  @param _vestingTerm uint
-     *  @param _minimumPrice uint
-     *  @param _maxPayout uint
-     *  @param _fee uint
-     *  @param _maxDebt uint
-     *  @param _initialDebt uint
-     *  @param _totalSupply uint
-     */
-    function initializeBondTerms(
-        uint256 _controlVariable,
-        uint256 _vestingTerm,
-        uint256 _minimumPrice,
-        uint256 _maxPayout,
-        uint256 _fee,
-        uint256 _maxDebt,
-        uint256 _totalSupply,
-        uint256 _initialDebt
-    ) external onlyPolicy {
-        terms = Terms({
-            controlVariable: _controlVariable,
-            vestingTerm: _vestingTerm,
-            minimumPrice: _minimumPrice,
-            maxPayout: _maxPayout,
-            fee: _fee,
-            maxDebt: _maxDebt,
-            totalSupply: _totalSupply
-        });
-        totalDebt = _initialDebt;
-        lastDecay = block.number;
-    }
 
     /**
      *  @notice initialize fee recipients and split percentage for each of them, in basis points
@@ -1062,48 +995,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /* ======== POLICY FUNCTIONS ======== */
 
-    enum PARAMETER {
-        VESTING,
-        PAYOUT,
-        FEE,
-        DEBT,
-        MINPRICE,
-        TOTALSUPPLY
-    }
-
-    /**
-     *  @notice set parameters for new bonds
-     *  @param _parameter PARAMETER
-     *  @param _input uint
-     */
-    function setBondTerms(PARAMETER _parameter, uint256 _input)
-        external
-        onlyPolicy
-    {
-        if (_parameter == PARAMETER.VESTING) {
-            // 0
-            require(_input >= 10000, 'Vesting must be longer than 3 hours');
-            terms.vestingTerm = _input;
-        } else if (_parameter == PARAMETER.PAYOUT) {
-            // 1
-            require(_input <= 1000, 'Payout cannot be above 1 percent');
-            terms.maxPayout = _input;
-        } else if (_parameter == PARAMETER.FEE) {
-            // 2
-            require(_input <= 10000, 'DAO fee cannot exceed payout');
-            terms.fee = _input;
-        } else if (_parameter == PARAMETER.DEBT) {
-            // 3
-            terms.maxDebt = _input;
-        } else if (_parameter == PARAMETER.MINPRICE) {
-            // 4
-            terms.minimumPrice = _input;
-        } else if (_parameter == PARAMETER.TOTALSUPPLY) {
-            // 5
-            terms.totalSupply = _input;
-        }
-    }
-
     /**
      *  @notice set discount for locking period
      *  @param _lockingPeriod uint
@@ -1118,6 +1009,27 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
         lockingDiscounts[_lockingPeriod] = _discount;
         lockingPeriods.push(_lockingPeriod);
+    }
+
+    function setMinPrice(uint256 _minimumPrice) external onlyPolicy {
+        minimumPrice = _minimumPrice;
+    }
+
+    function updateName(string memory _name) external onlyPolicy {
+        name = _name;
+    }
+
+    function updateFundWeights(address _fundRecipient, uint256 _feeBps)
+        external
+        onlyPolicy
+    {
+        require(initialized[CONFIG.FUND_RECIPIENT], 'not yet initialzed');
+
+        require(_fundRecipient != address(0), '_fundRecipient address invalid');
+        fundRecipient = _fundRecipient;
+
+        require(_feeBps > 0, '_feeBps should be greater than 0'); //? or maybe this rule is not neccessary
+        feeBps = _feeBps;
     }
 
     function updateFeeWeights(
@@ -1160,28 +1072,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         bondPricing = _bondPricing;
     }
 
-    /**
-     *  @notice set control variable adjustment
-     *  @param _addition bool
-     *  @param _increment uint
-     *  @param _target uint
-     *  @param _buffer uint
-     */
-    function setAdjustment(
-        bool _addition,
-        uint256 _increment,
-        uint256 _target,
-        uint256 _buffer
-    ) external onlyPolicy {
-        adjustment = Adjust({
-            add: _addition,
-            rate: _increment,
-            target: _target,
-            buffer: _buffer,
-            lastBlock: block.number
-        });
-    }
-
     /* ======== USER FUNCTIONS ======== */
 
     /**
@@ -1203,9 +1093,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 discount = lockingDiscounts[_lockingPeriod];
         require(discount > 0, 'Invalid locking period');
 
-        decayDebt();
-        require(totalDebt <= terms.maxDebt, 'Max capacity reached');
-
         uint256 priceInUSD = bondPriceInUSD(_principal)
             .mul(10000 - discount)
             .div(10000); // Stored in bond info
@@ -1226,7 +1113,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 payout = payoutFor(_principal, value, discount); // payout to bonder is computed
 
         require(payout >= (rewardUnit / 100), 'Bond too small'); // must be > 0.01 rewardToken ( underflow protection )
-        require(payout <= maxPayout(), 'Bond too large'); // size protection because there is no slippage
 
         // total remaining payout is increased
         totalRemainingPayout = totalRemainingPayout.add(payout);
@@ -1272,14 +1158,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
             block.timestamp.add(_lockingPeriod),
             priceInUSD
         );
-        emit BondPriceChanged(
-            _principal,
-            bondPriceInUSD(_principal),
-            _bondPrice(_principal),
-            debtRatio()
-        );
 
-        adjust(); // control variable is adjusted
         processFee(_principal, _amount); // distribute fee
 
         return payout;
@@ -1386,55 +1265,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         ] += theLast;
     }
 
-    /**
-     *  @notice makes incremental adjustment to control variable
-     */
-    function adjust() internal {
-        uint256 blockCanAdjust = adjustment.lastBlock.add(adjustment.buffer);
-        if (adjustment.rate != 0 && block.number >= blockCanAdjust) {
-            uint256 initial = terms.controlVariable;
-            if (adjustment.add) {
-                terms.controlVariable = terms.controlVariable.add(
-                    adjustment.rate
-                );
-                if (terms.controlVariable >= adjustment.target) {
-                    adjustment.rate = 0;
-                }
-            } else {
-                terms.controlVariable = terms.controlVariable.sub(
-                    adjustment.rate
-                );
-                if (terms.controlVariable <= adjustment.target) {
-                    adjustment.rate = 0;
-                }
-            }
-            adjustment.lastBlock = block.number;
-            emit ControlVariableAdjustment(
-                initial,
-                terms.controlVariable,
-                adjustment.rate,
-                adjustment.add
-            );
-        }
-    }
-
-    /**
-     *  @notice reduce total debt
-     */
-    function decayDebt() internal {
-        totalDebt = totalDebt.sub(debtDecay());
-        lastDecay = block.number;
-    }
-
     /* ======== VIEW FUNCTIONS ======== */
-
-    /**
-     *  @notice determine maximum bond size
-     *  @return uint
-     */
-    function maxPayout() public view returns (uint256) {
-        return terms.totalSupply.mul(terms.maxPayout).div(100000);
-    }
 
     /**
      *  @notice calculate interest due for new bond
@@ -1475,8 +1306,8 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         price_ = IUniswapPairOracle(oracle)
             .consult(rewardToken, rewardUnit)
             .div(10**(IERC20(_principal).decimals() - 4));
-        if (price_ < terms.minimumPrice) {
-            price_ = terms.minimumPrice;
+        if (price_ < minimumPrice) {
+            price_ = minimumPrice;
         }
     }
 
@@ -1493,10 +1324,10 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         price_ = IUniswapPairOracle(oracle)
             .consult(rewardToken, rewardUnit)
             .div(10**(IERC20(_principal).decimals() - 4));
-        if (price_ < terms.minimumPrice) {
-            price_ = terms.minimumPrice;
-        } else if (terms.minimumPrice != 0) {
-            terms.minimumPrice = 0;
+        if (price_ < minimumPrice) {
+            price_ = minimumPrice;
+        } else if (minimumPrice != 0) {
+            minimumPrice = 0;
         }
     }
 
@@ -1513,46 +1344,6 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         price_ = bondPrice(_principal)
             .mul(10**IERC20(_principal).decimals())
             .div(1e4);
-    }
-
-    /**
-     *  @notice calculate current ratio of debt to rewardToken supply
-     *  @return debtRatio_ uint
-     */
-    function debtRatio() public view returns (uint256 debtRatio_) {
-        uint256 supply = terms.totalSupply;
-        debtRatio_ = FixedPoint
-            .fraction(currentDebt().mul(rewardUnit), supply)
-            .decode112with18()
-            .div(1e18);
-    }
-
-    /**
-     *  @notice debt ratio in same terms for reserve or liquidity bonds
-     *  @return uint
-     */
-    function standardizedDebtRatio() external view returns (uint256) {
-        return debtRatio();
-    }
-
-    /**
-     *  @notice calculate debt factoring in decay
-     *  @return uint
-     */
-    function currentDebt() public view returns (uint256) {
-        return totalDebt.sub(debtDecay());
-    }
-
-    /**
-     *  @notice amount to decay total debt by
-     *  @return decay_ uint
-     */
-    function debtDecay() public view returns (uint256 decay_) {
-        uint256 blocksSinceLast = block.number.sub(lastDecay);
-        decay_ = totalDebt.mul(blocksSinceLast).div(terms.vestingTerm);
-        if (decay_ > totalDebt) {
-            decay_ = totalDebt;
-        }
     }
 
     /**
@@ -1681,6 +1472,23 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
             bondInfos_[i] = bondInfo[depositId];
             pendingPayouts_[i] = pendingPayoutFor(depositId);
         }
+    }
+
+    /**
+     *  @notice show all fee recipients and weight bps
+     *  @return feeRecipients_ fee recipients address
+     *  @return feeWeightBps_ fee weight bps
+     */
+    function allFeeInfos()
+        external
+        view
+        returns (
+            address[] memory feeRecipients_,
+            uint256[] memory feeWeightBps_
+        )
+    {
+        feeRecipients_ = feeRecipients;
+        feeWeightBps_ = feeWeightBps;
     }
 
     /* ======= AUXILLIARY ======= */

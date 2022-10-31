@@ -41,6 +41,16 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     hectorTokenAddress,
     daiTokenAddress
   );
+  await bondPricingContract.addOracle(
+    hec_dai_oracle,
+    hectorTokenAddress,
+    usdcTokenAddress
+  );
+  await bondPricingContract.addOracle(
+    hec_dai_oracle,
+    hectorTokenAddress,
+    usdTTokenAddress
+  );
 
   /// BondV2
   const params = [
@@ -57,19 +67,21 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       log: true,
     }
   );
-  const contract = await ethers.getContract(
-    'HectorBondV2NoTreasuryFTMDepository',
-    deployer
-  );
 
-  await contract.setMinPrice(minimumPrice);
-  await contract.initializeFundRecipient(fundRecipient, feeBps);
-  await contract.initializeFeeRecipient(feeRecipients, weightBps);
-  await contract.initializeDepositTokens(principleAddresses);
+  /// BondV2 Initialize
+  // const contract = await ethers.getContract(
+  //   'HectorBondV2NoTreasuryFTMDepository',
+  //   deployer
+  // );
 
-  await contract.setLockingDiscount(5 * 24 * 3600, 500); // 5 days lock - 5%
-  await contract.setLockingDiscount(5 * 7 * 24 * 3600, 1000); // 7 weeks lock - 10%
-  await contract.setLockingDiscount(5 * 30 * 24 * 3600, 1500); // 5 months lock - 15%
+  // await contract.setMinPrice(minimumPrice);
+  // await contract.initializeFundRecipient(fundRecipient, feeBps);
+  // await contract.initializeFeeRecipient(feeRecipients, weightBps);
+  // await contract.initializeDepositTokens(principleAddresses);
+
+  // await contract.setLockingDiscount(5 * 24 * 3600, 500); // 5 days lock - 5%
+  // await contract.setLockingDiscount(5 * 7 * 24 * 3600, 1000); // 7 weeks lock - 10%
+  // await contract.setLockingDiscount(5 * 30 * 24 * 3600, 1500); // 5 months lock - 15%
 
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
