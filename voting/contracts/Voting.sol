@@ -561,18 +561,13 @@ contract Voting is ReentrancyGuard {
 			(uint256 reserve0, uint256 reserve1, ) = _lpToken.getReserves();
 			uint256 amount0 = (_amount * reserve0) / _lpToken.totalSupply();
 			uint256 amount1 = (_amount * reserve1) / _lpToken.totalSupply();
-			address[] memory path = new address[](2);
-			path[0] = address(HEC);
-			path[1] = address(USDC);
 
 			if (_lpToken.token0() == address(HEC)) {
-				uint256[] memory amounts = spookySwapRouter.getAmountsIn(amount1, path);
-				hecWeight = amount0 + amounts[0];
+				hecWeight = amount0;
 			}
 
 			if (_lpToken.token1() == address(HEC)) {
-				uint256[] memory amounts = spookySwapRouter.getAmountsIn(amount0, path);
-				hecWeight = amount1 + amounts[0];
+				hecWeight = amount1;
 			}
 		}
 
