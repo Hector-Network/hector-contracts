@@ -740,19 +740,19 @@ contract Voting is ReentrancyGuard {
 	}
 
 	// Set status of the FNFT can participate in voting system by admin
-	function setStatusFNFT(LockFarm _lockFarm, bool status) public returns (LockFarm) {
+	function setStatusFNFT(FNFT _fnft, bool status) public returns (FNFT) {
 		require(msg.sender == admin, '!admin');
-		canVoteByFNFT[fnft[_lockFarm]] = status;
-		emit SetStatusFNFT(_lockFarm, status);
-		return _lockFarm;
+		canVoteByFNFT[_fnft] = status;
+		emit SetStatusFNFT(_fnft, status);
+		return _fnft;
 	}
 
 	// Set status of the ERC20 can participate in voting system by admin
-	function setStatusERC20(LockFarm _lockFarm, bool status) public returns (LockFarm) {
+	function setStatusERC20(IERC20 _stakingToken, bool status) public returns (IERC20) {
 		require(msg.sender == admin, '!admin');
-		canVoteByERC20[stakingToken[_lockFarm]] = status;
-		emit SetStatusERC20(_lockFarm, status);
-		return _lockFarm;
+		canVoteByERC20[_stakingToken] = status;
+		emit SetStatusERC20(_stakingToken, status);
+		return _stakingToken;
 	}
 
 	// All events
@@ -763,8 +763,8 @@ contract Voting is ReentrancyGuard {
 	event SetConfiguration(address admin);
 	event SetMaxPercentageFarm(uint256 percentage, address admin);
 	event SetVoteDelay(uint256 voteDelay, address admin);
-	event SetStatusFNFT(LockFarm farm, bool status);
-	event SetStatusERC20(LockFarm farm, bool status);
+	event SetStatusFNFT(FNFT farm, bool status);
+	event SetStatusERC20(IERC20 farm, bool status);
 	event SetAdmin(address oldAdmin, address newAdmin);
 	event Reset();
 	event Withdraw(IERC20[] stakingTokens, uint256[] amounts);
