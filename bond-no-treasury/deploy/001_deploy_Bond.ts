@@ -8,56 +8,65 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const [deployer] = await ethers.getSigners();
 
-  const hectorToken = await deploy('HectorToken', {
+  /// Token Address
+  const hectorTokenAddress = '0x5c4fdfc5233f935f20d2adba572f770c2e377ab0';
+  const daiTokenAddress = '0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e';
+  const usdcTokenAddress = '0x04068da6c83afcfa0e13ba15a6696662335d5b75';
+  const usdTTokenAddress = '0x049d68029688eabf473097a2fc38ef61633a3c7a';
+  const principleAddresses = [
+    daiTokenAddress,
+    usdcTokenAddress,
+    usdTTokenAddress,
+  ];
+
+  /// Oracle Address
+  const hec_dai_oracle = '0x227ccdfebea1355e73f1936c8a23ebb5f0181b3c';
+
+  /// Initial Params
+  const fundRecipient = '';
+  const feeBps = 3000;
+  const feeRecipients = [''];
+  const weightBps = [10000];
+  const minimumPrice = 10000;
+
+  /// Bond Pricing
+  const bondPricing = await deploy('BondPricing', {
     from: deployer.address,
     args: [],
     log: true,
   });
+  const bondPricingContract = await ethers.getContract('BondPricing', deployer);
+  await bondPricingContract.addOracle(
+    hec_dai_oracle,
+    hectorTokenAddress,
+    daiTokenAddress
+  );
 
-  const principle = await deploy('MockPrinciple', {
-    from: deployer.address,
-    args: [],
-    log: true,
-  });
-
+  /// BondV2
   const params = [
-    'TestBond',
-    hectorToken.address,
-    principle.address,
+    'HecBondV2',
+    hectorTokenAddress,
     deployer.address,
-    constants.AddressZero,
+    bondPricing.address,
   ];
   const hectorBondNoTreasuryDepository = await deploy(
-    'HectorBondNoTreasuryDepository',
+    'HectorBondV2NoTreasuryFTMDepository',
     {
       from: deployer.address,
       args: params,
       log: true,
     }
   );
-
-  const controlVariable = 2;
-  const vestingTerm = 5;
-  const minimumPrice = 1500;
-  const maxPayout = 500;
-  const fee = 500;
-  const maxDebt = utils.parseUnits('2000', 9);
-  const totalSupply = utils.parseEther('5000');
-  const initialDebt = utils.parseUnits('100', 9);
   const contract = await ethers.getContract(
-    'HectorBondNoTreasuryDepository',
+    'HectorBondV2NoTreasuryFTMDepository',
     deployer
   );
-  await contract.initializeBondTerms(
-    controlVariable,
-    vestingTerm,
-    minimumPrice,
-    maxPayout,
-    fee,
-    maxDebt,
-    totalSupply,
-    initialDebt
-  );
+
+  await contract.setMinPrice(minimumPrice);
+  await contract.initializeFundRecipient(fundRecipient, feeBps);
+  await contract.initializeFeeRecipient(feeRecipients, weightBps);
+  await contract.initializeDepositTokens(principleAddresses);
+
   await contract.setLockingDiscount(5 * 24 * 3600, 500); // 5 days lock - 5%
   await contract.setLockingDiscount(5 * 7 * 24 * 3600, 1000); // 7 weeks lock - 10%
   await contract.setLockingDiscount(5 * 30 * 24 * 3600, 1500); // 5 months lock - 15%
@@ -67,15 +76,8 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     console.log('=====> Verifing ....');
     try {
       await hre.run('verify:verify', {
-        address: hectorToken.address,
-        contract: 'contracts/HEC.sol:HectorToken',
-        constructorArguments: [],
-      });
-    } catch (_) {}
-    try {
-      await hre.run('verify:verify', {
-        address: principle.address,
-        contract: 'contracts/mock/MockPrinciple.sol:MockPrinciple',
+        address: bondPricing.address,
+        contract: 'contracts/BondPricing.sol:BondPricing',
         constructorArguments: [],
       });
     } catch (_) {}
@@ -83,7 +85,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepository.address,
         contract:
-          'contracts/HectorBondNoTreasuryDepository.sol:HectorBondNoTreasuryDepository',
+          'contracts/HectorBondV2NoTreasuryFTMDepository.sol:HectorBondV2NoTreasuryFTMDepository',
         constructorArguments: params,
       });
     } catch (_) {}
