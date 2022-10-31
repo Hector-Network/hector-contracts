@@ -7,6 +7,62 @@ import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/utils/math/SafeMath.sol';
 import '@openzeppelin/contracts/security/ReentrancyGuard.sol';
 
+interface IOwnable {
+	function owner() external view returns (address);
+
+	function renounceManagement(string memory confirm) external;
+
+	function pushManagement(address newOwner_) external;
+
+	function pullManagement() external;
+}
+
+// Ownable
+contract Ownable is IOwnable {
+
+    address internal _owner;
+    address internal _newOwner;
+
+    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+    constructor () {
+        _owner = msg.sender;
+        emit OwnershipPulled( address(0), _owner );
+    }
+
+    function owner() public view override returns (address) {
+        return _owner;
+    }
+
+    modifier onlyOwner() {
+        require( _owner == msg.sender, "Ownable: caller is not the owner" );
+        _;
+    }
+
+    function renounceManagement(string memory confirm) public virtual override onlyOwner() {
+        require(
+            keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked("confirm renounce")),
+            "Ownable: renouce needs 'confirm renounce' as input"
+        );
+        emit OwnershipPushed( _owner, address(0) );
+        _owner = address(0);
+        _newOwner = address(0);
+    }
+
+    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
+        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
+        emit OwnershipPushed( _owner, newOwner_ );
+        _newOwner = newOwner_;
+    }
+
+    function pullManagement() public virtual override {
+        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
+        emit OwnershipPulled( _owner, _newOwner );
+        _owner = _newOwner;
+    }
+}
+
 // Structure of FNFT
 struct FNFTInfo {
 	uint256 id;
@@ -144,7 +200,7 @@ interface wsHEC {
 }
 
 // Voting Contract
-contract Voting is ReentrancyGuard {
+contract Voting is ReentrancyGuard, Ownable {
 	using SafeERC20 for IERC20;
 	using SafeMath for uint256;
 
@@ -170,7 +226,6 @@ contract Voting is ReentrancyGuard {
 		uint256 time;
 	}
 
-	address public admin; //Admin address to manage farms like add/deprecate/resurrect
 	uint256 public totalWeight; // Total weights of the farms
 	uint256 public maxPercentage = 100; // Max percentage for each farm
 	uint256 public voteDelay = 604800; // Production Mode
@@ -233,7 +288,8 @@ contract Voting is ReentrancyGuard {
 		spookySwapFactory = _spookySwapFactory;
 		spookySwapRouter = _spookySwapRouter;
 		tokenVault = _tokenVault;
-		admin = msg.sender;
+		_owner = msg.sender;
+		emit OwnershipPulled(address(0), _owner);
 	}
 
 	// Return the farms list
@@ -650,20 +706,12 @@ contract Voting is ReentrancyGuard {
 		_vote(msg.sender, _farmVote, _weights, _stakingToken, _amount, _fnft, _fnftIds);
 	}
 
-	// Set Admin role
-	function setAdmin(address _admin) external {
-		require(msg.sender == admin, '!admin');
-		admin = _admin;
-		emit SetAdmin(admin, _admin);
-	}
-
 	// Add new lock farm
 	function addLockFarmForOwner(
 		LockFarm _lockFarm,
 		IERC20 _stakingToken,
 		LockAddressRegistry _lockAddressRegistry
-	) external returns (LockFarm) {
-		require(msg.sender == admin, '!admin');
+	) external onlyOwner returns (LockFarm) {
 		require(validFarm(_lockFarm), 'Already existed farm');
 
 		farms.push(_lockFarm);
@@ -684,16 +732,14 @@ contract Voting is ReentrancyGuard {
 	}
 
 	// Deprecate existing farm
-	function deprecateFarm(LockFarm _farm) external {
-		require((msg.sender == admin), '!admin');
+	function deprecateFarm(LockFarm _farm) external onlyOwner {
 		require(farmStatus[_farm], 'farm is not active');
 		farmStatus[_farm] = false;
 		emit FarmDeprecated(_farm);
 	}
 
 	// Bring Deprecated farm back into use
-	function resurrectFarm(LockFarm _farm) external {
-		require((msg.sender == admin), '!admin');
+	function resurrectFarm(LockFarm _farm) external onlyOwner {
 		require(!farmStatus[_farm], 'farm is active');
 		farmStatus[_farm] = true;
 		emit FarmResurrected(_farm);
@@ -708,8 +754,7 @@ contract Voting is ReentrancyGuard {
 		SpookySwapFactory _spookySwapFactory,
 		SpookySwapRouter _spookySwapRouter,
 		TokenVault _tokenVault
-	) external {
-		require((msg.sender == admin), '!admin');
+	) external onlyOwner {
 		HEC = IERC20(_hec);
 		sHEC = IERC20(_sHec);
 		wsHec = wsHEC(_wsHec);
@@ -721,30 +766,26 @@ contract Voting is ReentrancyGuard {
 	}
 
 	// Set max percentage of the farm
-	function setMaxPercentageFarm(uint256 _percentage) external {
-		require((msg.sender == admin), '!admin');
+	function setMaxPercentageFarm(uint256 _percentage) external onlyOwner {
 		maxPercentage = _percentage;
-		emit SetMaxPercentageFarm(_percentage, msg.sender);
+		emit SetMaxPercentageFarm(_percentage, _owner);
 	}
 
 	// Set Vote Delay
-	function setVoteDelay(uint256 _voteDelay) external {
-		require((msg.sender == admin), '!admin');
+	function setVoteDelay(uint256 _voteDelay) external onlyOwner {
 		voteDelay = _voteDelay;
-		emit SetVoteDelay(_voteDelay, admin);
+		emit SetVoteDelay(_voteDelay, _owner);
 	}
 
 	// Set status of the FNFT can participate in voting system by admin
-	function setStatusFNFT(FNFT _fnft, bool status) public returns (FNFT) {
-		require(msg.sender == admin, '!admin');
+	function setStatusFNFT(FNFT _fnft, bool status) public onlyOwner returns (FNFT) {
 		canVoteByFNFT[_fnft] = status;
 		emit SetStatusFNFT(_fnft, status);
 		return _fnft;
 	}
 
 	// Set status of the ERC20 can participate in voting system by admin
-	function setStatusERC20(IERC20 _stakingToken, bool status) public returns (IERC20) {
-		require(msg.sender == admin, '!admin');
+	function setStatusERC20(IERC20 _stakingToken, bool status) public onlyOwner returns (IERC20) {
 		canVoteByERC20[_stakingToken] = status;
 		emit SetStatusERC20(_stakingToken, status);
 		return _stakingToken;
@@ -760,7 +801,6 @@ contract Voting is ReentrancyGuard {
 	event SetVoteDelay(uint256 voteDelay, address admin);
 	event SetStatusFNFT(FNFT farm, bool status);
 	event SetStatusERC20(IERC20 farm, bool status);
-	event SetAdmin(address oldAdmin, address newAdmin);
 	event Reset();
 	event Withdraw(IERC20[] stakingTokens, uint256[] amounts);
 }
