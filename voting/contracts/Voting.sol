@@ -766,7 +766,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	}
 
 	// Set max percentage of the farm
-	function setMaxPercentageFarm(uint256 _percentage) external {
+	function setMaxPercentageFarm(uint256 _percentage) external onlyOwner {
 		maxPercentage = _percentage;
 		emit SetMaxPercentageFarm(_percentage, _owner);
 	}
