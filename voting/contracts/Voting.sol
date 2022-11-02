@@ -230,6 +230,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	mapping(LockFarm => bool) public farmStatus; // Return status of the farm
 	mapping(LockFarm => FNFT) public fnft; // Return FNFT for each LockFarm
 	mapping(LockFarm => TokenVault) public tokenVault; // Return TokenVault for each LockFarm
+	mapping(FNFT => TokenVault) public tokenVaultByFNFT; // Return TokenVault for each LockFarm
 	mapping(LockFarm => IERC20) public stakingToken; // Return staking token for eack LockFarm
 	mapping(IERC20 => LockFarm) internal lockFarmByERC20; // Return staking token for each LockFarm
 	mapping(LockFarm => LockAddressRegistry) internal lockAddressRegistry; // Return LockAddressRegistry by LockFarm
@@ -333,22 +334,7 @@ contract Voting is ReentrancyGuard, Ownable {
 
 		voteDelay = 0;
 
-		for (uint256 j = 0; j < farmInfo.length; j++) {
-			uint256 time = block.timestamp - farmInfo[j].time;
-			if (time > voteDelay && farmInfo[j].time > 0 && farmInfo[j]._farmWeight > 0) {
-				LockFarm _farm = farmInfo[j]._lockFarm;
-				uint256 _votes = farmInfo[j]._farmWeight;
-				address _voter = farmInfo[j].voter;
-				if (_votes > 0) {
-					totalWeight = totalWeight - _votes;
-					farmWeights[_farm] = farmWeights[_farm] - _votes;
-					userWeight[_voter][_farm] = userWeight[_voter][_farm] - _votes;
-					totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
-					farmInfo[j]._farmWeight = 0;
-					farmInfo[j].time = 0;
-				}
-			}
-		}
+		reset();
 
 		emit ResetByOwner(_owner);
 	}
@@ -661,7 +647,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	}
 
 	// Get available FNFT IDs by Owner
-	function getFNFTByUser(address owner) external view returns (FNFTInfoByUser[] memory _fnftInfos) {
+	function getFNFTByUser(address owner, FNFT _fnft) external view returns (FNFTInfoByUser[] memory _fnftInfos) {
 		uint256 totalFNFTBalance = 0;
 
 		for (uint256 i = 0; i < getFarmsLength(); i++) {
@@ -760,6 +746,7 @@ contract Voting is ReentrancyGuard, Ownable {
 		fnft[_lockFarm] = FNFT(fnftAddress);
 		lockFarmByERC20[_stakingToken] = _lockFarm;
 		tokenVault[_lockFarm] = _tokenVault;
+		tokenVaultByFNFT[FNFT(fnftAddress)] = _tokenVault;
 
 		// can participate in voting system by FNFT and ERC20 at first
 		canVoteByFNFT[fnft[_lockFarm]] = true;
