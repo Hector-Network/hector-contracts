@@ -594,19 +594,17 @@ contract Voting is ReentrancyGuard, Ownable {
 		uint256 totalWeightByUser = 0;
 		uint256 weightByFNFT = 0;
 
-		for (uint256 i = 0; i < getFarmsLength(); i++) {
-			LockFarm _lockFarm = getFarmsByIndex(i);
-			// Calculate of FNFT weight if there is FNFT voted
-			if (address(_fnft) != address(0) && _fnftIds.length > 0 && fnft[_lockFarm] == _fnft) {
-				TokenVault _tokenValut = tokenVault[_lockFarm];
-				for (uint256 j = 0; j < _fnftIds.length; j++) {
-					IERC20 _erc20Token = IERC20(_tokenValut.getFNFT(_fnftIds[j]).asset);
-					uint256 _lockedAmount = _tokenValut.getFNFT(_fnftIds[j]).depositAmount;
-					uint256 calcAmount = convertToHEC(address(_erc20Token), _lockedAmount);
-					weightByFNFT += calcAmount;
-				}
+		// Calculate of FNFT weight if there is FNFT voted
+		if (address(_fnft) != address(0) && _fnftIds.length > 0) {
+			TokenVault _tokenValut = tokenVaultByFNFT[_fnft];
+			for (uint256 j = 0; j < _fnftIds.length; j++) {
+				IERC20 _erc20Token = IERC20(_tokenValut.getFNFT(_fnftIds[j]).asset);
+				uint256 _lockedAmount = _tokenValut.getFNFT(_fnftIds[j]).depositAmount;
+				uint256 calcAmount = convertToHEC(address(_erc20Token), _lockedAmount);
+				weightByFNFT += calcAmount;
 			}
 		}
+
 		// Calculate of ERC20 token weight if there is ERC20 voted
 		uint256 erc20Weight = convertToHEC(address(_stakingToken), _amount);
 		totalWeightByUser = weightByFNFT + erc20Weight;

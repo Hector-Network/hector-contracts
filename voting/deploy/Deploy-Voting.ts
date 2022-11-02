@@ -12,14 +12,17 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const _usdc = prod_mode ? '0x04068DA6C83AFCFA0e13ba15A6696662335D5B75' : '0x6f3da9C6700cAfBAb0323cF344F58C54B3ddB66b';
 	const _spookySwapFactory = prod_mode ? '0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3' : '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 	const _spookySwapRotuer = prod_mode ? '0xbe4fc72f8293f9d3512d58b969c98c3f676cb957' : '0xa6AD18C2aC47803E193F75c3677b14BF19B94883';
-	const _lockAddressRegistry = prod_mode ? '0x55639b1833Ddc160c18cA60f5d0eC9286201f525' : '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018';
-	const _tokenVault = prod_mode ? '0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0' : '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
+	const _lockAddressRegistry = prod_mode
+		? ['0x55639b1833Ddc160c18cA60f5d0eC9286201f525', '0x51AdE8449AfeB8Bbd9Fd68D48cF4695574fA926D']
+		: ['0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018', '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018'];
+	const _tokenVault = prod_mode
+		? ['0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0', '0x78ACF2cccD89B191C82E9817c1C6C43E11b7038C']
+		: ['0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B', '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B'];
 
 	// Deploy Voting
 	const voting = await deployVoting(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer);
 	console.log('Voting: ', voting.address);
 	await waitSeconds(10);
-
 
 	const lockFarm = prod_mode
 		? ['0x80993B75e38227f1A3AF6f456Cf64747F0E21612', '0xd7faE64DD872616587Cc8914d4848947403078B8']
@@ -49,7 +52,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 	// Add LockFarms
 	for (let i = 0; i < lockFarm.length; i++) {
-		await voting.addLockFarmForOwner(lockFarm[i], stakingToken[i], _lockAddressRegistry, _tokenVault);
+		await voting.addLockFarmForOwner(lockFarm[i], stakingToken[i], _lockAddressRegistry[i], _tokenVault[i]);
 		await waitSeconds(3);
 	}
 
