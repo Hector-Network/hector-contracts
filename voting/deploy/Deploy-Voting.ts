@@ -16,7 +16,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const _tokenVault = prod_mode ? '0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0' : '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
 
 	// Deploy Voting
-	const voting = await deployVoting(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault);
+	const voting = await deployVoting(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer);
 	console.log('Voting: ', voting.address);
 	await waitSeconds(10);
 
@@ -49,7 +49,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 	// Add LockFarms
 	for (let i = 0; i < lockFarm.length; i++) {
-		await voting.addLockFarmForOwner(lockFarm[i], stakingToken[i], _lockAddressRegistry);
+		await voting.addLockFarmForOwner(lockFarm[i], stakingToken[i], _lockAddressRegistry, _tokenVault);
 		await waitSeconds(3);
 	}
 
@@ -60,7 +60,7 @@ const deploy: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 		await hre.run('verify:verify', {
 			address: voting.address,
 			contract: 'contracts/Voting.sol:Voting',
-			constructorArguments: [_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault],
+			constructorArguments: [_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer],
 		});
 	} catch (_) {}
 };

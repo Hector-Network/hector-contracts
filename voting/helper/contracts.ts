@@ -29,9 +29,8 @@ export const deployVoting = async (
   _usdc: any,
   _spookySwapFactory: any,
   _spookySwapRotuer: any,
-  _tokenVault: any,
 ) => {
   return await deployContract<Voting>('Voting', [
-    _hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault
+    _hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer
   ]);
 };
