@@ -19,48 +19,44 @@ interface IOwnable {
 
 // Ownable
 contract Ownable is IOwnable {
+	address internal _owner;
+	address internal _newOwner;
 
-    address internal _owner;
-    address internal _newOwner;
+	event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+	event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
 
-    event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
-    event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+	constructor() {
+		_owner = msg.sender;
+		emit OwnershipPulled(address(0), _owner);
+	}
 
-    constructor () {
-        _owner = msg.sender;
-        emit OwnershipPulled( address(0), _owner );
-    }
+	function owner() public view override returns (address) {
+		return _owner;
+	}
 
-    function owner() public view override returns (address) {
-        return _owner;
-    }
+	modifier onlyOwner() {
+		require(_owner == msg.sender, 'Ownable: caller is not the owner');
+		_;
+	}
 
-    modifier onlyOwner() {
-        require( _owner == msg.sender, "Ownable: caller is not the owner" );
-        _;
-    }
+	function renounceManagement(string memory confirm) public virtual override onlyOwner {
+		require(keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked('confirm renounce')), "Ownable: renouce needs 'confirm renounce' as input");
+		emit OwnershipPushed(_owner, address(0));
+		_owner = address(0);
+		_newOwner = address(0);
+	}
 
-    function renounceManagement(string memory confirm) public virtual override onlyOwner() {
-        require(
-            keccak256(abi.encodePacked(confirm)) == keccak256(abi.encodePacked("confirm renounce")),
-            "Ownable: renouce needs 'confirm renounce' as input"
-        );
-        emit OwnershipPushed( _owner, address(0) );
-        _owner = address(0);
-        _newOwner = address(0);
-    }
+	function pushManagement(address newOwner_) public virtual override onlyOwner {
+		require(newOwner_ != address(0), 'Ownable: new owner is the zero address');
+		emit OwnershipPushed(_owner, newOwner_);
+		_newOwner = newOwner_;
+	}
 
-    function pushManagement( address newOwner_ ) public virtual override onlyOwner() {
-        require( newOwner_ != address(0), "Ownable: new owner is the zero address");
-        emit OwnershipPushed( _owner, newOwner_ );
-        _newOwner = newOwner_;
-    }
-
-    function pullManagement() public virtual override {
-        require( msg.sender == _newOwner, "Ownable: must be new owner to pull");
-        emit OwnershipPulled( _owner, _newOwner );
-        _owner = _newOwner;
-    }
+	function pullManagement() public virtual override {
+		require(msg.sender == _newOwner, 'Ownable: must be new owner to pull');
+		emit OwnershipPulled(_owner, _newOwner);
+		_owner = _newOwner;
+	}
 }
 
 // Structure of FNFT
@@ -210,7 +206,6 @@ contract Voting is ReentrancyGuard, Ownable {
 	wsHEC internal wsHec; // wsHEC
 	SpookySwapFactory internal spookySwapFactory;
 	SpookySwapRouter internal spookySwapRouter;
-	TokenVault internal tokenVault;
 
 	struct DepositInfo {
 		address owner;
@@ -234,6 +229,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	LockFarm[] internal farms; // Farms array
 	mapping(LockFarm => bool) public farmStatus; // Return status of the farm
 	mapping(LockFarm => FNFT) public fnft; // Return FNFT for each LockFarm
+	mapping(LockFarm => TokenVault) public tokenVault; // Return TokenVault for each LockFarm
 	mapping(LockFarm => IERC20) public stakingToken; // Return staking token for eack LockFarm
 	mapping(IERC20 => LockFarm) internal lockFarmByERC20; // Return staking token for each LockFarm
 	mapping(LockFarm => LockAddressRegistry) internal lockAddressRegistry; // Return LockAddressRegistry by LockFarm
@@ -278,8 +274,7 @@ contract Voting is ReentrancyGuard, Ownable {
 		address _wsHec,
 		address _usdc,
 		SpookySwapFactory _spookySwapFactory,
-		SpookySwapRouter _spookySwapRouter,
-		TokenVault _tokenVault
+		SpookySwapRouter _spookySwapRouter
 	) {
 		HEC = IERC20(_hec);
 		sHEC = IERC20(_sHec);
@@ -287,7 +282,6 @@ contract Voting is ReentrancyGuard, Ownable {
 		USDC = IERC20(_usdc);
 		spookySwapFactory = _spookySwapFactory;
 		spookySwapRouter = _spookySwapRouter;
-		tokenVault = _tokenVault;
 		_owner = msg.sender;
 		emit OwnershipPulled(address(0), _owner);
 	}
@@ -303,11 +297,8 @@ contract Voting is ReentrancyGuard, Ownable {
 
 	// Return the farm by index
 	function getFarmsByIndex(uint256 index) internal view returns (LockFarm) {
-		LockFarm[] memory tempFarms = new LockFarm[](farms.length);
-		for (uint256 i = 0; i < farms.length; i++) {
-			if (farmStatus[farms[i]]) tempFarms[i] = farms[i];
-		}
-		return tempFarms[index];
+		LockFarm[] memory _farms = getFarms();
+		return _farms[index];
 	}
 
 	// Return farms length
@@ -335,6 +326,31 @@ contract Voting is ReentrancyGuard, Ownable {
 			}
 		}
 		emit Reset();
+	}
+
+	// Reset All voting Data and withdraw all token to users for their votes
+	function resetByOwner() external onlyOwner {
+
+		voteDelay = 0;
+
+		for (uint256 j = 0; j < farmInfo.length; j++) {
+			uint256 time = block.timestamp - farmInfo[j].time;
+			if (time > voteDelay && farmInfo[j].time > 0 && farmInfo[j]._farmWeight > 0) {
+				LockFarm _farm = farmInfo[j]._lockFarm;
+				uint256 _votes = farmInfo[j]._farmWeight;
+				address _voter = farmInfo[j].voter;
+				if (_votes > 0) {
+					totalWeight = totalWeight - _votes;
+					farmWeights[_farm] = farmWeights[_farm] - _votes;
+					userWeight[_voter][_farm] = userWeight[_voter][_farm] - _votes;
+					totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
+					farmInfo[j]._farmWeight = 0;
+					farmInfo[j].time = 0;
+				}
+			}
+		}
+
+		emit ResetByOwner(_owner);
 	}
 
 	// Verify farms array is valid
@@ -590,13 +606,17 @@ contract Voting is ReentrancyGuard, Ownable {
 		uint256 totalWeightByUser = 0;
 		uint256 weightByFNFT = 0;
 
-		// Calculate of FNFT weight if there is FNFT voted
-		if (address(_fnft) != address(0) && compareStringsbyBytes(_fnft.symbol(), 'HFNFT') && _fnftIds.length > 0) {
-			for (uint256 j = 0; j < _fnftIds.length; j++) {
-				uint256 _lockedAmount = tokenVault.getFNFT(_fnftIds[j]).depositAmount;
-				IERC20 _erc20Token = IERC20(tokenVault.getFNFT(_fnftIds[j]).asset);
-				uint256 calcAmount = convertToHEC(address(_erc20Token), _lockedAmount);
-				weightByFNFT += calcAmount;
+		for (uint256 i = 0; i < getFarmsLength(); i++) {
+			LockFarm _lockFarm = getFarmsByIndex(i);
+			// Calculate of FNFT weight if there is FNFT voted
+			if (address(_fnft) != address(0) && _fnftIds.length > 0 && fnft[_lockFarm] == _fnft) {
+				TokenVault _tokenValut = tokenVault[_lockFarm];
+				for (uint256 j = 0; j < _fnftIds.length; j++) {
+					IERC20 _erc20Token = IERC20(_tokenValut.getFNFT(_fnftIds[j]).asset);
+					uint256 _lockedAmount = _tokenValut.getFNFT(_fnftIds[j]).depositAmount;
+					uint256 calcAmount = convertToHEC(address(_erc20Token), _lockedAmount);
+					weightByFNFT += calcAmount;
+				}
 			}
 		}
 		// Calculate of ERC20 token weight if there is ERC20 voted
@@ -641,22 +661,38 @@ contract Voting is ReentrancyGuard, Ownable {
 	}
 
 	// Get available FNFT IDs by Owner
-	function getFNFTByUser(address owner, FNFT _fnft) external view returns (FNFTInfoByUser[] memory _fnftInfos) {
-		uint256 fnftBalance = _fnft.balanceOf(owner);
-		FNFTInfoByUser[] memory fnftInfos = new FNFTInfoByUser[](fnftBalance);
-		// Get All Balance By user both of HEC and FNFT
-		for (uint256 i = 0; i < fnftBalance; i++) {
-			// FNFTInfoByUser memory fnftInfo;
-			uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
-			uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
-			address _stakingToken = tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
-			uint256 _stakingAmount = tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
-			uint256 time = block.timestamp - lastVoted;
-			IERC20 _stakingERC20Token = IERC20(_stakingToken);
-			if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
-				fnftInfos[i] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
+	function getFNFTByUser(address owner) external view returns (FNFTInfoByUser[] memory _fnftInfos) {
+		uint256 totalFNFTBalance = 0;
+
+		for (uint256 i = 0; i < getFarmsLength(); i++) {
+			LockFarm _lockFarm = getFarmsByIndex(i);
+			FNFT _fnft_new = fnft[_lockFarm];
+			uint256 fnftBalance = _fnft_new.balanceOf(owner);
+			totalFNFTBalance = totalFNFTBalance + fnftBalance;
+		}
+
+		FNFTInfoByUser[] memory fnftInfos = new FNFTInfoByUser[](totalFNFTBalance);
+
+		for (uint256 i = 0; i < getFarmsLength(); i++) {
+			LockFarm _lockFarm = getFarmsByIndex(i);
+			FNFT _fnft_new = fnft[_lockFarm];
+			TokenVault _tokenVault = tokenVault[_lockFarm];
+			uint256 fnftBalance = _fnft_new.balanceOf(owner);
+			// Get All Balance By user both of HEC and FNFT
+			for (uint256 j = 0; j < fnftBalance; j++) {
+				// FNFTInfoByUser memory fnftInfo;
+				uint256 tokenOfOwnerByIndex = _fnft_new.tokenOfOwnerByIndex(owner, j);
+				uint256 lastVoted = lastVotedByFNFT[_fnft_new][tokenOfOwnerByIndex]; // time of the last voted
+				address _stakingToken = _tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
+				uint256 _stakingAmount = _tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
+				uint256 time = block.timestamp - lastVoted;
+				IERC20 _stakingERC20Token = IERC20(_stakingToken);
+				if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
+					fnftInfos[j] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
+				}
 			}
 		}
+
 		return fnftInfos;
 	}
 
@@ -710,7 +746,8 @@ contract Voting is ReentrancyGuard, Ownable {
 	function addLockFarmForOwner(
 		LockFarm _lockFarm,
 		IERC20 _stakingToken,
-		LockAddressRegistry _lockAddressRegistry
+		LockAddressRegistry _lockAddressRegistry,
+		TokenVault _tokenVault
 	) external onlyOwner returns (LockFarm) {
 		require(validFarm(_lockFarm), 'Already existed farm');
 
@@ -722,6 +759,7 @@ contract Voting is ReentrancyGuard, Ownable {
 		address fnftAddress = _lockAddressRegistry.getFNFT();
 		fnft[_lockFarm] = FNFT(fnftAddress);
 		lockFarmByERC20[_stakingToken] = _lockFarm;
+		tokenVault[_lockFarm] = _tokenVault;
 
 		// can participate in voting system by FNFT and ERC20 at first
 		canVoteByFNFT[fnft[_lockFarm]] = true;
@@ -752,8 +790,7 @@ contract Voting is ReentrancyGuard, Ownable {
 		address _wsHec,
 		address _usdc,
 		SpookySwapFactory _spookySwapFactory,
-		SpookySwapRouter _spookySwapRouter,
-		TokenVault _tokenVault
+		SpookySwapRouter _spookySwapRouter
 	) external onlyOwner {
 		HEC = IERC20(_hec);
 		sHEC = IERC20(_sHec);
@@ -761,7 +798,6 @@ contract Voting is ReentrancyGuard, Ownable {
 		USDC = IERC20(_usdc);
 		spookySwapRouter = _spookySwapRouter;
 		spookySwapFactory = _spookySwapFactory;
-		tokenVault = _tokenVault;
 		emit SetConfiguration(msg.sender);
 	}
 
@@ -802,5 +838,6 @@ contract Voting is ReentrancyGuard, Ownable {
 	event SetStatusFNFT(FNFT farm, bool status);
 	event SetStatusERC20(IERC20 farm, bool status);
 	event Reset();
+	event ResetByOwner(address owner);
 	event Withdraw(IERC20[] stakingTokens, uint256[] amounts);
 }
