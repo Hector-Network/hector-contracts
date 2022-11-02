@@ -68,23 +68,23 @@ describe("Voting Test", async () => {
     console.log("Farm2: ", farm2.address);
 
     // Voting
-    Voting = await deployVoting(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault);
+    Voting = await deployVoting(_hec, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer);
     console.log("Voting: ", Voting.address);
 
     console.log("Deployer: ", deployer.address);
     console.log("Alice: ", alice.address);
 
-    await Voting.connect(deployer).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry);
+    await Voting.connect(deployer).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry, _tokenVault);
     await Voting.connect(deployer).setMaxPercentageFarm(200);
   });
 
   describe("#1: AddLockFarmForOwner", async () => {
     it("Should set the right owner", async function () {
-      await expect(Voting.connect(alice).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry)).to.be.revertedWith("!admin");
+      await expect(Voting.connect(alice).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry,_tokenVault)).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Should set the non-existed farm", async function () {
-      await expect(Voting.connect(deployer).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry)).to.be.revertedWith("Already existed farm");
+      await expect(Voting.connect(deployer).addLockFarmForOwner(farm1.address, _fnft, _lockAddressRegistry, _tokenVault)).to.be.revertedWith("Already existed farm");
     });
   });
 
@@ -116,12 +116,12 @@ describe("Voting Test", async () => {
 
   describe("#3: setConfiguration", async () => {
     it("Failed - only admin can set configuration", async function () {
-      await expect(Voting.connect(alice).setConfiguration(hec.address, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault)).to.be.revertedWith("!admin");
+      await expect(Voting.connect(alice).setConfiguration(hec.address, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer)).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Compare - configurations after set", async function () {
       const thec = hec.address;
-      await Voting.connect(deployer).setConfiguration(hec.address, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer, _tokenVault);
+      await Voting.connect(deployer).setConfiguration(hec.address, _sHec, _wsHec, _usdc, _spookySwapFactory, _spookySwapRotuer);
 
       expect(thec).to.equal(await Voting.connect(deployer).HEC());
     });
@@ -129,7 +129,7 @@ describe("Voting Test", async () => {
 
   describe("#4: setMaxPercentageFarm", async () => {
     it("Failed - only admin can set max percentage of the farms", async function () {
-      await expect(Voting.connect(alice).setMaxPercentageFarm("60")).to.be.revertedWith("!admin");
+      await expect(Voting.connect(alice).setMaxPercentageFarm("60")).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Compare - max percentage after set", async function () {
@@ -143,7 +143,7 @@ describe("Voting Test", async () => {
   describe("#5: setVoteDelay", async () => {
     it("Failed - only admin can set vote delay time", async function () {
       const voteDelay = 60;
-      await expect(Voting.connect(alice).setVoteDelay(voteDelay)).to.be.revertedWith("!admin");
+      await expect(Voting.connect(alice).setVoteDelay(voteDelay)).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Compare - vote delay time after set", async function () {
@@ -156,12 +156,12 @@ describe("Voting Test", async () => {
 
   describe("#6: setAdmin", async () => {
     it("Failed - only admin can change admin", async function () {
-      await expect(Voting.connect(alice).setAdmin(alice.address)).to.be.revertedWith("!admin");
+      await expect(Voting.connect(alice).pushManagement(alice.address)).to.be.revertedWith("Ownable: caller is not the owner");
     });
 
     it("Compare - admin after set", async function () {
-      await Voting.connect(deployer).setAdmin(alice.address);
-      expect(alice.address).to.equal(await Voting.connect(alice).admin());
+      await Voting.connect(deployer).pushManagement(alice.address);
+      expect(alice.address).to.equal(await Voting.connect(alice).owner());
     });
   });
 });

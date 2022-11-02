@@ -289,10 +289,22 @@ contract Voting is ReentrancyGuard, Ownable {
 
 	// Return the farms list
 	function getFarms() public view returns (LockFarm[] memory) {
-		LockFarm[] memory tempFarms = new LockFarm[](farms.length);
+		uint256 _farmsLength = 0;
 		for (uint256 i = 0; i < farms.length; i++) {
-			if (farmStatus[farms[i]]) tempFarms[i] = farms[i];
+			if (farmStatus[farms[i]]) _farmsLength = _farmsLength + 1;
 		}
+
+		LockFarm[] memory tempFarms = new LockFarm[](_farmsLength);
+		uint256 k = 1;
+		for (uint256 j = 0; j < farms.length; j++) {
+			if (farmStatus[farms[j]]) {
+				tempFarms[k - 1] = farms[j];
+			} else {
+				k--;
+			}
+			k++;
+		}
+
 		return tempFarms;
 	}
 
@@ -331,7 +343,6 @@ contract Voting is ReentrancyGuard, Ownable {
 
 	// Reset All voting Data and withdraw all token to users for their votes
 	function resetByOwner() external onlyOwner {
-
 		voteDelay = 0;
 
 		reset();
@@ -346,7 +357,7 @@ contract Voting is ReentrancyGuard, Ownable {
 		bool flag = true;
 		LockFarm prevFarm = _farms[0];
 		// Check new inputted address is already existed on Voting farms array
-		for (uint256 i = 1; i < _farms.length; i++) {
+		for (uint256 i = 1; i < getFarmsLength(); i++) {
 			if (prevFarm == _farms[i]) {
 				flag = false;
 				break;
@@ -354,7 +365,7 @@ contract Voting is ReentrancyGuard, Ownable {
 			prevFarm = _farms[i];
 		}
 		// Check Farms Status
-		for (uint256 i = 0; i < _farms.length; i++) {
+		for (uint256 i = 0; i < getFarmsLength(); i++) {
 			if (!farmStatus[_farms[i]]) {
 				flag = false;
 				break;
@@ -773,6 +784,24 @@ contract Voting is ReentrancyGuard, Ownable {
 		emit SetConfiguration(msg.sender);
 	}
 
+	// Set LockFarm
+	function setLockFarm(
+		LockFarm _lockFarm,
+		IERC20 _stakingToken,
+		TokenVault _tokenVault,
+		LockAddressRegistry _lockAddressRegistry
+	) external onlyOwner {
+		lockAddressRegistry[_lockFarm] = _lockAddressRegistry;
+		stakingToken[_lockFarm] = _stakingToken;
+		address fnftAddress = _lockAddressRegistry.getFNFT();
+		fnft[_lockFarm] = FNFT(fnftAddress);
+		lockFarmByERC20[_stakingToken] = _lockFarm;
+		tokenVault[_lockFarm] = _tokenVault;
+		tokenVaultByFNFT[FNFT(fnftAddress)] = _tokenVault;
+
+		emit SetLockFarm(msg.sender, _lockFarm, _stakingToken, _tokenVault, _lockAddressRegistry);
+	}
+
 	// Set max percentage of the farm
 	function setMaxPercentageFarm(uint256 _percentage) external onlyOwner {
 		maxPercentage = _percentage;
@@ -812,4 +841,5 @@ contract Voting is ReentrancyGuard, Ownable {
 	event Reset();
 	event ResetByOwner(address owner);
 	event Withdraw(IERC20[] stakingTokens, uint256[] amounts);
+	event SetLockFarm(address owner, LockFarm _lockFarm, IERC20 _stakingToken, TokenVault _tokenVault, LockAddressRegistry _lockAddressRegistry);
 }
