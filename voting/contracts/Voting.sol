@@ -336,6 +336,8 @@ contract Voting is ReentrancyGuard, Ownable {
 
 		reset();
 
+		voteDelay = 604800;
+
 		emit ResetByOwner(_owner);
 	}
 
@@ -648,37 +650,22 @@ contract Voting is ReentrancyGuard, Ownable {
 
 	// Get available FNFT IDs by Owner
 	function getFNFTByUser(address owner, FNFT _fnft) external view returns (FNFTInfoByUser[] memory _fnftInfos) {
-		uint256 totalFNFTBalance = 0;
-
-		for (uint256 i = 0; i < getFarmsLength(); i++) {
-			LockFarm _lockFarm = getFarmsByIndex(i);
-			FNFT _fnft_new = fnft[_lockFarm];
-			uint256 fnftBalance = _fnft_new.balanceOf(owner);
-			totalFNFTBalance = totalFNFTBalance + fnftBalance;
-		}
-
-		FNFTInfoByUser[] memory fnftInfos = new FNFTInfoByUser[](totalFNFTBalance);
-
-		for (uint256 i = 0; i < getFarmsLength(); i++) {
-			LockFarm _lockFarm = getFarmsByIndex(i);
-			FNFT _fnft_new = fnft[_lockFarm];
-			TokenVault _tokenVault = tokenVault[_lockFarm];
-			uint256 fnftBalance = _fnft_new.balanceOf(owner);
-			// Get All Balance By user both of HEC and FNFT
-			for (uint256 j = 0; j < fnftBalance; j++) {
-				// FNFTInfoByUser memory fnftInfo;
-				uint256 tokenOfOwnerByIndex = _fnft_new.tokenOfOwnerByIndex(owner, j);
-				uint256 lastVoted = lastVotedByFNFT[_fnft_new][tokenOfOwnerByIndex]; // time of the last voted
-				address _stakingToken = _tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
-				uint256 _stakingAmount = _tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
-				uint256 time = block.timestamp - lastVoted;
-				IERC20 _stakingERC20Token = IERC20(_stakingToken);
-				if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
-					fnftInfos[j] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
-				}
+		uint256 fnftBalance = _fnft.balanceOf(owner);
+		FNFTInfoByUser[] memory fnftInfos = new FNFTInfoByUser[](fnftBalance);
+		// Get All Balance By user both of HEC and FNFT
+		for (uint256 i = 0; i < fnftBalance; i++) {
+			// FNFTInfoByUser memory fnftInfo;
+			uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
+			uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
+			TokenVault _tokenVault = tokenVaultByFNFT[_fnft];
+			address _stakingToken = _tokenVault.getFNFT(tokenOfOwnerByIndex).asset;
+			uint256 _stakingAmount = _tokenVault.getFNFT(tokenOfOwnerByIndex).depositAmount;
+			uint256 time = block.timestamp - lastVoted;
+			IERC20 _stakingERC20Token = IERC20(_stakingToken);
+			if (time > voteDelay && canVoteByERC20[_stakingERC20Token]) {
+				fnftInfos[i] = FNFTInfoByUser(tokenOfOwnerByIndex, _stakingToken, _stakingAmount);
 			}
 		}
-
 		return fnftInfos;
 	}
 
