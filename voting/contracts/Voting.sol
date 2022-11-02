@@ -230,7 +230,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	mapping(LockFarm => bool) public farmStatus; // Return status of the farm
 	mapping(LockFarm => FNFT) public fnft; // Return FNFT for each LockFarm
 	mapping(LockFarm => TokenVault) public tokenVault; // Return TokenVault for each LockFarm
-	mapping(FNFT => TokenVault) public tokenVaultByFNFT; // Return TokenVault for each LockFarm
+	mapping(FNFT => TokenVault) public tokenVaultByFNFT; // Return TokenVault for each FNFT
 	mapping(LockFarm => IERC20) public stakingToken; // Return staking token for eack LockFarm
 	mapping(IERC20 => LockFarm) internal lockFarmByERC20; // Return staking token for each LockFarm
 	mapping(LockFarm => LockAddressRegistry) internal lockAddressRegistry; // Return LockAddressRegistry by LockFarm
