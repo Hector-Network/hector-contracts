@@ -1005,10 +1005,25 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         onlyPolicy
     {
         require(_lockingPeriod > 0, 'Invalid locking period');
-        require(_discount > 0 && _discount < 10000, 'Invalid discount');
+        require(_discount < 10000, 'Invalid discount');
+
+        // remove locking period
+        if (_discount == 0) {
+            uint256 length = lockingPeriods.length;
+            for (uint256 i = 0; i < length; i++) {
+                if (lockingPeriods[i] == _lockingPeriod) {
+                    lockingPeriods[i] = lockingPeriods[length - 1];
+                    delete lockingPeriods[length - 1];
+                    lockingPeriods.pop();
+                }
+            }
+        }
+        // push if new locking period
+        else if (lockingDiscounts[_lockingPeriod] == 0) {
+            lockingPeriods.push(_lockingPeriod);
+        }
 
         lockingDiscounts[_lockingPeriod] = _discount;
-        lockingPeriods.push(_lockingPeriod);
     }
 
     function setMinPrice(uint256 _minimumPrice) external onlyPolicy {
