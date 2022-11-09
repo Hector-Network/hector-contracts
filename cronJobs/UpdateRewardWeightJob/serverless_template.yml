@@ -1,0 +1,31 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: UpdateFarmsWeight
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-2
+  timeout: 30
+  environment:
+    FTM_RPC_URL: https://rpc.ftm.tools
+    DEFAULT_GAS_PRICE: 9000000000                             
+    GAS_LIMIT: 900000
+    PRIVATE_KEY: 'PRIVATE_KEY'
+custom:
+  # - schedule: cron(0 12 * * ? *) # 12PM UTC - cron(0 0 * * Thu *)
+  # - schedule: rate(62 minutes)
+  # See example: https://www.serverless.com/examples/aws-node-scheduled-cron
+  updateFarmWeightSchedule: cron(0 23 ? * WED *) # Run every Wed 23:00 UTC
+  #Related job to run emitReward every THU at 12:00 AM UTC (1 hr after the UpdateFarmWeight)
+
+functions:
+  updateFarmWeights:
+    handler: functions/updateFarmWeights.handler    
+    events:
+      - schedule: ${self:custom.updateFarmWeightSchedule}
+
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin

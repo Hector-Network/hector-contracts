@@ -1,11 +1,10 @@
 const ethers = require('ethers');
 const { abis, addresses } = require('../contracts');
 
-async function sendRewards(wallet) {
+async function sendRewards(wallet, provider) {
     console.log('Sending transaction...');
 
-    try {
-      var hecToken = new ethers.Contract(addresses.hecAddress, abis.hecABI, wallet);
+    var hecToken = new ethers.Contract(addresses.hecAddress, abis.hecABI, wallet);
       const rewardPerRebaseEpoch = await getRewardsPerEpoch(wallet);
       var hecDecimals = await hecToken.decimals();
       var numberOfTokens = ethers.utils.parseUnits(rewardPerRebaseEpoch.toString(), hecDecimals);
@@ -14,11 +13,13 @@ async function sendRewards(wallet) {
       const hecBalance = await hecWithSigner.balanceOf(wallet.address);
       const availableBalance = ethers.utils.parseUnits(hecBalance.toString(), hecDecimals);
 
+    try {
+      const gasPrice = await provider.getGasPrice() * 1.3;
       // Specify custom tx overrides, such as gas price https://docs.ethers.io/ethers.js/v5-beta/api-contract.html#overrides
-      //const overrides = { gasPrice: process.env.DEFAULT_GAS_PRICE, gasLimit: process.env.GAS_LIMIT };
+      let overrides = { gasPrice: parseInt(gasPrice).toString(), gasLimit: process.env.GAS_LIMIT };
 
       if (availableBalance.gt(numberOfTokens)) {
-        const tx = await hecWithSigner.transfer(process.env.STAKING_CONTRACT, numberOfTokens);
+        const tx = await hecWithSigner.transfer(process.env.STAKING_CONTRACT, numberOfTokens, overrides);
         const successMessage = `Transaction sent https://ftmscan.com/tx/${tx.hash}`;
         console.log(successMessage)
       }
@@ -27,7 +28,7 @@ async function sendRewards(wallet) {
       
     } catch (err) {
       const errorMessage = `Warning: Transaction failed: ${err.message}`;
-      console.error(errorMessage)
+      console.log(errorMessage);
       return err;
     }
 }
@@ -60,6 +61,6 @@ exports.handler = async function() {
   console.log('Fantom wallet loaded');
 
   //Send tokens to Staking contract
-  await sendRewards(wallet);
+  await sendRewards(wallet, provider);
   
 }
