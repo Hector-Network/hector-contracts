@@ -226,7 +226,7 @@ contract Voting is ReentrancyGuard, Ownable {
 	uint256 public voteDelay = 604800; // Production Mode
 
 	mapping(LockFarm => uint256) public farmWeights; // Return farm weights
-	LockFarm[] internal farms; // Farms array
+	LockFarm[] public farms; // Farms array
 	mapping(LockFarm => bool) public farmStatus; // Return status of the farm
 	mapping(LockFarm => FNFT) public fnft; // Return FNFT for each LockFarm
 	mapping(LockFarm => TokenVault) public tokenVault; // Return TokenVault for each LockFarm
@@ -236,10 +236,10 @@ contract Voting is ReentrancyGuard, Ownable {
 	mapping(LockFarm => LockAddressRegistry) internal lockAddressRegistry; // Return LockAddressRegistry by LockFarm
 	mapping(FNFT => bool) internal canVoteByFNFT; // Return status of user can vote by FNFT
 	mapping(IERC20 => bool) internal canVoteByERC20; // Return status of user can vote by StakingToken
-	mapping(FNFT => mapping(uint256 => uint256)) internal lastVotedByFNFT; // Return last time of voted FNFT
+	mapping(FNFT => mapping(uint256 => uint256)) public lastVotedByFNFT; // Return last time of voted FNFT
 	FarmInfo[] internal farmInfo; // Store the every farmInfo
 	DepositInfo[] internal depositInfo; // Store the every deposit info by ERC20 token
-	mapping(address => LockFarm[]) internal farmVote; // Return farm list by user voted
+	mapping(address => LockFarm[]) public farmVote; // Return farm list by user voted
 	mapping(address => mapping(LockFarm => uint256)) public userWeight; // Return user's voting weigths by lockfarm
 	mapping(address => uint256) public totalUserWeight; // Return total user's voting weigths
 
