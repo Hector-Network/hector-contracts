@@ -1,0 +1,32 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: rebasetopupjob
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-1
+  timeout: 30
+  environment:
+    FTM_RPC_URL: https://rpc.ftm.tools
+    DEFAULT_GAS_PRICE: 9000000000                             
+    GAS_LIMIT: 50000
+    STAKING_CONTRACT: '0xd12930c8deedafd788f437879cba1ad1e3908cc5'
+    REBASE_APR: 0.05
+    REBASE_WALLET_PRIVATE_KEY: 'REBASE_WALLET_PRIVATE_KEY'
+custom:
+  # - schedule: cron(0 12 * * ? *) # 12PM UTC - cron(0 0 * * Thu *)
+  # - schedule: rate(62 minutes)
+  # See example: https://www.serverless.com/examples/aws-node-scheduled-cron
+  rebaseTopUpSchedule: rate(8 hours) # Run every 8 hours
+
+functions:
+  rebaseTopUp:
+    handler: functions/rebaseTopUp.handler    
+    events:
+      - schedule: ${self:custom.rebaseTopUpSchedule}
+
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin

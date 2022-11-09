@@ -19,14 +19,20 @@ async function runTwapUpdate(contract, wallet, label) {
     }
 
 }
+async function getGasPrice(provider) {
+  const gasPrice = await ethers.provider.getGasPrice();
+}
 
-async function updateMultiChainOracle(contract, contractBsc, label) {
+async function updateMultiChainOracle(contract, contractBsc, provider, providerBSC, label) {
     console.log('Sending transaction...', label);
 
     try {
     // Specify custom tx overrides, such as gas price https://docs.ethers.io/ethers.js/v5-beta/api-contract.html#overrides
-    const overrides = { gasPrice: process.env.DEFAULT_GAS_PRICE, gasLimit: process.env.GAS_LIMIT };
-    const overridesBSC = { gasPrice: process.env.DEFAULT_GAS_PRICE_BSC, gasLimit: process.env.GAS_LIMIT_BSC };
+    const gasPriceFtm = await provider.getGasPrice() * 1.3;
+    const gasPriceBsc = await providerBSC.getGasPrice() * 1.3;
+
+    const overrides = { gasPrice: parseInt(gasPriceFtm).toString(), gasLimit: process.env.GAS_LIMIT };
+    const overridesBSC = { gasPrice: parseInt(gasPriceBsc).toString(), gasLimit: process.env.GAS_LIMIT_BSC };
 
      //Retrieves updated data from FTM
     let blockTimestampLast = await contract.blockTimestampLast();
@@ -116,19 +122,14 @@ exports.handler = async function() {
 
   console.log('Contract UniswapPairOracle_HEC_DAI_BSC loaded');
 
-
-  // await runTwapUpdate(    
-  //   contract_HEC_DAI,
-  //   wallet,
-  //   'HEC_DAI: ')
-
   await updateMultiChainOracle(    
     contract_HEC_DAI,
     contract_HEC_DAI_BSC, 
+    provider,
+    providerBSC,
     'updateMultiChainOracle: ')
 
     
-
   console.log('Completed');
   return true;
 }
