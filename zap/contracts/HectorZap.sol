@@ -42,8 +42,8 @@ contract HectorZap is Ownable {
         require(fee < 1000);
         uniswapFee = fee;
 
-        _setNotLP(WFTM);
-        _setNotLP(HEC);
+        _setNotLP(wftm);
+        _setNotLP(hec);
     }
 
     receive() external payable {}
