@@ -21,3 +21,15 @@ voting/cache
 voting/artifacts
 voting/types
 
+#### Voting ####
+dex/node_modules/
+dex/.env
+dex/coverage
+dex/coverage.json
+dex/typechain
+
+#Hardhat files
+dex/cache
+dex/artifacts
+dex/types
+
