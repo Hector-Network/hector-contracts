@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
-pragma abicoder v2;
 
 import "../lib/Utils.sol";
 
-interface IAdapter {
+interface IBuyAdapter {
     /**
      * @dev Certain adapters needs to be initialized.
      * This method will be called from Augustus
@@ -13,17 +12,21 @@ interface IAdapter {
 
     /**
      * @dev The function which performs the swap on an exchange.
+     * @param index Index of the router in the adapter
      * @param fromToken Address of the source token
      * @param toToken Address of the destination token
-     * @param fromAmount Amount of source tokens to be swapped
-     * @param networkFee NOT USED - Network fee to be used in this router
-     * @param route Route to be followed
+     * @param maxFromAmount Max amount of source tokens to be swapped
+     * @param toAmount Amount of destination tokens to be received
+     * @param targetExchange Target exchange address to be called
+     * @param payload extra data which needs to be passed to this router
      */
-    function swap(
+    function buy(
+        uint256 index,
         IERC20 fromToken,
         IERC20 toToken,
-        uint256 fromAmount,
-        uint256 networkFee,
-        Utils.Route[] calldata route
+        uint256 maxFromAmount,
+        uint256 toAmount,
+        address targetExchange,
+        bytes calldata payload
     ) external payable;
 }

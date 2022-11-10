@@ -2,29 +2,31 @@
 pragma solidity ^0.8.7;
 pragma experimental ABIEncoderV2;
 
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
-import '@openzeppelin/contracts/utils/math/SafeMath.sol';
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "../ITokenTransferProxy.sol";
 
-// interface IERC20Permit {
-//     function permit(
-//         address owner,
-//         address spender,
-//         uint256 amount,
-//         uint256 deadline,
-//         uint8 v,
-//         bytes32 r,
-//         bytes32 s
-//     ) external;
-// }
+interface IERC20PermitLegacy {
+    function permit(
+        address holder,
+        address spender,
+        uint256 nonce,
+        uint256 expiry,
+        bool allowed,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external;
+}
 
 library Utils {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address constant ETH_ADDRESS =
-        address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    address private constant ETH_ADDRESS = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
 
-    uint256 constant MAX_UINT = type(uint256).max;
+    uint256 private constant MAX_UINT = type(uint256).max;
 
     /**
    * @param fromToken Address of the source token
@@ -43,6 +45,22 @@ library Utils {
         uint256 expectedAmount;
         address payable beneficiary;
         Utils.Path[] path;
+        address payable partner;
+        uint256 feePercent;
+        bytes permit;
+        uint256 deadline;
+        bytes16 uuid;
+    }
+
+    struct BuyData {
+        address adapter;
+        address fromToken;
+        address toToken;
+        uint256 fromAmount;
+        uint256 toAmount;
+        uint256 expectedAmount;
+        address payable beneficiary;
+        Utils.Route[] route;
         address payable partner;
         uint256 feePercent;
         bytes permit;
@@ -85,7 +103,7 @@ library Utils {
     struct Adapter {
         address payable adapter;
         uint256 percent;
-        uint256 networkFee;
+        uint256 networkFee; //NOT USED
         Route[] route;
     }
 
@@ -94,7 +112,7 @@ library Utils {
         address targetExchange;
         uint256 percent;
         bytes payload;
-        uint256 networkFee; //Network fee is associated with 0xv3 trades
+        uint256 networkFee; //NOT USED - Network fee is associated with 0xv3 trades
     }
 
     struct MegaSwapPath {
@@ -104,7 +122,7 @@ library Utils {
 
     struct Path {
         address to;
-        uint256 totalNetworkFee; //Network fee is associated with 0xv3 trades
+        uint256 totalNetworkFee; //NOT USED - Network fee is associated with 0xv3 trades
         Adapter[] adapters;
     }
 
@@ -124,10 +142,7 @@ library Utils {
         if (token != ETH_ADDRESS) {
             IERC20 _token = IERC20(token);
 
-            uint256 allowance = _token.allowance(
-                address(this),
-                addressToApprove
-            );
+            uint256 allowance = _token.allowance(address(this), addressToApprove);
 
             if (allowance < amount) {
                 _token.safeApprove(addressToApprove, 0);
@@ -143,9 +158,7 @@ library Utils {
     ) internal {
         if (amount > 0) {
             if (token == ETH_ADDRESS) {
-                (bool result, ) = destination.call{value: amount, gas: 10000}(
-                    ""
-                );
+                (bool result, ) = destination.call{ value: amount, gas: 10000 }("");
                 require(result, "Failed to transfer Ether");
             } else {
                 IERC20(token).safeTransfer(destination, amount);
@@ -153,11 +166,7 @@ library Utils {
         }
     }
 
-    function tokenBalance(address token, address account)
-        internal
-        view
-        returns (uint256)
-    {
+    function tokenBalance(address token, address account) internal view returns (uint256) {
         if (token == ETH_ADDRESS) {
             return account.balance;
         } else {
@@ -167,10 +176,20 @@ library Utils {
 
     function permit(address token, bytes memory _permit) internal {
         if (_permit.length == 32 * 7) {
-            (bool success, ) = token.call(
-                abi.encodePacked(IERC20Permit.permit.selector, _permit)
-            );
+            (bool success, ) = token.call(abi.encodePacked(IERC20Permit.permit.selector, _permit));
             require(success, "Permit failed");
+        }
+
+        if (_permit.length == 32 * 8) {
+            (bool success, ) = token.call(abi.encodePacked(IERC20PermitLegacy.permit.selector, _permit));
+            require(success, "Permit failed");
+        }
+    }
+
+    function transferETH(address payable destination, uint256 amount) internal {
+        if (amount > 0) {
+            (bool result, ) = destination.call{ value: amount, gas: 10000 }("");
+            require(result, "Transfer ETH failed");
         }
     }
 }

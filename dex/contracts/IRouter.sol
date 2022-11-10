@@ -4,7 +4,7 @@ pragma solidity ^0.8.7;
 interface IRouter {
     /**
      * @dev Certain routers/exchanges needs to be initialized.
-     * This method will be called from HectorSwapper
+     * This method will be called from Augustus
      */
     function initialize(bytes calldata data) external;
 
@@ -13,8 +13,10 @@ interface IRouter {
      */
     function getKey() external pure returns (bytes32);
 
-    event Swapped(
+    event SwappedV3(
         bytes16 uuid,
+        address partner,
+        uint256 feePercent,
         address initiator,
         address indexed beneficiary,
         address indexed srcToken,
@@ -24,15 +26,16 @@ interface IRouter {
         uint256 expectedAmount
     );
 
-    event Bought(
+    event BoughtV3(
         bytes16 uuid,
+        address partner,
+        uint256 feePercent,
         address initiator,
         address indexed beneficiary,
         address indexed srcToken,
         address indexed destToken,
         uint256 srcAmount,
-        uint256 receivedAmount
+        uint256 receivedAmount,
+        uint256 expectedAmount
     );
-
-    event FeeTaken(uint256 fee, uint256 partnerShare, uint256 paraswapShare);
 }
