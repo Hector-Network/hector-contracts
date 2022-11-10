@@ -41,9 +41,6 @@ contract HectorZap is Ownable {
 
         require(fee < 1000);
         uniswapFee = fee;
-
-        _setNotLP(wftm);
-        _setNotLP(hec);
     }
 
     receive() external payable {}
@@ -375,14 +372,6 @@ contract HectorZap is Ownable {
         return amounts[amounts.length - 1];
     }
 
-    function _setNotLP(address token) internal {
-        bool needPush = notLP[token] == false;
-        notLP[token] = true;
-        if (needPush) {
-            tokens.push(token);
-        }
-    }
-
     /* ========== RESTRICTED FUNCTIONS ========== */
 
     function setRoutePairAddress(address asset, address route)
@@ -397,8 +386,14 @@ contract HectorZap is Ownable {
         uniswapFee = fee;
     }
 
-    function setNotLP(address token) public onlyOwner {
-        _setNotLP(token);
+    function setNotLP(address[] memory _tokens) public onlyOwner {
+        for (uint256 i = 0; i < _tokens.length; i++) {
+            address token = _tokens[i];
+            if (notLP[token] == false) {
+                notLP[token] = true;
+                tokens.push(token);
+            }
+        }
     }
 
     function removeToken(uint256 i) external onlyOwner {

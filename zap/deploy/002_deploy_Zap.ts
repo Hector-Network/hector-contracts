@@ -37,8 +37,12 @@ const deployZap: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     log: true,
   });
   const zapContract = await ethers.getContract('HectorZap', deployer);
-  await zapContract.setNotLP(usdcTokenAddress);
-  await zapContract.setNotLP(torTokenAddress);
+  await zapContract.setNotLP([
+    hectorTokenAddress,
+    usdcTokenAddress,
+    torTokenAddress,
+    wftmTokenAddress,
+  ]);
 
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
