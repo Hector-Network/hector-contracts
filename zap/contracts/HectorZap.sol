@@ -4,6 +4,7 @@ pragma solidity ^0.8.7;
 import '@openzeppelin/contracts/access/Ownable.sol';
 import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 
+import './libraries/Babylonian.sol';
 import './interfaces/IUniswapV2Pair.sol';
 import './interfaces/IUniswapV2Router02.sol';
 import './interfaces/IWETH.sol';
@@ -14,11 +15,11 @@ contract HectorZap is Ownable {
     /* ========== CONSTANT VARIABLES ========== */
 
     address public immutable HEC;
-    address public immutable USDC;
-    address public immutable TOR;
     address public immutable WFTM;
 
     IUniswapV2Router02 public immutable ROUTER;
+
+    uint256 private uniswapFee;
 
     /* ========== STATE VARIABLES ========== */
 
@@ -29,22 +30,20 @@ contract HectorZap is Ownable {
     /* ========== CONSTRUCTOR ========== */
 
     constructor(
-        address _hec,
-        address _usdc,
-        address _tor,
-        address _wftm,
-        address _router
+        address hec,
+        address wftm,
+        address router,
+        uint256 fee
     ) {
-        HEC = _hec;
-        USDC = _usdc;
-        TOR = _tor;
-        WFTM = _wftm;
-        ROUTER = IUniswapV2Router02(_router);
+        HEC = hec;
+        WFTM = wftm;
+        ROUTER = IUniswapV2Router02(router);
+
+        require(fee < 1000);
+        uniswapFee = fee;
 
         _setNotLP(WFTM);
-        _setNotLP(USDC);
         _setNotLP(HEC);
-        _setNotLP(TOR);
     }
 
     receive() external payable {}
@@ -57,6 +56,20 @@ contract HectorZap is Ownable {
 
     function routePair(address _address) external view returns (address) {
         return routePairAddresses[_address];
+    }
+
+    function calculateSwapInAmount(
+        uint256 reserveIn,
+        uint256 userIn,
+        uint256 fee
+    ) public pure returns (uint256) {
+        return
+            (Babylonian.sqrt(
+                reserveIn *
+                    ((userIn * (uint256(4000) - (4 * fee)) * 1000) +
+                        (reserveIn *
+                            ((uint256(4000) - (4 * fee)) * 1000 + fee * fee)))
+            ) - (reserveIn * (2000 - fee))) / (2000 - 2 * fee);
     }
 
     /* ========== External Functions ========== */
@@ -77,7 +90,14 @@ contract HectorZap is Ownable {
                 // swap half amount for other
                 address other = _from == token0 ? token1 : token0;
                 _approveTokenIfNeeded(other);
-                uint256 sellAmount = amount / 2;
+
+                (uint256 rsv0, uint256 rsv1, ) = pair.getReserves();
+                uint256 sellAmount = calculateSwapInAmount(
+                    _from == token0 ? rsv0 : rsv1,
+                    amount,
+                    uniswapFee
+                );
+
                 uint256 otherAmount = _swap(
                     _from,
                     sellAmount,
@@ -370,6 +390,11 @@ contract HectorZap is Ownable {
         onlyOwner
     {
         routePairAddresses[asset] = route;
+    }
+
+    function setFee(uint256 fee) external onlyOwner {
+        require(fee < 1000);
+        uniswapFee = fee;
     }
 
     function setNotLP(address token) public onlyOwner {

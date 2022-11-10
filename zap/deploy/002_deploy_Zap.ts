@@ -22,19 +22,23 @@ const deployZap: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const wftmTokenAddress = '0xf1277d1Ed8AD466beddF92ef448A132661956621';
   const spookyRouterAddress = '0xa6AD18C2aC47803E193F75c3677b14BF19B94883';
 
+  const fee = 30; // 0.3%
+
   /// Bond Pricing
   const params = [
     hectorTokenAddress,
-    usdcTokenAddress,
-    torTokenAddress,
     wftmTokenAddress,
     spookyRouterAddress,
+    fee,
   ];
   const zap = await deploy('HectorZap', {
     from: deployer.address,
     args: params,
     log: true,
   });
+  const zapContract = await ethers.getContract('HectorZap', deployer);
+  await zapContract.setNotLP(usdcTokenAddress);
+  await zapContract.setNotLP(torTokenAddress);
 
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
