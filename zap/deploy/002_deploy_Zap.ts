@@ -43,6 +43,8 @@ const deployZap: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     torTokenAddress,
     wftmTokenAddress,
   ]);
+  await zapContract.setRoutePairAddress(usdcTokenAddress, hectorTokenAddress);
+  await zapContract.setRoutePairAddress(torTokenAddress, hectorTokenAddress);
 
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
