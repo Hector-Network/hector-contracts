@@ -9,10 +9,11 @@
     "compile": "hardhat compile",
     "size": "hardhat size-contracts",
     "test": "hardhat test --network ftmtest",
+    "clean": "hardhat clean",
     "deploy:kovan": "hardhat deploy --network kovan",
     "deploy:rinkeby": "hardhat deploy --network rinkeby",
-    "deploy:ftm": "hardhat deploy --network ftm",
-    "deploy:ftmtest": "hardhat deploy --network ftmtest"
+    "deploy:ftm": "hardhat run ./scripts/deploySwapper.js --network ftm",
+    "deploy:ftmtest": "hardhat run ./scripts/deploySwapper.js --network ftmtest"
   },
   "keywords": [],
   "author": "",

@@ -7,7 +7,7 @@ import "../lib/Utils.sol";
 interface IAdapter {
     /**
      * @dev Certain adapters needs to be initialized.
-     * This method will be called from Augustus
+     * This method will be called from Hector
      */
     function initialize(bytes calldata data) external;
 

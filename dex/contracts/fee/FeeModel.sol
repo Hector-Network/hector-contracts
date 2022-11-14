@@ -2,13 +2,13 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "../AugustusStorage.sol";
+import "../HectorStorage.sol";
 import "../lib/Utils.sol";
 import "./IFeeClaimer.sol";
 // helpers
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract FeeModel is AugustusStorage {
+contract FeeModel is HectorStorage {
     using SafeMath for uint256;
 
     uint256 public immutable partnerSharePercent;

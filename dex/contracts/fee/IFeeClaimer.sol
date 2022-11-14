@@ -6,7 +6,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 interface IFeeClaimer {
     /**
      * @notice register partner's, affiliate's and PP's fee
-     * @dev only callable by AugustusSwapper contract
+     * @dev only callable by HectorSwapper contract
      * @param _account account address used to withdraw fees
      * @param _token token address
      * @param _fee fee amount in token

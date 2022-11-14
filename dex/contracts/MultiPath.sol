@@ -5,7 +5,7 @@ pragma solidity ^0.8.7;
 pragma abicoder v2;
 
 import "./IRouter.sol";
-import "./IAugustusSwapperV5.sol";
+import "./IHectorSwapperV5.sol";
 import "./adapters/IAdapter.sol";
 import "./adapters/IBuyAdapter.sol";
 import "./fee/FeeModel.sol";
@@ -308,7 +308,7 @@ contract MultiPath is FeeModel, IRouter {
 
                 //Check if exchange is supported
                 require(
-                    IAugustusSwapperV5(address(this)).hasRole(
+                    IHectorSwapperV5(address(this)).hasRole(
                         WHITELISTED_ROLE,
                         adapter.adapter
                     ),
@@ -350,7 +350,7 @@ contract MultiPath is FeeModel, IRouter {
     ) private returns (uint256) {
         //Check if exchange is supported
         require(
-            IAugustusSwapperV5(address(this)).hasRole(
+            IHectorSwapperV5(address(this)).hasRole(
                 WHITELISTED_ROLE,
                 adapter
             ),

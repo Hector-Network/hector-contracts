@@ -11,16 +11,16 @@ import "./fee/IFeeClaimer.sol";
 
 contract SimpleSwap is FeeModel, IRouter {
     using SafeMath for uint256;
-    address public immutable augustusRFQ;
+    address public immutable HectorRFQ;
 
     /*solhint-disable no-empty-blocks*/
     constructor(
         uint256 _partnerSharePercent,
         uint256 _maxFeePercent,
         IFeeClaimer _feeClaimer,
-        address _augustusRFQ
+        address _HectorRFQ
     ) FeeModel(_partnerSharePercent, _maxFeePercent, _feeClaimer) {
-        augustusRFQ = _augustusRFQ;
+        HectorRFQ = _HectorRFQ;
     }
 
     /*solhint-enable no-empty-blocks*/
@@ -274,8 +274,8 @@ contract SimpleSwap is FeeModel, IRouter {
                 "Can not call TokenTransferProxy Contract"
             );
 
-            if (callees[i] == augustusRFQ) {
-                verifyAugustusRFQParams(startIndexes[i], exchangeData);
+            if (callees[i] == HectorRFQ) {
+                verifyHectorRFQParams(startIndexes[i], exchangeData);
             } else {
                 uint256 dataOffset = startIndexes[i];
                 bytes32 selector;
@@ -299,7 +299,7 @@ contract SimpleSwap is FeeModel, IRouter {
         }
     }
 
-    function verifyAugustusRFQParams(
+    function verifyHectorRFQParams(
         uint256 startIndex,
         bytes memory exchangeData
     ) private view {
@@ -372,7 +372,7 @@ contract SimpleSwap is FeeModel, IRouter {
                 );
             }
         } else {
-            revert("unrecognized AugustusRFQ method selector");
+            revert("unrecognized HectorRFQ method selector");
         }
     }
 

@@ -3,7 +3,7 @@ pragma solidity ^0.8.7;
 
 import "./ITokenTransferProxy.sol";
 
-contract AugustusStorage {
+contract HectorStorage {
     struct FeeStructure {
         uint256 partnerShare;
         bool noPositiveSlippage;
