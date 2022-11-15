@@ -1,0 +1,17 @@
+#node files
+node_modules
+
+#hardhat files
+cache
+artifacts
+types
+deployments
+
+#env
+.env
+
+# vscode settings
+.vscode
+
+# playground
+playground.ts
