@@ -6,9 +6,9 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
-import "./lib/Utils.sol";
-import "./lib/weth/IWETH.sol";
-import "./ITokenTransferProxy.sol";
+import "../lib/Utils.sol";
+import "../lib/weth/IWETH.sol";
+import "../ITokenTransferProxy.sol";
 
 contract SimpleSwapHelper {
 

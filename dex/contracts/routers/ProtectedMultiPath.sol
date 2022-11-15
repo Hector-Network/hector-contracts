@@ -1,53 +1,47 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.7;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "./HectorStorage.sol";
-import "./fee/FeeModelV2.sol";
-import "./lib/Utils.sol";
-import "./routers/IRouterV2.sol";
-import "./IHectorSwapperV5.sol";
-import "./ITokenTransferProxy.sol";
-import "./adapters/IAdapter.sol";
+pragma abicoder v2;
+
+import "./IRouter.sol";
+import "../IHectorSwapperV5.sol";
+import "../adapters/IAdapter.sol";
+import "../fee/FeeModel.sol";
+import "../fee/IFeeClaimer.sol";
 
 abstract contract ProtectedMultiPath is FeeModel, IRouter {
     using SafeMath for uint256;
 
-    constructor(uint256 _partnerSharePercent, uint256 _maxFeePercent)
-        FeeModel(_partnerSharePercent, _maxFeePercent)
-    {}
+    /*solhint-disable no-empty-blocks*/
+    constructor(
+        uint256 _partnerSharePercent,
+        uint256 _maxFeePercent,
+        IFeeClaimer _feeClaimer
+    ) FeeModel(_partnerSharePercent, _maxFeePercent, _feeClaimer) {}
 
-    function initialize() external pure {
+    /*solhint-enable no-empty-blocks*/
+
+    function initialize(bytes calldata) external pure {
         revert("METHOD NOT IMPLEMENTED");
     }
 
     function getKey() external pure override returns (bytes32) {
-        return
-            keccak256(abi.encodePacked("PROTECTED_MULTIPATH_ROUTER", "1.0.0"));
+        return keccak256(abi.encodePacked("PROTECTED_MULTIPATH_ROUTER", "1.0.0"));
     }
 
     /**
      * @dev The function which performs the multi path swap.
      * @param data Data required to perform swap.
      */
-    function protectedMultiSwap(Utils.SellData memory data)
-        public
-        payable
-        returns (uint256)
-    {
+    function protectedMultiSwap(Utils.SellData memory data) public payable returns (uint256) {
         require(data.deadline >= block.timestamp, "Deadline breached");
 
         address fromToken = data.fromToken;
         uint256 fromAmount = data.fromAmount;
+        require(msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0), "Incorrect msg.value");
         uint256 toAmount = data.toAmount;
         uint256 expectedAmount = data.expectedAmount;
-        address payable beneficiary = data.beneficiary == address(0)
-            ? payable(msg.sender)
-            : data.beneficiary;
+        address payable beneficiary = data.beneficiary == address(0) ? payable(msg.sender) : data.beneficiary;
         Utils.Path[] memory path = data.path;
         address toToken = path[path.length - 1].to;
 
@@ -56,29 +50,39 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
         //If source token is not ETH than transfer required amount of tokens
         //from sender to this contract
         transferTokensFromProxy(fromToken, fromAmount, data.permit);
+        if (_isTakeFeeFromSrcToken(data.feePercent)) {
+            // take fee from source token
+            fromAmount = takeFromTokenFee(fromToken, fromAmount, data.partner, data.feePercent);
+        }
 
         performSwap(fromToken, fromAmount, path);
 
         uint256 receivedAmount = Utils.tokenBalance(toToken, address(this));
 
-        require(
-            receivedAmount >= toAmount,
-            "Received amount of tokens are less then expected"
-        );
+        require(receivedAmount >= toAmount, "Received amount of tokens are less then expected");
 
-        takeFeeAndTransferTokens(
-            toToken,
-            expectedAmount,
-            receivedAmount,
-            beneficiary,
-            data.partner,
-            data.feePercent
-        );
+        if (!_isTakeFeeFromSrcToken(data.feePercent)) {
+            // take fee from dest token
+            takeToTokenFeeSlippageAndTransfer(
+                toToken,
+                expectedAmount,
+                receivedAmount,
+                beneficiary,
+                data.partner,
+                data.feePercent
+            );
+        } else {
+            // Fee is already taken from fromToken
+            // Transfer toToken to beneficiary
+            Utils.transferTokens(toToken, beneficiary, receivedAmount);
+        }
 
         retrieveEth();
 
-        emit Swapped(
+        emit SwappedV3(
             data.uuid,
+            data.partner,
+            data.feePercent,
             msg.sender,
             beneficiary,
             fromToken,
@@ -95,19 +99,14 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
      * @dev The function which performs the mega path swap.
      * @param data Data required to perform swap.
      */
-    function protectedMegaSwap(Utils.MegaSwapSellData memory data)
-        public
-        payable
-        returns (uint256)
-    {
+    function protectedMegaSwap(Utils.MegaSwapSellData memory data) public payable returns (uint256) {
         require(data.deadline >= block.timestamp, "Deadline breached");
         address fromToken = data.fromToken;
         uint256 fromAmount = data.fromAmount;
+        require(msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0), "Incorrect msg.value");
         uint256 toAmount = data.toAmount;
         uint256 expectedAmount = data.expectedAmount;
-        address payable beneficiary = data.beneficiary == address(0)
-            ? payable(msg.sender)
-            : data.beneficiary;
+        address payable beneficiary = data.beneficiary == address(0) ? payable(msg.sender) : data.beneficiary;
         Utils.MegaSwapPath[] memory path = data.path;
         address toToken = path[0].path[path[0].path.length - 1].to;
 
@@ -115,40 +114,45 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
 
         //if fromToken is not ETH then transfer tokens from user to this contract
         transferTokensFromProxy(fromToken, fromAmount, data.permit);
+        if (_isTakeFeeFromSrcToken(data.feePercent)) {
+            // take fee from source token
+            fromAmount = takeFromTokenFee(fromToken, fromAmount, data.partner, data.feePercent);
+        }
 
         for (uint8 i = 0; i < uint8(path.length); i++) {
-            uint256 _fromAmount = fromAmount.mul(path[i].fromAmountPercent).div(
-                10000
-            );
+            uint256 _fromAmount = fromAmount.mul(path[i].fromAmountPercent).div(10000);
             if (i == path.length - 1) {
-                _fromAmount = Utils.tokenBalance(
-                    address(fromToken),
-                    address(this)
-                );
+                _fromAmount = Utils.tokenBalance(address(fromToken), address(this));
             }
             performSwap(fromToken, _fromAmount, path[i].path);
         }
 
         uint256 receivedAmount = Utils.tokenBalance(toToken, address(this));
 
-        require(
-            receivedAmount >= toAmount,
-            "Received amount of tokens are less then expected"
-        );
+        require(receivedAmount >= toAmount, "Received amount of tokens are less then expected");
 
-        takeFeeAndTransferTokens(
-            toToken,
-            expectedAmount,
-            receivedAmount,
-            beneficiary,
-            data.partner,
-            data.feePercent
-        );
+        if (!_isTakeFeeFromSrcToken(data.feePercent)) {
+            // take fee from dest token
+            takeToTokenFeeSlippageAndTransfer(
+                toToken,
+                expectedAmount,
+                receivedAmount,
+                beneficiary,
+                data.partner,
+                data.feePercent
+            );
+        } else {
+            // Fee is already taken from fromToken
+            // Transfer toToken to beneficiary
+            Utils.transferTokens(toToken, beneficiary, receivedAmount);
+        }
 
         retrieveEth();
 
-        emit Swapped(
+        emit SwappedV3(
             data.uuid,
+            data.partner,
+            data.feePercent,
             msg.sender,
             beneficiary,
             fromToken,
@@ -175,45 +179,22 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
             address _fromToken = i > 0 ? path[i - 1].to : fromToken;
             address _toToken = path[i].to;
 
-            uint256 _fromAmount = i > 0
-                ? Utils.tokenBalance(_fromToken, address(this))
-                : fromAmount;
-            if (i > 0 && _fromToken == Utils.ethAddress()) {
-                _fromAmount = _fromAmount.sub(path[i].totalNetworkFee);
-            }
+            uint256 _fromAmount = i > 0 ? Utils.tokenBalance(_fromToken, address(this)) : fromAmount;
 
             for (uint256 j = 0; j < path[i].adapters.length; j++) {
                 Utils.Adapter memory adapter = path[i].adapters[j];
 
                 //Check if exchange is supported
                 require(
-                    IHectorSwapperV5(address(this)).hasRole(
-                        WHITELISTED_ROLE,
-                        adapter.adapter
-                    ),
+                    IHectorSwapperV5(address(this)).hasRole(WHITELISTED_ROLE, adapter.adapter),
                     "Exchange not whitelisted"
                 );
 
                 //Calculating tokens to be passed to the relevant exchange
                 //percentage should be 200 for 2%
-                uint256 fromAmountSlice = _fromAmount.mul(adapter.percent).div(
-                    10000
-                );
-                uint256 value = adapter.networkFee;
-
-                if (i > 0 && j == path[i].adapters.length.sub(1)) {
-                    uint256 remBal = Utils.tokenBalance(
-                        address(_fromToken),
-                        address(this)
-                    );
-
-                    fromAmountSlice = remBal;
-
-                    if (address(_fromToken) == Utils.ethAddress()) {
-                        //subtract network fee
-                        fromAmountSlice = fromAmountSlice.sub(value);
-                    }
-                }
+                uint256 fromAmountSlice = i > 0 && j == path[i].adapters.length.sub(1)
+                    ? Utils.tokenBalance(address(_fromToken), address(this))
+                    : _fromAmount.mul(adapter.percent).div(10000);
 
                 //DELEGATING CALL TO THE ADAPTER
                 (bool success, ) = adapter.adapter.delegatecall(
@@ -222,7 +203,7 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
                         _fromToken,
                         _toToken,
                         fromAmountSlice,
-                        adapter.networkFee,
+                        uint256(0), //adapter.networkFee,
                         adapter.route
                     )
                 );
@@ -239,19 +220,14 @@ abstract contract ProtectedMultiPath is FeeModel, IRouter {
     ) private {
         if (token != Utils.ethAddress()) {
             Utils.permit(token, permit);
-            tokenTransferProxy.transferFrom(
-                token,
-                msg.sender,
-                address(this),
-                amount
-            );
+            tokenTransferProxy.transferFrom(token, msg.sender, address(this), amount);
         }
     }
 
     function retrieveEth() private {
         uint256 balance = address(this).balance;
         if (balance > 0) {
-            (bool result, ) = msg.sender.call{value: balance, gas: 10000}("");
+            (bool result, ) = msg.sender.call{ value: balance, gas: 10000 }("");
             require(result, "Failed to transfer Ether");
         }
     }

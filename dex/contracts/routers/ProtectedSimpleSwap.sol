@@ -3,45 +3,39 @@ pragma solidity ^0.8.7;
 pragma abicoder v2;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./lib/Utils.sol";
+import "../lib/Utils.sol";
 import "./IRouter.sol";
-import "./lib/weth/IWETH.sol";
-import "./fee/FeeModel.sol";
-import "./fee/IFeeClaimer.sol";
+import "../lib/weth/IWETH.sol";
+import "../fee/FeeModel.sol";
+import "../fee/IFeeClaimer.sol";
 
-contract SimpleSwap is FeeModel, IRouter {
+contract ProtectedSimpleSwap is FeeModel, IRouter {
     using SafeMath for uint256;
-    address public immutable HectorRFQ;
+    address public immutable augustusRFQ;
 
     /*solhint-disable no-empty-blocks*/
     constructor(
         uint256 _partnerSharePercent,
         uint256 _maxFeePercent,
         IFeeClaimer _feeClaimer,
-        address _HectorRFQ
+        address _augustusRFQ
     ) FeeModel(_partnerSharePercent, _maxFeePercent, _feeClaimer) {
-        HectorRFQ = _HectorRFQ;
+        augustusRFQ = _augustusRFQ;
     }
 
     /*solhint-enable no-empty-blocks*/
 
-    function initialize(bytes calldata) external pure override {
+    function initialize(bytes calldata) external pure {
         revert("METHOD NOT IMPLEMENTED");
     }
 
     function getKey() external pure override returns (bytes32) {
-        return keccak256(abi.encodePacked("SIMPLE_SWAP_ROUTER", "1.0.0"));
+        return keccak256(abi.encodePacked("PROTECTED_SIMPLE_SWAP_ROUTER", "1.0.0"));
     }
 
-    function simpleSwap(Utils.SimpleData memory data)
-        public
-        payable
-        returns (uint256 receivedAmount)
-    {
+    function protectedSimpleSwap(Utils.SimpleData memory data) public payable returns (uint256 receivedAmount) {
         require(data.deadline >= block.timestamp, "Deadline breached");
-        address payable beneficiary = data.beneficiary == address(0)
-            ? payable(msg.sender)
-            : data.beneficiary;
+        address payable beneficiary = data.beneficiary == address(0) ? payable(msg.sender) : data.beneficiary;
         receivedAmount = performSimpleSwap(
             data.callees,
             data.exchangeData,
@@ -74,11 +68,9 @@ contract SimpleSwap is FeeModel, IRouter {
         return receivedAmount;
     }
 
-    function simpleBuy(Utils.SimpleData calldata data) external payable {
+    function protectedSimpleBuy(Utils.SimpleData calldata data) external payable {
         require(data.deadline >= block.timestamp, "Deadline breached");
-        address payable beneficiary = data.beneficiary == address(0)
-            ? payable(msg.sender)
-            : data.beneficiary;
+        address payable beneficiary = data.beneficiary == address(0) ? payable(msg.sender) : data.beneficiary;
         (uint256 receivedAmount, uint256 remainingAmount) = performSimpleBuy(
             data.callees,
             data.exchangeData,
@@ -124,19 +116,10 @@ contract SimpleSwap is FeeModel, IRouter {
         bytes memory permit,
         address payable beneficiary
     ) private returns (uint256 receivedAmount) {
-        require(
-            msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0),
-            "Incorrect msg.value"
-        );
+        require(msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0), "Incorrect msg.value");
         require(toAmount > 0, "toAmount is too low");
-        require(
-            callees.length + 1 == startIndexes.length,
-            "Start indexes must be 1 greater then number of callees"
-        );
-        require(
-            callees.length == values.length,
-            "callees and values must have same length"
-        );
+        require(callees.length + 1 == startIndexes.length, "Start indexes must be 1 greater then number of callees");
+        require(callees.length == values.length, "callees and values must have same length");
 
         //If source token is not ETH than transfer required amount of tokens
         //from sender to this contract
@@ -146,10 +129,7 @@ contract SimpleSwap is FeeModel, IRouter {
 
         receivedAmount = Utils.tokenBalance(toToken, address(this));
 
-        require(
-            receivedAmount >= toAmount,
-            "Received amount of tokens are less then expected"
-        );
+        require(receivedAmount >= toAmount, "Received amount of tokens are less then expected");
 
         if (!_isTakeFeeFromSrcToken(feePercent)) {
             // take fee from dest token
@@ -161,12 +141,17 @@ contract SimpleSwap is FeeModel, IRouter {
                 partner,
                 feePercent
             );
+
+            // Transfer fromToken back to sender
+            uint256 remainingAmount = Utils.tokenBalance(fromToken, address(this));
+            Utils.transferTokens(fromToken, payable(msg.sender), remainingAmount);
         } else {
             // Transfer toToken to beneficiary
             Utils.transferTokens(toToken, beneficiary, receivedAmount);
 
             // take fee from source token
-            takeFromTokenFee(fromToken, fromAmount, partner, feePercent);
+            uint256 remainingAmount = Utils.tokenBalance(fromToken, address(this));
+            takeFromTokenFeeAndTransfer(fromToken, fromAmount, remainingAmount, partner, feePercent);
         }
 
         return receivedAmount;
@@ -187,19 +172,10 @@ contract SimpleSwap is FeeModel, IRouter {
         bytes memory permit,
         address payable beneficiary
     ) private returns (uint256 receivedAmount, uint256 remainingAmount) {
-        require(
-            msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0),
-            "Incorrect msg.value"
-        );
+        require(msg.value == (fromToken == Utils.ethAddress() ? fromAmount : 0), "Incorrect msg.value");
         require(toAmount > 0, "toAmount is too low");
-        require(
-            callees.length + 1 == startIndexes.length,
-            "Start indexes must be 1 greater then number of callees"
-        );
-        require(
-            callees.length == values.length,
-            "callees and values must have same length"
-        );
+        require(callees.length + 1 == startIndexes.length, "Start indexes must be 1 greater then number of callees");
+        require(callees.length == values.length, "callees and values must have same length");
 
         //If source token is not ETH than transfer required amount of tokens
         //from sender to this contract
@@ -209,22 +185,13 @@ contract SimpleSwap is FeeModel, IRouter {
 
         receivedAmount = Utils.tokenBalance(toToken, address(this));
 
-        require(
-            receivedAmount >= toAmount,
-            "Received amount of tokens are less then expected"
-        );
+        require(receivedAmount >= toAmount, "Received amount of tokens are less then expected");
 
         if (!_isTakeFeeFromSrcToken(feePercent)) {
             // take fee from dest token
-            takeToTokenFeeAndTransfer(
-                toToken,
-                receivedAmount,
-                beneficiary,
-                partner,
-                feePercent
-            );
+            takeToTokenFeeAndTransfer(toToken, receivedAmount, beneficiary, partner, feePercent);
 
-            // Transfer remaining token back to msg.sender
+            // Transfer fromToken to beneficiary
             remainingAmount = Utils.tokenBalance(fromToken, address(this));
             Utils.transferTokens(fromToken, payable(msg.sender), remainingAmount);
         } else {
@@ -253,12 +220,7 @@ contract SimpleSwap is FeeModel, IRouter {
     ) private {
         if (token != Utils.ethAddress()) {
             Utils.permit(token, permit);
-            tokenTransferProxy.transferFrom(
-                token,
-                msg.sender,
-                address(this),
-                amount
-            );
+            tokenTransferProxy.transferFrom(token, msg.sender, address(this), amount);
         }
     }
 
@@ -269,23 +231,17 @@ contract SimpleSwap is FeeModel, IRouter {
         uint256[] memory values
     ) private {
         for (uint256 i = 0; i < callees.length; i++) {
-            require(
-                callees[i] != address(tokenTransferProxy),
-                "Can not call TokenTransferProxy Contract"
-            );
+            require(callees[i] != address(tokenTransferProxy), "Can not call TokenTransferProxy Contract");
 
-            if (callees[i] == HectorRFQ) {
-                verifyHectorRFQParams(startIndexes[i], exchangeData);
+            if (callees[i] == augustusRFQ) {
+                verifyAugustusRFQParams(startIndexes[i], exchangeData);
             } else {
                 uint256 dataOffset = startIndexes[i];
                 bytes32 selector;
                 assembly {
                     selector := mload(add(exchangeData, add(dataOffset, 32)))
                 }
-                require(
-                    bytes4(selector) != IERC20.transferFrom.selector,
-                    "transferFrom not allowed for externalCall"
-                );
+                require(bytes4(selector) != IERC20.transferFrom.selector, "transferFrom not allowed for externalCall");
             }
 
             bool result = externalCall(
@@ -299,10 +255,7 @@ contract SimpleSwap is FeeModel, IRouter {
         }
     }
 
-    function verifyHectorRFQParams(
-        uint256 startIndex,
-        bytes memory exchangeData
-    ) private view {
+    function verifyAugustusRFQParams(uint256 startIndex, bytes memory exchangeData) private view {
         // Load the 4 byte function signature in the lower 32 bits
         // Also load the memory address of the calldata params which follow
         uint256 sig;
@@ -333,10 +286,7 @@ contract SimpleSwap is FeeModel, IRouter {
                 nonceAndMeta := mload(paramsStart)
             }
             address userAddress = address(uint160(nonceAndMeta));
-            require(
-                userAddress == address(0) || userAddress == msg.sender,
-                "unauthorized user"
-            );
+            require(userAddress == address(0) || userAddress == msg.sender, "unauthorized user");
         } else if (
             sig == 0x077822bd || // batchFillOrderWithTarget
             sig == 0xc8b81d63 || // batchFillOrderWithTargetNFT
@@ -366,13 +316,10 @@ contract SimpleSwap is FeeModel, IRouter {
                     nonceAndMeta := mload(add(arrayStart, mload(arrayPtr)))
                 }
                 address userAddress = address(uint160(nonceAndMeta));
-                require(
-                    userAddress == address(0) || userAddress == msg.sender,
-                    "unauthorized user"
-                );
+                require(userAddress == address(0) || userAddress == msg.sender, "unauthorized user");
             }
         } else {
-            revert("unrecognized HectorRFQ method selector");
+            revert("unrecognized AugustusRFQ method selector");
         }
     }
 
@@ -404,10 +351,6 @@ contract SimpleSwap is FeeModel, IRouter {
                 x,
                 0 // Output is ignored, therefore the output size is zero
             )
-            // let ptr := mload(0x40)
-            // let size := returndatasize()
-            // returndatacopy(ptr, 0, size)
-            // revert(ptr, size)
         }
         return result;
     }

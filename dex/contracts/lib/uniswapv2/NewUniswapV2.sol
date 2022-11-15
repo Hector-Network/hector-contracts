@@ -1,20 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
+pragma abicoder v2;
+
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+
 import "./NewUniswapV2Lib.sol";
-import "../../lib/Utils.sol";
-import "../../lib/weth/IWETH.sol";
+import "../Utils.sol";
+import "../weth/IWETH.sol";
 
 abstract contract NewUniswapV2 {
     using SafeMath for uint256;
+    address internal _toToken;
 
     // Pool bits are 255-161: fee, 160: direction flag, 159-0: address
     uint256 constant FEE_OFFSET = 161;
     uint256 constant DIRECTION_FLAG =
         0x0000000000000000000000010000000000000000000000000000000000000000;
-    address internal _toToken;
 
     struct UniswapV2Data {
         address weth;
@@ -27,14 +29,97 @@ abstract contract NewUniswapV2 {
         uint256 fromAmount,
         bytes calldata payload
     ) internal {
-        UniswapV2Data memory data = abi.decode(payload, (UniswapV2Data));
         _toToken = address(toToken);
+        UniswapV2Data memory data = abi.decode(payload, (UniswapV2Data));
         _swapOnUniswapV2Fork(
             address(fromToken),
             fromAmount,
             data.weth,
             data.pools
         );
+    }
+
+    function buyOnUniswapFork(
+        IERC20 fromToken,
+        IERC20 toToken,
+        uint256 amountInMax,
+        uint256 amountOut,
+        bytes calldata payload
+    ) internal {
+        _toToken = address(toToken);
+        UniswapV2Data memory data = abi.decode(payload, (UniswapV2Data));
+
+        _buyOnUniswapFork(
+            address(fromToken),
+            amountInMax,
+            amountOut,
+            data.weth,
+            data.pools
+        );
+    }
+
+    function _buyOnUniswapFork(
+        address tokenIn,
+        uint256 amountInMax,
+        uint256 amountOut,
+        address weth,
+        uint256[] memory pools
+    ) private returns (uint256 tokensSold) {
+        uint256 pairs = pools.length;
+
+        require(pairs != 0, "At least one pool required");
+
+        uint256[] memory amounts = new uint256[](pairs + 1);
+
+        amounts[pairs] = amountOut;
+
+        for (uint256 i = pairs; i != 0; --i) {
+            uint256 p = pools[i - 1];
+            amounts[i - 1] = NewUniswapV2Lib.getAmountIn(
+                amounts[i],
+                address(uint160(p)),
+                p & DIRECTION_FLAG == 0,
+                p >> FEE_OFFSET
+            );
+        }
+
+        tokensSold = amounts[0];
+        require(
+            tokensSold <= amountInMax,
+            "UniswapV2Router: INSUFFICIENT_INPUT_AMOUNT"
+        );
+        bool tokensBoughtEth;
+
+        if (tokenIn == Utils.ethAddress()) {
+            IWETH(weth).deposit{value: tokensSold}();
+            require(
+                IWETH(weth).transfer(address(uint160(pools[0])), tokensSold)
+            );
+        } else {
+            TransferHelper.safeTransfer(
+                tokenIn,
+                address(uint160(pools[0])),
+                tokensSold
+            );
+            tokensBoughtEth = weth != address(0);
+        }
+
+        for (uint256 i = 0; i < pairs; ++i) {
+            uint256 p = pools[i];
+            (uint256 amount0Out, uint256 amount1Out) = p & DIRECTION_FLAG == 0
+                ? (uint256(0), amounts[i + 1])
+                : (amounts[i + 1], uint256(0));
+            IUniswapV2Pair(address(uint160(p))).swap(
+                amount0Out,
+                amount1Out,
+                i + 1 == pairs ? address(this) : address(uint160(pools[i + 1])),
+                ""
+            );
+        }
+
+        if (tokensBoughtEth) {
+            IWETH(weth).withdraw(amountOut);
+        }
     }
 
     function _swapOnUniswapV2Fork(

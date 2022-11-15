@@ -5,11 +5,11 @@ pragma solidity ^0.8.7;
 pragma abicoder v2;
 
 import "./IRouter.sol";
-import "./IHectorSwapperV5.sol";
-import "./adapters/IAdapter.sol";
-import "./adapters/IBuyAdapter.sol";
-import "./fee/FeeModel.sol";
-import "./fee/IFeeClaimer.sol";
+import "../IHectorSwapperV5.sol";
+import "../adapters/IAdapter.sol";
+import "../adapters/IBuyAdapter.sol";
+import "../fee/FeeModel.sol";
+import "../fee/IFeeClaimer.sol";
 
 contract MultiPath is FeeModel, IRouter {
     using SafeMath for uint256;
