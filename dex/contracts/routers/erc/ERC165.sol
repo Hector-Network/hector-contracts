@@ -7,7 +7,7 @@ import "../IRouter.sol";
 abstract contract ERC165 is HectorStorage, IRouter {
     constructor() {}
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 

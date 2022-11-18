@@ -25,7 +25,7 @@ abstract contract SimpleSwapNFT is FeeModel, IRouterNFT {
 
     /*solhint-enable no-empty-blocks*/
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 

@@ -22,7 +22,7 @@ abstract contract NewUniswapV2Router is HectorStorage, IRouter {
     uint256 constant DIRECTION_FLAG =
         0x0000000000000000000000010000000000000000000000000000000000000000;
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 

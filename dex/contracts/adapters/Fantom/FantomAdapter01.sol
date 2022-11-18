@@ -29,7 +29,7 @@ import "../../lib/uniswapv2/dystopia/DystopiaUniswapV2Fork.sol";
  * 10 - DystopiaUniswapV2Fork
  * The above are the indexes
  */
-abstract contract FantomAdapter01 is
+contract FantomAdapter01 is
     IAdapter,
     NewUniswapV2,
     WethExchange,
@@ -52,7 +52,7 @@ abstract contract FantomAdapter01 is
         address _aaveV3WethGateway
     ) WethProvider(_weth) AaveV3(_aaveV3RefCode, _aaveV3Pool, _aaveV3WethGateway) {}
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 

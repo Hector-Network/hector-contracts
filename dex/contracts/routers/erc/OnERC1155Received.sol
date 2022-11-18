@@ -16,7 +16,7 @@ abstract contract OnERC1155Received is HectorStorage, IRouter {
     uint256[] internal __ids;
     uint256[] internal __values;
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 

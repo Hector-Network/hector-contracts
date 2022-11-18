@@ -11,12 +11,12 @@ import "../IBuyAdapter.sol";
  * 2- AugustusRFQ
  * The above are the indexes
  */
-abstract contract FantomBuyAdapter is IBuyAdapter, NewUniswapV2, AugustusRFQ {
+contract FantomBuyAdapter is IBuyAdapter, NewUniswapV2, AugustusRFQ {
     using SafeMath for uint256;
 
     constructor(address _weth) WethProvider(_weth) {}
 
-    function initialize() external pure {
+    function initialize(bytes calldata) external pure override {
         revert("METHOD NOT IMPLEMENTED");
     }
 
