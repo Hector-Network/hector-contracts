@@ -25,7 +25,7 @@ contract LockFarm is
     using SafeERC20 for IERC20;
 
     string public name;
-    IERC20 immutable stakingToken;
+    IERC20 public immutable stakingToken;
 
     uint256 public totalReward;
     uint256 public totalTokenSupply;
@@ -368,6 +368,8 @@ contract LockFarm is
     }
 
     function _claimAll(address owner) internal {
+        updateFarm();
+
         uint256 balance = getFNFT().balanceOf(owner);
 
         for (uint256 i = 0; i < balance; i++) {
