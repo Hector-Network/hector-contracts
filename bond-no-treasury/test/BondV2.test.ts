@@ -225,6 +225,7 @@ describe('Bond with no treasury', function () {
       const info = await bond.bondInfo(1);
       expect(info.depositId).equal(BigNumber.from(1));
       expect(info.principal).equal(principal.address);
+      expect(info.amount).equal(amount1);
       expect(info.payout).equal(payout1);
       expect(info.vesting).equal(fiveDays);
       expect(info.lastBlockAt).equal(
@@ -249,6 +250,7 @@ describe('Bond with no treasury', function () {
       const info = await bond.bondInfo(2);
       expect(info.depositId).equal(BigNumber.from(2));
       expect(info.principal).equal(principal.address);
+      expect(info.amount).equal(amount2);
       expect(info.payout).equal(payout2);
       expect(info.vesting).equal(oneWeeks);
       expect(info.lastBlockAt).equal(
