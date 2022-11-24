@@ -873,6 +873,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
     struct Bond {
         uint256 depositId; // deposit Id
         address principal; // token used to create bond
+        uint256 amount; // princial deposited amount
         uint256 payout; // rewardToken remaining to be paid
         uint256 vesting; // Blocks left to vest
         uint256 lastBlockAt; // Last interaction
@@ -1153,6 +1154,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         bondInfo[depositId] = Bond({
             depositId: depositId,
             principal: _principal,
+            amount: _amount,
             payout: payout,
             vesting: _lockingPeriod,
             lastBlockAt: block.timestamp,
