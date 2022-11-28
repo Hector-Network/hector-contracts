@@ -2,7 +2,179 @@
 pragma abicoder v2;
 pragma solidity 0.7.5;
 
-interface IOwnable {
+library AddressUpgradeable {
+    function isContract(address account) internal view returns (bool) {
+        // This method relies on extcodesize, which returns 0 for contracts in
+        // construction, since the code is only stored at the end of the
+        // constructor execution.
+
+        uint256 size;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
+    }
+
+    function sendValue(address payable recipient, uint256 amount) internal {
+        require(
+            address(this).balance >= amount,
+            'Address: insufficient balance'
+        );
+
+        // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
+        (bool success, ) = recipient.call{value: amount}('');
+        require(
+            success,
+            'Address: unable to send value, recipient may have reverted'
+        );
+    }
+
+    function functionCall(address target, bytes memory data)
+        internal
+        returns (bytes memory)
+    {
+        return functionCall(target, data, 'Address: low-level call failed');
+    }
+
+    function functionCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        return functionCallWithValue(target, data, 0, errorMessage);
+    }
+
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value
+    ) internal returns (bytes memory) {
+        return
+            functionCallWithValue(
+                target,
+                data,
+                value,
+                'Address: low-level call with value failed'
+            );
+    }
+
+    function functionCallWithValue(
+        address target,
+        bytes memory data,
+        uint256 value,
+        string memory errorMessage
+    ) internal returns (bytes memory) {
+        require(
+            address(this).balance >= value,
+            'Address: insufficient balance for call'
+        );
+        require(isContract(target), 'Address: call to non-contract');
+
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory returndata) = target.call{value: value}(
+            data
+        );
+        return _verifyCallResult(success, returndata, errorMessage);
+    }
+
+    function functionStaticCall(address target, bytes memory data)
+        internal
+        view
+        returns (bytes memory)
+    {
+        return
+            functionStaticCall(
+                target,
+                data,
+                'Address: low-level static call failed'
+            );
+    }
+
+    function functionStaticCall(
+        address target,
+        bytes memory data,
+        string memory errorMessage
+    ) internal view returns (bytes memory) {
+        require(isContract(target), 'Address: static call to non-contract');
+
+        // solhint-disable-next-line avoid-low-level-calls
+        (bool success, bytes memory returndata) = target.staticcall(data);
+        return _verifyCallResult(success, returndata, errorMessage);
+    }
+
+    function _verifyCallResult(
+        bool success,
+        bytes memory returndata,
+        string memory errorMessage
+    ) private pure returns (bytes memory) {
+        if (success) {
+            return returndata;
+        } else {
+            // Look for revert reason and bubble it up if present
+            if (returndata.length > 0) {
+                // The easiest way to bubble the revert reason is using memory via assembly
+
+                // solhint-disable-next-line no-inline-assembly
+                assembly {
+                    let returndata_size := mload(returndata)
+                    revert(add(32, returndata), returndata_size)
+                }
+            } else {
+                revert(errorMessage);
+            }
+        }
+    }
+}
+
+abstract contract Initializable {
+    bool private _initialized;
+    bool private _initializing;
+
+    modifier initializer() {
+        require(
+            _initializing || _isConstructor() || !_initialized,
+            'Initializable: contract is already initialized'
+        );
+
+        bool isTopLevelCall = !_initializing;
+        if (isTopLevelCall) {
+            _initializing = true;
+            _initialized = true;
+        }
+
+        _;
+
+        if (isTopLevelCall) {
+            _initializing = false;
+        }
+    }
+
+    function _isConstructor() private view returns (bool) {
+        return !AddressUpgradeable.isContract(address(this));
+    }
+}
+
+abstract contract ContextUpgradeable is Initializable {
+    function __Context_init() internal initializer {
+        __Context_init_unchained();
+    }
+
+    function __Context_init_unchained() internal initializer {}
+
+    function _msgSender() internal view virtual returns (address payable) {
+        return msg.sender;
+    }
+
+    function _msgData() internal view virtual returns (bytes memory) {
+        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
+        return msg.data;
+    }
+
+    uint256[50] private __gap;
+}
+
+interface IOwnableUpgradeable {
     function policy() external view returns (address);
 
     function renounceManagement() external;
@@ -12,7 +184,11 @@ interface IOwnable {
     function pullManagement() external;
 }
 
-contract Ownable is IOwnable {
+abstract contract OwnableUpgradeable is
+    IOwnableUpgradeable,
+    Initializable,
+    ContextUpgradeable
+{
     address internal _owner;
     address internal _newOwner;
 
@@ -25,7 +201,15 @@ contract Ownable is IOwnable {
         address indexed newOwner
     );
 
-    constructor() {
+    /**
+     * @dev Initializes the contract setting the deployer as the initial owner.
+     */
+    function __Ownable_init() internal initializer {
+        __Context_init_unchained();
+        __Ownable_init_unchained();
+    }
+
+    function __Ownable_init_unchained() internal initializer {
         _owner = msg.sender;
         emit OwnershipPushed(address(0), _owner);
     }
@@ -63,18 +247,85 @@ contract Ownable is IOwnable {
         emit OwnershipPulled(_owner, _newOwner);
         _owner = _newOwner;
     }
+
+    uint256[49] private __gap;
 }
 
-library SafeMath {
+library SafeMathUpgradeable {
+    function tryAdd(uint256 a, uint256 b)
+        internal
+        pure
+        returns (bool, uint256)
+    {
+        uint256 c = a + b;
+        if (c < a) return (false, 0);
+        return (true, c);
+    }
+
+    function trySub(uint256 a, uint256 b)
+        internal
+        pure
+        returns (bool, uint256)
+    {
+        if (b > a) return (false, 0);
+        return (true, a - b);
+    }
+
+    function tryMul(uint256 a, uint256 b)
+        internal
+        pure
+        returns (bool, uint256)
+    {
+        if (a == 0) return (true, 0);
+        uint256 c = a * b;
+        if (c / a != b) return (false, 0);
+        return (true, c);
+    }
+
+    function tryDiv(uint256 a, uint256 b)
+        internal
+        pure
+        returns (bool, uint256)
+    {
+        if (b == 0) return (false, 0);
+        return (true, a / b);
+    }
+
+    function tryMod(uint256 a, uint256 b)
+        internal
+        pure
+        returns (bool, uint256)
+    {
+        if (b == 0) return (false, 0);
+        return (true, a % b);
+    }
+
     function add(uint256 a, uint256 b) internal pure returns (uint256) {
         uint256 c = a + b;
         require(c >= a, 'SafeMath: addition overflow');
-
         return c;
     }
 
     function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        return sub(a, b, 'SafeMath: subtraction overflow');
+        require(b <= a, 'SafeMath: subtraction overflow');
+        return a - b;
+    }
+
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        if (a == 0) return 0;
+        uint256 c = a * b;
+        require(c / a == b, 'SafeMath: multiplication overflow');
+        return c;
+    }
+
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b > 0, 'SafeMath: division by zero');
+        return a / b;
+    }
+
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b > 0, 'SafeMath: modulo by zero');
+        return a % b;
     }
 
     function sub(
@@ -83,24 +334,7 @@ library SafeMath {
         string memory errorMessage
     ) internal pure returns (uint256) {
         require(b <= a, errorMessage);
-        uint256 c = a - b;
-
-        return c;
-    }
-
-    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-        if (a == 0) {
-            return 0;
-        }
-
-        uint256 c = a * b;
-        require(c / a == b, 'SafeMath: multiplication overflow');
-
-        return c;
-    }
-
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        return div(a, b, 'SafeMath: division by zero');
+        return a - b;
     }
 
     function div(
@@ -109,12 +343,7 @@ library SafeMath {
         string memory errorMessage
     ) internal pure returns (uint256) {
         require(b > 0, errorMessage);
-        uint256 c = a / b;
-        return c;
-    }
-
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        return mod(a, b, 'SafeMath: modulo by zero');
+        return a / b;
     }
 
     function mod(
@@ -122,216 +351,12 @@ library SafeMath {
         uint256 b,
         string memory errorMessage
     ) internal pure returns (uint256) {
-        require(b != 0, errorMessage);
+        require(b > 0, errorMessage);
         return a % b;
     }
-
-    function sqrrt(uint256 a) internal pure returns (uint256 c) {
-        if (a > 3) {
-            c = a;
-            uint256 b = add(div(a, 2), 1);
-            while (b < c) {
-                c = b;
-                b = div(add(div(a, b), b), 2);
-            }
-        } else if (a != 0) {
-            c = 1;
-        }
-    }
 }
 
-library Address {
-    function isContract(address account) internal view returns (bool) {
-        uint256 size;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
-    }
-
-    function sendValue(address payable recipient, uint256 amount) internal {
-        require(
-            address(this).balance >= amount,
-            'Address: insufficient balance'
-        );
-
-        // solhint-disable-next-line avoid-low-level-calls, avoid-call-value
-        (bool success, ) = recipient.call{value: amount}('');
-        require(
-            success,
-            'Address: unable to send value, recipient may have reverted'
-        );
-    }
-
-    function functionCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
-        return functionCall(target, data, 'Address: low-level call failed');
-    }
-
-    function functionCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        return _functionCallWithValue(target, data, 0, errorMessage);
-    }
-
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value
-    ) internal returns (bytes memory) {
-        return
-            functionCallWithValue(
-                target,
-                data,
-                value,
-                'Address: low-level call with value failed'
-            );
-    }
-
-    function functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 value,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        require(
-            address(this).balance >= value,
-            'Address: insufficient balance for call'
-        );
-        require(isContract(target), 'Address: call to non-contract');
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{value: value}(
-            data
-        );
-        return _verifyCallResult(success, returndata, errorMessage);
-    }
-
-    function _functionCallWithValue(
-        address target,
-        bytes memory data,
-        uint256 weiValue,
-        string memory errorMessage
-    ) private returns (bytes memory) {
-        require(isContract(target), 'Address: call to non-contract');
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.call{value: weiValue}(
-            data
-        );
-        if (success) {
-            return returndata;
-        } else {
-            // Look for revert reason and bubble it up if present
-            if (returndata.length > 0) {
-                // The easiest way to bubble the revert reason is using memory via assembly
-
-                // solhint-disable-next-line no-inline-assembly
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
-    }
-
-    function functionStaticCall(address target, bytes memory data)
-        internal
-        view
-        returns (bytes memory)
-    {
-        return
-            functionStaticCall(
-                target,
-                data,
-                'Address: low-level static call failed'
-            );
-    }
-
-    function functionStaticCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal view returns (bytes memory) {
-        require(isContract(target), 'Address: static call to non-contract');
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.staticcall(data);
-        return _verifyCallResult(success, returndata, errorMessage);
-    }
-
-    function functionDelegateCall(address target, bytes memory data)
-        internal
-        returns (bytes memory)
-    {
-        return
-            functionDelegateCall(
-                target,
-                data,
-                'Address: low-level delegate call failed'
-            );
-    }
-
-    function functionDelegateCall(
-        address target,
-        bytes memory data,
-        string memory errorMessage
-    ) internal returns (bytes memory) {
-        require(isContract(target), 'Address: delegate call to non-contract');
-
-        // solhint-disable-next-line avoid-low-level-calls
-        (bool success, bytes memory returndata) = target.delegatecall(data);
-        return _verifyCallResult(success, returndata, errorMessage);
-    }
-
-    function _verifyCallResult(
-        bool success,
-        bytes memory returndata,
-        string memory errorMessage
-    ) private pure returns (bytes memory) {
-        if (success) {
-            return returndata;
-        } else {
-            if (returndata.length > 0) {
-                assembly {
-                    let returndata_size := mload(returndata)
-                    revert(add(32, returndata), returndata_size)
-                }
-            } else {
-                revert(errorMessage);
-            }
-        }
-    }
-
-    function addressToString(address _address)
-        internal
-        pure
-        returns (string memory)
-    {
-        bytes32 _bytes = bytes32(uint256(_address));
-        bytes memory HEX = '0123456789abcdef';
-        bytes memory _addr = new bytes(42);
-
-        _addr[0] = '0';
-        _addr[1] = 'x';
-
-        for (uint256 i = 0; i < 20; i++) {
-            _addr[2 + i * 2] = HEX[uint8(_bytes[i + 12] >> 4)];
-            _addr[3 + i * 2] = HEX[uint8(_bytes[i + 12] & 0x0f)];
-        }
-
-        return string(_addr);
-    }
-}
-
-interface IERC20 {
+interface IERC20Upgradeable {
     function decimals() external view returns (uint8);
 
     function totalSupply() external view returns (uint256);
@@ -364,211 +389,8 @@ interface IERC20 {
     );
 }
 
-abstract contract ERC20 is IERC20 {
-    using SafeMath for uint256;
-
-    // TODO comment actual hash value.
-    bytes32 private constant ERC20TOKEN_ERC1820_INTERFACE_ID =
-        keccak256('ERC20Token');
-
-    mapping(address => uint256) internal _balances;
-
-    mapping(address => mapping(address => uint256)) internal _allowances;
-
-    uint256 internal _totalSupply;
-
-    string internal _name;
-
-    string internal _symbol;
-
-    uint8 internal _decimals;
-
-    constructor(
-        string memory name_,
-        string memory symbol_,
-        uint8 decimals_
-    ) {
-        _name = name_;
-        _symbol = symbol_;
-        _decimals = decimals_;
-    }
-
-    function name() public view returns (string memory) {
-        return _name;
-    }
-
-    function symbol() public view returns (string memory) {
-        return _symbol;
-    }
-
-    function decimals() public view override returns (uint8) {
-        return _decimals;
-    }
-
-    function totalSupply() public view override returns (uint256) {
-        return _totalSupply;
-    }
-
-    function balanceOf(address account)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _balances[account];
-    }
-
-    function transfer(address recipient, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        _transfer(msg.sender, recipient, amount);
-        return true;
-    }
-
-    function allowance(address owner, address spender)
-        public
-        view
-        virtual
-        override
-        returns (uint256)
-    {
-        return _allowances[owner][spender];
-    }
-
-    function approve(address spender, uint256 amount)
-        public
-        virtual
-        override
-        returns (bool)
-    {
-        _approve(msg.sender, spender, amount);
-        return true;
-    }
-
-    function transferFrom(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) public virtual override returns (bool) {
-        _transfer(sender, recipient, amount);
-        _approve(
-            sender,
-            msg.sender,
-            _allowances[sender][msg.sender].sub(
-                amount,
-                'ERC20: transfer amount exceeds allowance'
-            )
-        );
-        return true;
-    }
-
-    function increaseAllowance(address spender, uint256 addedValue)
-        public
-        virtual
-        returns (bool)
-    {
-        _approve(
-            msg.sender,
-            spender,
-            _allowances[msg.sender][spender].add(addedValue)
-        );
-        return true;
-    }
-
-    function decreaseAllowance(address spender, uint256 subtractedValue)
-        public
-        virtual
-        returns (bool)
-    {
-        _approve(
-            msg.sender,
-            spender,
-            _allowances[msg.sender][spender].sub(
-                subtractedValue,
-                'ERC20: decreased allowance below zero'
-            )
-        );
-        return true;
-    }
-
-    function _transfer(
-        address sender,
-        address recipient,
-        uint256 amount
-    ) internal virtual {
-        require(sender != address(0), 'ERC20: transfer from the zero address');
-        require(recipient != address(0), 'ERC20: transfer to the zero address');
-
-        _beforeTokenTransfer(sender, recipient, amount);
-
-        _balances[sender] = _balances[sender].sub(
-            amount,
-            'ERC20: transfer amount exceeds balance'
-        );
-        _balances[recipient] = _balances[recipient].add(amount);
-        emit Transfer(sender, recipient, amount);
-    }
-
-    function _mint(address account_, uint256 ammount_) internal virtual {
-        require(account_ != address(0), 'ERC20: mint to the zero address');
-        _beforeTokenTransfer(address(this), account_, ammount_);
-        _totalSupply = _totalSupply.add(ammount_);
-        _balances[account_] = _balances[account_].add(ammount_);
-        emit Transfer(address(this), account_, ammount_);
-    }
-
-    function _burn(address account, uint256 amount) internal virtual {
-        require(account != address(0), 'ERC20: burn from the zero address');
-
-        _beforeTokenTransfer(account, address(0), amount);
-
-        _balances[account] = _balances[account].sub(
-            amount,
-            'ERC20: burn amount exceeds balance'
-        );
-        _totalSupply = _totalSupply.sub(amount);
-        emit Transfer(account, address(0), amount);
-    }
-
-    function _approve(
-        address owner,
-        address spender,
-        uint256 amount
-    ) internal virtual {
-        require(owner != address(0), 'ERC20: approve from the zero address');
-        require(spender != address(0), 'ERC20: approve to the zero address');
-
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
-    }
-
-    function _beforeTokenTransfer(
-        address from_,
-        address to_,
-        uint256 amount_
-    ) internal virtual {}
-}
-
-interface IERC2612Permit {
-    function permit(
-        address owner,
-        address spender,
-        uint256 amount,
-        uint256 deadline,
-        uint8 v,
-        bytes32 r,
-        bytes32 s
-    ) external;
-
-    function nonces(address owner) external view returns (uint256);
-}
-
-library Counters {
-    using SafeMath for uint256;
+library CountersUpgradeable {
+    using SafeMathUpgradeable for uint256;
 
     struct Counter {
         uint256 _value; // default: 0
@@ -591,12 +413,12 @@ library Counters {
     }
 }
 
-library SafeERC20 {
-    using SafeMath for uint256;
-    using Address for address;
+library SafeERC20Upgradeable {
+    using SafeMathUpgradeable for uint256;
+    using AddressUpgradeable for address;
 
     function safeTransfer(
-        IERC20 token,
+        IERC20Upgradeable token,
         address to,
         uint256 value
     ) internal {
@@ -607,7 +429,7 @@ library SafeERC20 {
     }
 
     function safeTransferFrom(
-        IERC20 token,
+        IERC20Upgradeable token,
         address from,
         address to,
         uint256 value
@@ -619,7 +441,7 @@ library SafeERC20 {
     }
 
     function safeApprove(
-        IERC20 token,
+        IERC20Upgradeable token,
         address spender,
         uint256 value
     ) internal {
@@ -634,7 +456,7 @@ library SafeERC20 {
     }
 
     function safeIncreaseAllowance(
-        IERC20 token,
+        IERC20Upgradeable token,
         address spender,
         uint256 value
     ) internal {
@@ -652,7 +474,7 @@ library SafeERC20 {
     }
 
     function safeDecreaseAllowance(
-        IERC20 token,
+        IERC20Upgradeable token,
         address spender,
         uint256 value
     ) internal {
@@ -670,7 +492,13 @@ library SafeERC20 {
         );
     }
 
-    function _callOptionalReturn(IERC20 token, bytes memory data) private {
+    function _callOptionalReturn(IERC20Upgradeable token, bytes memory data)
+        private
+    {
+        // We need to perform a low level call here, to bypass Solidity's return data size checking mechanism, since
+        // we're implementing it ourselves. We use {Address.functionCall} to perform this call, which verifies that
+        // the target address contains contract code and also asserts for success in the low-level call.
+
         bytes memory returndata = address(token).functionCall(
             data,
             'SafeERC20: low-level call failed'
@@ -798,11 +626,11 @@ interface IBondPricing {
         returns (address);
 }
 
-contract HectorBondV2NoTreasuryFTMDepository is Ownable {
-    using Counters for Counters.Counter;
+contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
     using FixedPoint for *;
-    using SafeERC20 for IERC20;
-    using SafeMath for uint256;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using SafeMathUpgradeable for uint256;
 
     /* ======== EVENTS ======== */
 
@@ -823,16 +651,16 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable rewardToken; // token given as payment for bond
-    address public immutable DAO; // receives profit share from bond
+    address public rewardToken; // token given as payment for bond
+    address public DAO; // receives profit share from bond
     address public bondPricing; // bond price oracles
 
-    uint256 immutable rewardUnit; // HEC: 1e9, WETH: 1e18
+    uint256 rewardUnit; // HEC: 1e9, WETH: 1e18
 
     address[] public principals; // tokens used to create bond
     mapping(address => bool) public isPrincipal; // is token used to create bond
 
-    Counters.Counter public depositIdGenerator; // id for each deposit
+    CountersUpgradeable.Counter public depositIdGenerator; // id for each deposit
     mapping(address => mapping(uint256 => uint256)) public ownedDeposits; // each wallet owned index=>depositId
     mapping(uint256 => uint256) public depositIndexes; // each depositId and its index in ownedDeposits
     mapping(address => uint256) public depositCounts; // each wallet total deposit count
@@ -883,12 +711,12 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(
+    function initialize(
         string memory _name,
         address _rewardToken,
         address _DAO,
         address _bondPricing
-    ) {
+    ) external initializer {
         require(_rewardToken != address(0));
         rewardToken = _rewardToken;
         require(_DAO != address(0));
@@ -897,8 +725,10 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         bondPricing = _bondPricing;
 
         name = _name;
-        rewardUnit = 10**(IERC20(_rewardToken).decimals());
+        rewardUnit = 10**(IERC20Upgradeable(_rewardToken).decimals());
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
+
+        __Ownable_init();
     }
 
     /* ======== MODIFIER ======== */
@@ -1124,7 +954,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         }
 
         uint256 value = _amount.mul(rewardUnit).div(
-            10**IERC20(_principal).decimals()
+            10**IERC20Upgradeable(_principal).decimals()
         );
         uint256 payout = payoutFor(_principal, value, discount); // payout to bonder is computed
 
@@ -1134,14 +964,18 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         totalRemainingPayout = totalRemainingPayout.add(payout);
         require(
             totalRemainingPayout <=
-                IERC20(rewardToken).balanceOf(address(this)),
+                IERC20Upgradeable(rewardToken).balanceOf(address(this)),
             'Insufficient rewardToken'
         ); // has enough rewardToken balance for payout
 
         /**
             principal is transferred
          */
-        IERC20(_principal).safeTransferFrom(msg.sender, address(this), _amount);
+        IERC20Upgradeable(_principal).safeTransferFrom(
+            msg.sender,
+            address(this),
+            _amount
+        );
 
         totalPrincipals[_principal] = totalPrincipals[_principal].add(_amount);
 
@@ -1199,7 +1033,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
         totalRemainingPayout = totalRemainingPayout.sub(info.payout); // total remaining payout is decreased
 
-        IERC20(rewardToken).transfer(_recipient, info.payout); // send payout
+        IERC20Upgradeable(rewardToken).transfer(_recipient, info.payout); // send payout
 
         emit BondRedeemed(_depositId, _recipient, info.payout, 0); // emit bond data
 
@@ -1217,7 +1051,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 fee = tokenBalances[_principal][feeRecipient];
         require(fee > 0, 'no fee for principal and feeRecipient');
 
-        IERC20(_principal).safeTransfer(feeRecipient, fee);
+        IERC20Upgradeable(_principal).safeTransfer(feeRecipient, fee);
         tokenBalances[_principal][feeRecipient] = 0;
     }
 
@@ -1225,7 +1059,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         uint256 fund = tokenBalances[_principal][fundRecipient];
         require(fund > 0, 'no fund is available for fundRecipient');
 
-        IERC20(_principal).safeTransfer(fundRecipient, fund);
+        IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
         tokenBalances[_principal][fundRecipient] = 0;
     }
 
@@ -1322,7 +1156,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         );
         price_ = IUniswapPairOracle(oracle)
             .consult(rewardToken, rewardUnit)
-            .div(10**(IERC20(_principal).decimals() - 4));
+            .div(10**(IERC20Upgradeable(_principal).decimals() - 4));
         if (price_ < minimumPrice) {
             price_ = minimumPrice;
         }
@@ -1340,7 +1174,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         );
         price_ = IUniswapPairOracle(oracle)
             .consult(rewardToken, rewardUnit)
-            .div(10**(IERC20(_principal).decimals() - 4));
+            .div(10**(IERC20Upgradeable(_principal).decimals() - 4));
         if (price_ < minimumPrice) {
             price_ = minimumPrice;
         } else if (minimumPrice != 0) {
@@ -1359,7 +1193,7 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
         returns (uint256 price_)
     {
         price_ = bondPrice(_principal)
-            .mul(10**IERC20(_principal).decimals())
+            .mul(10**IERC20Upgradeable(_principal).decimals())
             .div(1e4);
     }
 
@@ -1422,8 +1256,8 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
 
         amount_ = (rewardUnit / 100)
             .mul(nativePrice)
-            .mul(10**IERC20(_principal).decimals())
-            .div(10**(4 + IERC20(rewardToken).decimals()));
+            .mul(10**IERC20Upgradeable(_principal).decimals())
+            .div(10**(4 + IERC20Upgradeable(rewardToken).decimals()));
     }
 
     /**
@@ -1515,11 +1349,11 @@ contract HectorBondV2NoTreasuryFTMDepository is Ownable {
      *  @return bool
      */
     function withdrawToken(address _token) external onlyPolicy returns (bool) {
-        uint256 amount = IERC20(_token).balanceOf(address(this));
+        uint256 amount = IERC20Upgradeable(_token).balanceOf(address(this));
         if (_token == rewardToken) {
             amount = amount.sub(totalRemainingPayout);
         }
-        IERC20(_token).safeTransfer(DAO, amount);
+        IERC20Upgradeable(_token).safeTransfer(DAO, amount);
         return true;
     }
 }
