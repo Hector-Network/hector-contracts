@@ -1,7 +1,7 @@
 import { MockBondPricing } from './../types/contracts/mock/MockBondPricing.sol/MockBondPricing';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { BigNumber, constants, utils } from 'ethers';
 import { increaseTime } from './../helper/helpers';
 import {
@@ -62,12 +62,12 @@ describe('Bond with no treasury', function () {
     const HectorBondV2NoTreasuryFTMDepository = await ethers.getContractFactory(
       'HectorBondV2NoTreasuryFTMDepository'
     );
-    bond = (await HectorBondV2NoTreasuryFTMDepository.deploy(
+    bond = (await upgrades.deployProxy(HectorBondV2NoTreasuryFTMDepository, [
       'TestBond',
       hectorToken.address,
       owner.address,
-      bondPricing.address
-    )) as HectorBondV2NoTreasuryFTMDepository;
+      bondPricing.address,
+    ])) as HectorBondV2NoTreasuryFTMDepository;
 
     await bond.initializeFundRecipient(fundRecipient.address, feeBps);
     await bond.initializeFeeRecipient(

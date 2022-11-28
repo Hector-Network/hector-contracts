@@ -1,7 +1,15 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { waitSeconds } from '../helper/helpers';
-import { constants, utils } from 'ethers';
+import { ethers } from 'hardhat';
+
+async function getImplementationAddress(proxyAddress: string) {
+  const implHex = await ethers.provider.getStorageAt(
+    proxyAddress,
+    '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+  );
+  return ethers.utils.hexStripZeros(implHex);
+}
 
 const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployments, ethers } = hre;
@@ -21,13 +29,8 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   /// Oracle Address
   const hec_dai_oracle = '0x227ccdfebea1355e73f1936c8a23ebb5f0181b3c';
-
-  /// Initial Params
-  const fundRecipient = '';
-  const feeBps = 3000;
-  const feeRecipients = [''];
-  const weightBps = [10000];
-  const minimumPrice = 10000;
+  const hec_usdc_oracle = '0xE813518093F05d0421db3EE248b59A15f96CeA81';
+  const hec_usdt_oracle = '0x2561a0A9083BD002762cB9008b08baed00BeE28e';
 
   /// Bond Pricing
   const bondPricing = await deploy('BondPricing', {
@@ -36,18 +39,21 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     log: true,
   });
   const bondPricingContract = await ethers.getContract('BondPricing', deployer);
+  await waitSeconds(2);
   await bondPricingContract.addOracle(
     hec_dai_oracle,
     hectorTokenAddress,
     daiTokenAddress
   );
+  await waitSeconds(2);
   await bondPricingContract.addOracle(
-    hec_dai_oracle,
+    hec_usdc_oracle,
     hectorTokenAddress,
     usdcTokenAddress
   );
+  await waitSeconds(2);
   await bondPricingContract.addOracle(
-    hec_dai_oracle,
+    hec_usdt_oracle,
     hectorTokenAddress,
     usdTTokenAddress
   );
@@ -63,24 +69,52 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     'HectorBondV2NoTreasuryFTMDepository',
     {
       from: deployer.address,
-      args: params,
+      args: [],
       log: true,
+      proxy: {
+        proxyContract: 'OpenZeppelinTransparentProxy',
+        execute: {
+          methodName: 'initialize',
+          args: params,
+        },
+      },
     }
   );
+  const hectorBondNoTreasuryDepositoryImplementation =
+    await getImplementationAddress(hectorBondNoTreasuryDepository.address);
 
   /// BondV2 Initialize
-  // const contract = await ethers.getContract(
-  //   'HectorBondV2NoTreasuryFTMDepository',
-  //   deployer
-  // );
+  const contract = await ethers.getContract(
+    'HectorBondV2NoTreasuryFTMDepository',
+    deployer
+  );
 
+  /// Initial Params
+  // const fundRecipient = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
+  // const feeBps = 1000;
+  // const feeRecipients = [
+  //   '0x906B738Dce4E20F672C1752e48f3627CF20b883a',
+  //   '0xa79E9d90abeE6fC7b36E05FB7F9692e2CF2b368b',
+  // ];
+  // const weightBps = [1000, 9000];
+  // const minimumPrice = 100;
+
+  // await waitSeconds(2);
   // await contract.setMinPrice(minimumPrice);
+  // await waitSeconds(1);
   // await contract.initializeFundRecipient(fundRecipient, feeBps);
+  // await waitSeconds(1);
   // await contract.initializeFeeRecipient(feeRecipients, weightBps);
+  // await waitSeconds(1);
   // await contract.initializeDepositTokens(principleAddresses);
 
+  // await waitSeconds(1);
+  // await contract.setLockingDiscount(5 * 60, 200); // 5 minutes lock - 2%
+  // await waitSeconds(1);
   // await contract.setLockingDiscount(5 * 24 * 3600, 500); // 5 days lock - 5%
-  // await contract.setLockingDiscount(5 * 7 * 24 * 3600, 1000); // 7 weeks lock - 10%
+  // await waitSeconds(1);
+  // await contract.setLockingDiscount(5 * 7 * 24 * 3600, 1000); // 5 weeks lock - 10%
+  // await waitSeconds(1);
   // await contract.setLockingDiscount(5 * 30 * 24 * 3600, 1500); // 5 months lock - 15%
 
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
@@ -93,12 +127,13 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         constructorArguments: [],
       });
     } catch (_) {}
+    await waitSeconds(10);
     try {
       await hre.run('verify:verify', {
-        address: hectorBondNoTreasuryDepository.address,
+        address: hectorBondNoTreasuryDepositoryImplementation,
         contract:
           'contracts/HectorBondV2NoTreasuryFTMDepository.sol:HectorBondV2NoTreasuryFTMDepository',
-        constructorArguments: params,
+        constructorArguments: [],
       });
     } catch (_) {}
   }
