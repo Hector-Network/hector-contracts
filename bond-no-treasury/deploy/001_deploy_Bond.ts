@@ -29,8 +29,8 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   /// Oracle Address
   const hec_dai_oracle = '0x227ccdfebea1355e73f1936c8a23ebb5f0181b3c';
-  const hec_usdc_oracle = '';
-  const hec_usdt_oracle = '';
+  const hec_usdc_oracle = '0xE813518093F05d0421db3EE248b59A15f96CeA81';
+  const hec_usdt_oracle = '0x2561a0A9083BD002762cB9008b08baed00BeE28e';
 
   /// Bond Pricing
   const bondPricing = await deploy('BondPricing', {
