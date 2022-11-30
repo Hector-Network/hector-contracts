@@ -674,6 +674,7 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
     uint256 public lastDecay; // reference block for debt decay
 
     uint256 public totalRemainingPayout; // total remaining rewardToken payout for bonding
+    uint256 public totalBondedValue; // total amount of payout assets sold to the bonders
     mapping(address => uint256) public totalPrincipals; // total principal bonded through this depository
 
     uint256 public minimumPrice; //min price
@@ -967,6 +968,9 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
                 IERC20Upgradeable(rewardToken).balanceOf(address(this)),
             'Insufficient rewardToken'
         ); // has enough rewardToken balance for payout
+
+        // total bonded value is increased
+        totalBondedValue = totalBondedValue.add(payout);
 
         /**
             principal is transferred
