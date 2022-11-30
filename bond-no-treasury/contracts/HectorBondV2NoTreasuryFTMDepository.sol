@@ -821,7 +821,6 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         require(_fundRecipient != address(0), '_fundRecipient address invalid');
         fundRecipient = _fundRecipient;
 
-        require(_feeBps > 0, '_feeBps should be greater than 0'); //? or maybe this rule is not neccessary
         feeBps = _feeBps;
     }
 
@@ -875,7 +874,6 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         require(_fundRecipient != address(0), '_fundRecipient address invalid');
         fundRecipient = _fundRecipient;
 
-        require(_feeBps > 0, '_feeBps should be greater than 0'); //? or maybe this rule is not neccessary
         feeBps = _feeBps;
     }
 
@@ -883,15 +881,20 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         address[] memory recipients,
         uint256[] memory weightBps
     ) external onlyPolicy {
-        require(feeRecipients.length > 0, 'fee recipients not yet initialized');
+        require(initialized[CONFIG.FEE_RECIPIENT], 'not yet initialzed');
+
+        require(
+            recipients.length > 0,
+            'there shall be at least one fee recipient'
+        );
         require(
             recipients.length == weightBps.length,
             'number of recipients and number of weightBps should match'
         );
-        require(
-            recipients.length == feeRecipients.length,
-            'must update all receipients together'
-        );
+
+        for (uint256 i = 0; i < feeRecipients.length; i++) {
+            feeWeightFor[feeRecipients[i]] = 0;
+        }
 
         uint256 total = 0;
         for (uint256 i = 0; i < recipients.length; i++) {
@@ -902,8 +905,12 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
             total += weightBps[i];
 
             require(
-                feeWeightFor[recipients[i]] > 0,
-                'all recipients must be in the fee weight initilization list'
+                recipients[i] != fundRecipient,
+                'address in recipients can be the same as fundRecipient'
+            );
+            require(
+                feeWeightFor[recipients[i]] == 0,
+                'duplicated address detected in recipients'
             );
             feeWeightFor[recipients[i]] = weightBps[i];
         }
@@ -1103,21 +1110,26 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
 
         uint256 fee = _amount.mul(feeBps).div(ONEinBPS);
         tokenBalances[_principal][fundRecipient] += _amount.sub(fee);
-        uint256 theLast = fee;
-        for (uint256 i = 0; i < feeRecipients.length - 1; i++) {
-            tokenBalances[_principal][feeRecipients[i]] += fee
-                .mul(feeWeightBps[i])
-                .div(ONEinBPS);
-            theLast = theLast.sub(fee.mul(feeWeightBps[i]).div(ONEinBPS));
+
+        if (fee > 0) {
+            uint256 theLast = fee;
+            for (uint256 i = 0; i < feeRecipients.length - 1; i++) {
+                tokenBalances[_principal][feeRecipients[i]] += fee
+                    .mul(feeWeightBps[i])
+                    .div(ONEinBPS);
+                theLast = theLast.sub(fee.mul(feeWeightBps[i]).div(ONEinBPS));
+            }
+            require(
+                theLast >=
+                    fee.mul(feeWeightBps[feeWeightBps.length - 1]).div(
+                        ONEinBPS
+                    ),
+                'fee calculation error'
+            );
+            tokenBalances[_principal][
+                feeRecipients[feeRecipients.length - 1]
+            ] += theLast;
         }
-        require(
-            theLast >=
-                fee.mul(feeWeightBps[feeWeightBps.length - 1]).div(ONEinBPS),
-            'fee calculation error'
-        );
-        tokenBalances[_principal][
-            feeRecipients[feeRecipients.length - 1]
-        ] += theLast;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
