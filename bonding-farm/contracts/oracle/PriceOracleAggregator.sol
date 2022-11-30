@@ -8,12 +8,10 @@ import "../interfaces/IOracle.sol";
 import "../interfaces/IPriceOracleAggregator.sol";
 
 contract PriceOracleAggregator is IPriceOracleAggregator, Ownable {
-    address public immutable airUSD;
     /// @notice token to the oracle address
     mapping(address => IOracle) public assetToOracle;
 
-    constructor(address _airUSD) Ownable() {
-        airUSD = _airUSD;
+    constructor() Ownable() {
     }
 
     /// @notice adds oracle for an asset e.g. ETH
@@ -37,10 +35,6 @@ contract PriceOracleAggregator is IPriceOracleAggregator, Ownable {
         override
         returns (uint256)
     {
-        if (_token == airUSD) {
-            return 10**8;
-        }
-
         require(address(assetToOracle[_token]) != address(0), "INVALID_ORACLE");
         return assetToOracle[_token].viewPriceInUSD();
     }
