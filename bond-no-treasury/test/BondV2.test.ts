@@ -109,6 +109,18 @@ describe('Bond with no treasury', function () {
       ]);
       expect(result[1]).to.deep.equal([feeWeightBps1, feeWeightBps2]);
     });
+
+    it('updateFeeWeights', async function () {
+      await bond.updateFeeWeights(
+        [feeRecipient1.address],
+        [BigNumber.from(10000)]
+      );
+
+      const result = await bond.allFeeInfos();
+
+      expect(result[0]).to.deep.equal([feeRecipient1.address]);
+      expect(result[1]).to.deep.equal([BigNumber.from(10000)]);
+    });
   });
 
   describe('#locking discount and period', () => {
