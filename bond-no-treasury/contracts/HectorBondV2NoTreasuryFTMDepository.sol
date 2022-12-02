@@ -723,6 +723,8 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
     string public name; // name of this bond
 
+    string public constant VERSION = '2.0'; // version number
+
     enum CONFIG {
         DEPOSIT_TOKEN,
         FEE_RECIPIENT,
