@@ -123,6 +123,47 @@ describe('Bond with no treasury', function () {
     });
   });
 
+  describe('#pausable', () => {
+    const maxPrice = 30000000000;
+    const amount1 = utils.parseEther('10000');
+    const payout1 = BigNumber.from('1052631578947368548474'); // 10000 / 9.5 = 1052.6315789474
+
+    it('deposit when paused', async function () {
+      await bond.pause();
+
+      await expect(
+        bond
+          .connect(alice)
+          .deposit(principal.address, amount1, maxPrice, fiveDays)
+      ).to.be.revertedWith('Pausable: paused');
+    });
+
+    it('redeem when paused', async function () {
+      await bond
+        .connect(alice)
+        .deposit(principal.address, amount1, maxPrice, fiveDays);
+
+      await bond.pause();
+      await increaseTime(fiveDays.toNumber());
+
+      await expect(bond.connect(alice).redeem(1)).to.be.revertedWith(
+        'Pausable: paused'
+      );
+    });
+
+    it('unpause', async function () {
+      await bond
+        .connect(alice)
+        .deposit(principal.address, amount1, maxPrice, fiveDays);
+
+      await bond.pause();
+      await increaseTime(fiveDays.toNumber());
+      await bond.unpause();
+
+      bond.connect(alice).redeem(1);
+    });
+  });
+
   describe('#locking discount and period', () => {
     it('setLockingDiscount to add', async function () {
       await bond.setLockingDiscount(100, 10); // 100 seconds lock - 0.1%

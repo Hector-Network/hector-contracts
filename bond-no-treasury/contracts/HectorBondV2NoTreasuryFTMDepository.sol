@@ -251,6 +251,48 @@ abstract contract OwnableUpgradeable is
     uint256[49] private __gap;
 }
 
+abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
+    event Paused(address account);
+    event Unpaused(address account);
+
+    bool private _paused;
+
+    function __Pausable_init() internal initializer {
+        __Context_init_unchained();
+        __Pausable_init_unchained();
+    }
+
+    function __Pausable_init_unchained() internal initializer {
+        _paused = false;
+    }
+
+    function paused() public view virtual returns (bool) {
+        return _paused;
+    }
+
+    modifier whenNotPaused() {
+        require(!paused(), 'Pausable: paused');
+        _;
+    }
+
+    modifier whenPaused() {
+        require(paused(), 'Pausable: not paused');
+        _;
+    }
+
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+
+    uint256[49] private __gap;
+}
+
 library SafeMathUpgradeable {
     function tryAdd(uint256 a, uint256 b)
         internal
@@ -626,7 +668,10 @@ interface IBondPricing {
         returns (address);
 }
 
-contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
+contract HectorBondV2NoTreasuryFTMDepository is
+    OwnableUpgradeable,
+    PausableUpgradeable
+{
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using FixedPoint for *;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -730,6 +775,7 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
 
         __Ownable_init();
+        __Pausable_init();
     }
 
     /* ======== MODIFIER ======== */
@@ -926,6 +972,14 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         bondPricing = _bondPricing;
     }
 
+    function pause() external onlyPolicy whenNotPaused {
+        return _pause();
+    }
+
+    function unpause() external onlyPolicy whenPaused {
+        return _unpause();
+    }
+
     /* ======== USER FUNCTIONS ======== */
 
     /**
@@ -941,7 +995,7 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         uint256 _amount,
         uint256 _maxPrice,
         uint256 _lockingPeriod
-    ) external onlyPrincipal(_principal) returns (uint256) {
+    ) external onlyPrincipal(_principal) whenNotPaused returns (uint256) {
         require(_amount > 0, 'Amount zero');
 
         uint256 discount = lockingDiscounts[_lockingPeriod];
@@ -1031,7 +1085,11 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
      *  @param _depositId uint
      *  @return uint
      */
-    function redeem(uint256 _depositId) external returns (uint256) {
+    function redeem(uint256 _depositId)
+        external
+        whenNotPaused
+        returns (uint256)
+    {
         Bond memory info = bondInfo[_depositId];
         address _recipient = info.depositor;
         require(msg.sender == _recipient, 'Cant redeem others bond');
