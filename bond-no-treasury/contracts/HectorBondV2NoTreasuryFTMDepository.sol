@@ -1058,19 +1058,18 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
             feeRecipient != fundRecipient,
             'can only claim fee for recipient'
         );
-
-        uint256 fee = tokenBalances[_principal][feeRecipient];
-        require(fee > 0, 'no fee for principal and feeRecipient');
-
-        IERC20Upgradeable(_principal).safeTransfer(feeRecipient, fee);
+        IERC20Upgradeable(_principal).safeTransfer(
+            feeRecipient,
+            tokenBalances[_principal][feeRecipient]
+        );
         tokenBalances[_principal][feeRecipient] = 0;
     }
 
     function claimFund(address _principal) external {
-        uint256 fund = tokenBalances[_principal][fundRecipient];
-        require(fund > 0, 'no fund is available for fundRecipient');
-
-        IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
+        IERC20Upgradeable(_principal).safeTransfer(
+            fundRecipient,
+            tokenBalances[_principal][fundRecipient]
+        );
         tokenBalances[_principal][fundRecipient] = 0;
     }
 
@@ -1109,14 +1108,16 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         );
 
         uint256 fee = _amount.mul(feeBps).div(ONEinBPS);
-        tokenBalances[_principal][fundRecipient] += _amount.sub(fee);
+        tokenBalances[_principal][fundRecipient] = tokenBalances[_principal][
+            fundRecipient
+        ].add(_amount.sub(fee));
 
         if (fee > 0) {
             uint256 theLast = fee;
             for (uint256 i = 0; i < feeRecipients.length - 1; i++) {
-                tokenBalances[_principal][feeRecipients[i]] += fee
-                    .mul(feeWeightBps[i])
-                    .div(ONEinBPS);
+                tokenBalances[_principal][feeRecipients[i]] = tokenBalances[
+                    _principal
+                ][feeRecipients[i]].add(fee.mul(feeWeightBps[i]).div(ONEinBPS));
                 theLast = theLast.sub(fee.mul(feeWeightBps[i]).div(ONEinBPS));
             }
             require(
@@ -1128,7 +1129,9 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
             );
             tokenBalances[_principal][
                 feeRecipients[feeRecipients.length - 1]
-            ] += theLast;
+            ] = tokenBalances[_principal][
+                feeRecipients[feeRecipients.length - 1]
+            ].add(theLast);
         }
     }
 
