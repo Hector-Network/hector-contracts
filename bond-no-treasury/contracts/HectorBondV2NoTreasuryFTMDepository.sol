@@ -668,10 +668,7 @@ interface IBondPricing {
         returns (address);
 }
 
-contract HectorBondV2NoTreasuryFTMDepository is
-    OwnableUpgradeable,
-    PausableUpgradeable
-{
+contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using FixedPoint for *;
     using SafeERC20Upgradeable for IERC20Upgradeable;

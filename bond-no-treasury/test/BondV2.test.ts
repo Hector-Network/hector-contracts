@@ -5,7 +5,7 @@ import { ethers, upgrades } from 'hardhat';
 import { BigNumber, constants, utils } from 'ethers';
 import { increaseTime } from './../helper/helpers';
 import {
-  HectorBondV2NoTreasuryFTMDepository,
+  BondNoTreasury,
   MockPrinciple,
   MockUniswapPairOracle,
   RewardToken,
@@ -23,7 +23,7 @@ describe('Bond with no treasury', function () {
   let principal: MockPrinciple;
   let oracle: MockUniswapPairOracle;
   let bondPricing: MockBondPricing;
-  let bond: HectorBondV2NoTreasuryFTMDepository;
+  let bond: BondNoTreasury;
 
   const feeBps = BigNumber.from(1000);
   const feeWeightBps1 = BigNumber.from(1000);
@@ -59,15 +59,13 @@ describe('Bond with no treasury', function () {
       principal.address
     );
 
-    const HectorBondV2NoTreasuryFTMDepository = await ethers.getContractFactory(
-      'HectorBondV2NoTreasuryFTMDepository'
-    );
-    bond = (await upgrades.deployProxy(HectorBondV2NoTreasuryFTMDepository, [
+    const BondNoTreasury = await ethers.getContractFactory('BondNoTreasury');
+    bond = (await upgrades.deployProxy(BondNoTreasury, [
       'TestBond',
       hectorToken.address,
       owner.address,
       bondPricing.address,
-    ])) as HectorBondV2NoTreasuryFTMDepository;
+    ])) as BondNoTreasury;
 
     await bond.initializeFundRecipient(fundRecipient.address, feeBps);
     await bond.initializeFeeRecipient(
