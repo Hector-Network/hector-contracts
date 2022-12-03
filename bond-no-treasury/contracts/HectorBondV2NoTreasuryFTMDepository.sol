@@ -251,6 +251,48 @@ abstract contract OwnableUpgradeable is
     uint256[49] private __gap;
 }
 
+abstract contract PausableUpgradeable is Initializable, ContextUpgradeable {
+    event Paused(address account);
+    event Unpaused(address account);
+
+    bool private _paused;
+
+    function __Pausable_init() internal initializer {
+        __Context_init_unchained();
+        __Pausable_init_unchained();
+    }
+
+    function __Pausable_init_unchained() internal initializer {
+        _paused = false;
+    }
+
+    function paused() public view virtual returns (bool) {
+        return _paused;
+    }
+
+    modifier whenNotPaused() {
+        require(!paused(), 'Pausable: paused');
+        _;
+    }
+
+    modifier whenPaused() {
+        require(paused(), 'Pausable: not paused');
+        _;
+    }
+
+    function _pause() internal virtual whenNotPaused {
+        _paused = true;
+        emit Paused(_msgSender());
+    }
+
+    function _unpause() internal virtual whenPaused {
+        _paused = false;
+        emit Unpaused(_msgSender());
+    }
+
+    uint256[49] private __gap;
+}
+
 library SafeMathUpgradeable {
     function tryAdd(uint256 a, uint256 b)
         internal
@@ -626,7 +668,7 @@ interface IBondPricing {
         returns (address);
 }
 
-contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
+contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using FixedPoint for *;
     using SafeERC20Upgradeable for IERC20Upgradeable;
@@ -681,6 +723,8 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
 
     string public name; // name of this bond
 
+    string public constant VERSION = '2.0'; // version number
+
     enum CONFIG {
         DEPOSIT_TOKEN,
         FEE_RECIPIENT,
@@ -730,6 +774,7 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
 
         __Ownable_init();
+        __Pausable_init();
     }
 
     /* ======== MODIFIER ======== */
@@ -926,6 +971,14 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         bondPricing = _bondPricing;
     }
 
+    function pause() external onlyPolicy whenNotPaused {
+        return _pause();
+    }
+
+    function unpause() external onlyPolicy whenPaused {
+        return _unpause();
+    }
+
     /* ======== USER FUNCTIONS ======== */
 
     /**
@@ -941,7 +994,7 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         uint256 _amount,
         uint256 _maxPrice,
         uint256 _lockingPeriod
-    ) external onlyPrincipal(_principal) returns (uint256) {
+    ) external onlyPrincipal(_principal) whenNotPaused returns (uint256) {
         require(_amount > 0, 'Amount zero');
 
         uint256 discount = lockingDiscounts[_lockingPeriod];
@@ -1031,7 +1084,11 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
      *  @param _depositId uint
      *  @return uint
      */
-    function redeem(uint256 _depositId) external returns (uint256) {
+    function redeem(uint256 _depositId)
+        external
+        whenNotPaused
+        returns (uint256)
+    {
         Bond memory info = bondInfo[_depositId];
         address _recipient = info.depositor;
         require(msg.sender == _recipient, 'Cant redeem others bond');
@@ -1058,19 +1115,18 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
             feeRecipient != fundRecipient,
             'can only claim fee for recipient'
         );
-
-        uint256 fee = tokenBalances[_principal][feeRecipient];
-        require(fee > 0, 'no fee for principal and feeRecipient');
-
-        IERC20Upgradeable(_principal).safeTransfer(feeRecipient, fee);
+        IERC20Upgradeable(_principal).safeTransfer(
+            feeRecipient,
+            tokenBalances[_principal][feeRecipient]
+        );
         tokenBalances[_principal][feeRecipient] = 0;
     }
 
     function claimFund(address _principal) external {
-        uint256 fund = tokenBalances[_principal][fundRecipient];
-        require(fund > 0, 'no fund is available for fundRecipient');
-
-        IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
+        IERC20Upgradeable(_principal).safeTransfer(
+            fundRecipient,
+            tokenBalances[_principal][fundRecipient]
+        );
         tokenBalances[_principal][fundRecipient] = 0;
     }
 
@@ -1109,14 +1165,16 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
         );
 
         uint256 fee = _amount.mul(feeBps).div(ONEinBPS);
-        tokenBalances[_principal][fundRecipient] += _amount.sub(fee);
+        tokenBalances[_principal][fundRecipient] = tokenBalances[_principal][
+            fundRecipient
+        ].add(_amount.sub(fee));
 
         if (fee > 0) {
             uint256 theLast = fee;
             for (uint256 i = 0; i < feeRecipients.length - 1; i++) {
-                tokenBalances[_principal][feeRecipients[i]] += fee
-                    .mul(feeWeightBps[i])
-                    .div(ONEinBPS);
+                tokenBalances[_principal][feeRecipients[i]] = tokenBalances[
+                    _principal
+                ][feeRecipients[i]].add(fee.mul(feeWeightBps[i]).div(ONEinBPS));
                 theLast = theLast.sub(fee.mul(feeWeightBps[i]).div(ONEinBPS));
             }
             require(
@@ -1128,7 +1186,9 @@ contract HectorBondV2NoTreasuryFTMDepository is OwnableUpgradeable {
             );
             tokenBalances[_principal][
                 feeRecipients[feeRecipients.length - 1]
-            ] += theLast;
+            ] = tokenBalances[_principal][
+                feeRecipients[feeRecipients.length - 1]
+            ].add(theLast);
         }
     }
 

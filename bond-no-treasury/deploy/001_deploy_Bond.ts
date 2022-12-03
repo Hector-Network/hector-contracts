@@ -65,29 +65,23 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer.address,
     bondPricing.address,
   ];
-  const hectorBondNoTreasuryDepository = await deploy(
-    'HectorBondV2NoTreasuryFTMDepository',
-    {
-      from: deployer.address,
-      args: [],
-      log: true,
-      proxy: {
-        proxyContract: 'OpenZeppelinTransparentProxy',
-        execute: {
-          methodName: 'initialize',
-          args: params,
-        },
+  const hectorBondNoTreasuryDepository = await deploy('BondNoTreasury', {
+    from: deployer.address,
+    args: [],
+    log: true,
+    proxy: {
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        methodName: 'initialize',
+        args: params,
       },
-    }
-  );
+    },
+  });
   const hectorBondNoTreasuryDepositoryImplementation =
     await getImplementationAddress(hectorBondNoTreasuryDepository.address);
 
   /// BondV2 Initialize
-  const contract = await ethers.getContract(
-    'HectorBondV2NoTreasuryFTMDepository',
-    deployer
-  );
+  const contract = await ethers.getContract('BondNoTreasury', deployer);
 
   /// Initial Params
   // const fundRecipient = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
@@ -132,7 +126,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepositoryImplementation,
         contract:
-          'contracts/HectorBondV2NoTreasuryFTMDepository.sol:HectorBondV2NoTreasuryFTMDepository',
+          'contracts/HectorBondV2NoTreasuryFTMDepository.sol:BondNoTreasury',
         constructorArguments: [],
       });
     } catch (_) {}

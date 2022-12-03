@@ -5,7 +5,7 @@ import { ethers, upgrades } from 'hardhat';
 import { BigNumber, constants, utils } from 'ethers';
 import { increaseTime } from './../helper/helpers';
 import {
-  HectorBondV2NoTreasuryFTMDepository,
+  BondNoTreasury,
   MockPrinciple,
   MockUniswapPairOracle,
   RewardToken,
@@ -23,7 +23,7 @@ describe('Bond with no treasury', function () {
   let principal: MockPrinciple;
   let oracle: MockUniswapPairOracle;
   let bondPricing: MockBondPricing;
-  let bond: HectorBondV2NoTreasuryFTMDepository;
+  let bond: BondNoTreasury;
 
   const feeBps = BigNumber.from(1000);
   const feeWeightBps1 = BigNumber.from(1000);
@@ -59,15 +59,13 @@ describe('Bond with no treasury', function () {
       principal.address
     );
 
-    const HectorBondV2NoTreasuryFTMDepository = await ethers.getContractFactory(
-      'HectorBondV2NoTreasuryFTMDepository'
-    );
-    bond = (await upgrades.deployProxy(HectorBondV2NoTreasuryFTMDepository, [
+    const BondNoTreasury = await ethers.getContractFactory('BondNoTreasury');
+    bond = (await upgrades.deployProxy(BondNoTreasury, [
       'TestBond',
       hectorToken.address,
       owner.address,
       bondPricing.address,
-    ])) as HectorBondV2NoTreasuryFTMDepository;
+    ])) as BondNoTreasury;
 
     await bond.initializeFundRecipient(fundRecipient.address, feeBps);
     await bond.initializeFeeRecipient(
@@ -120,6 +118,47 @@ describe('Bond with no treasury', function () {
 
       expect(result[0]).to.deep.equal([feeRecipient1.address]);
       expect(result[1]).to.deep.equal([BigNumber.from(10000)]);
+    });
+  });
+
+  describe('#pausable', () => {
+    const maxPrice = 30000000000;
+    const amount1 = utils.parseEther('10000');
+    const payout1 = BigNumber.from('1052631578947368548474'); // 10000 / 9.5 = 1052.6315789474
+
+    it('deposit when paused', async function () {
+      await bond.pause();
+
+      await expect(
+        bond
+          .connect(alice)
+          .deposit(principal.address, amount1, maxPrice, fiveDays)
+      ).to.be.revertedWith('Pausable: paused');
+    });
+
+    it('redeem when paused', async function () {
+      await bond
+        .connect(alice)
+        .deposit(principal.address, amount1, maxPrice, fiveDays);
+
+      await bond.pause();
+      await increaseTime(fiveDays.toNumber());
+
+      await expect(bond.connect(alice).redeem(1)).to.be.revertedWith(
+        'Pausable: paused'
+      );
+    });
+
+    it('unpause', async function () {
+      await bond
+        .connect(alice)
+        .deposit(principal.address, amount1, maxPrice, fiveDays);
+
+      await bond.pause();
+      await increaseTime(fiveDays.toNumber());
+      await bond.unpause();
+
+      bond.connect(alice).redeem(1);
     });
   });
 
