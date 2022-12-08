@@ -82,8 +82,6 @@ abstract contract OwnableUpgradeable is
         emit OwnershipPulled(_owner, _newOwner);
         _owner = _newOwner;
     }
-
-    uint256[49] private __gap;
 }
 
 library CountersUpgradeable {
@@ -832,5 +830,5 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         return true;
     }
 
-    uint256[49] private __gap;
+    uint256[49] private ___gap;
 }
