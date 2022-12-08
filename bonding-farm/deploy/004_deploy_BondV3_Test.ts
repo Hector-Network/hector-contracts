@@ -162,7 +162,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer.address,
     priceOracleAggregator.address,
   ];
-  const hectorBondNoTreasuryDepository = await deploy('BondNoTreasuryV3', {
+  const hectorBondNoTreasuryDepository = await deploy('BondNoTreasury', {
     from: deployer.address,
     args: [],
     log: true,
@@ -178,7 +178,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await getImplementationAddress(hectorBondNoTreasuryDepository.address);
 
   /// BondV3 Initialize
-  const contract = await ethers.getContract('BondNoTreasuryV3', deployer);
+  const contract = await ethers.getContract('BondNoTreasury', deployer);
 
   /// Initial Params
   const fundRecipient = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
@@ -304,7 +304,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepositoryImplementation,
         contract:
-          'contracts/HectorBondV3NoTreasuryFTMDepository.sol:BondNoTreasuryV3',
+          'contracts/HectorBondV3NoTreasuryFTMDepository.sol:BondNoTreasury',
         constructorArguments: [],
       });
     } catch (_) {}

@@ -108,7 +108,7 @@ library CountersUpgradeable {
     }
 }
 
-contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
+contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -158,7 +158,7 @@ contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
 
     string public name; // name of this bond
 
-    string public constant VERSION = '2.0'; // version number
+    string public constant VERSION = '3.0'; // version number
 
     enum CONFIG {
         DEPOSIT_TOKEN,
@@ -530,7 +530,7 @@ contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
 
         totalRemainingPayout -= info.payout; // total remaining payout is decreased
 
-        IERC20Upgradeable(rewardToken).transfer(_recipient, info.payout); // send payout
+        IERC20Upgradeable(rewardToken).safeTransfer(_recipient, info.payout); // send payout
 
         emit BondRedeemed(_depositId, _recipient, info.payout, 0); // emit bond data
 
@@ -544,19 +544,20 @@ contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
             feeRecipient != fundRecipient,
             'can only claim fee for recipient'
         );
-        IERC20Upgradeable(_principal).safeTransfer(
-            feeRecipient,
-            tokenBalances[_principal][feeRecipient]
-        );
+
+        uint256 fee = tokenBalances[_principal][feeRecipient];
+        require(fee > 0);
+
         tokenBalances[_principal][feeRecipient] = 0;
+        IERC20Upgradeable(_principal).safeTransfer(feeRecipient, fee);
     }
 
     function claimFund(address _principal) external {
-        IERC20Upgradeable(_principal).safeTransfer(
-            fundRecipient,
-            tokenBalances[_principal][fundRecipient]
-        );
+        uint256 fund = tokenBalances[_principal][fundRecipient];
+        require(fund > 0);
+
         tokenBalances[_principal][fundRecipient] = 0;
+        IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
     }
 
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
@@ -830,4 +831,6 @@ contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
         IERC20Upgradeable(_token).safeTransfer(DAO, amount);
         return true;
     }
+
+    uint256[49] private __gap;
 }
