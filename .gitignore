@@ -16,6 +16,13 @@ voting/coverage
 voting/coverage.json
 voting/typechain
 
+#### bridge ####
+bridge/node_modules/
+bridge/.env
+bridge/coverage
+bridge/coverage.json
+bridge/typechain
+
 #Hardhat files
 voting/cache
 voting/artifacts
