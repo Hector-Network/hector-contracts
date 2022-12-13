@@ -468,8 +468,17 @@ contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
         uint256 discount = lockingDiscounts[_lockingPeriod];
         require(discount > 0, 'Invalid locking period');
 
-        uint256 priceInUSD = (_bondPrice() * (ONEinBPS - discount)) / ONEinBPS; // Stored in bond info
-        require(_maxPrice >= priceInUSD, 'Slippage limit: more than max price'); // slippage protection
+        uint256 priceInUSD = (bondPriceInUSD() * (ONEinBPS - discount)) /
+            ONEinBPS; // Stored in bond info
+
+        {
+            uint256 nativePrice = (_bondPrice() * (ONEinBPS - discount)) /
+                ONEinBPS;
+            require(
+                _maxPrice >= nativePrice,
+                'Slippage limit: more than max price'
+            ); // slippage protection
+        }
 
         uint256 payout = payoutFor(_principal, _amount, discount); // payout to bonder is computed
         require(payout >= (rewardUnit / 100), 'Bond too small'); // must be > 0.01 rewardToken ( underflow protection )
@@ -723,6 +732,13 @@ contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
         } else {
             minimumPrice = 0;
         }
+    }
+
+    /**
+     *  @return price_ uint
+     */
+    function bondPriceInUSD() public view returns (uint256 price_) {
+        price_ = priceOracleAggregator.viewPriceInUSD(rewardToken);
     }
 
     /**
