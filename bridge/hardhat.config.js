@@ -76,6 +76,7 @@ module.exports = {
       polygon: "WZB1DPUWYZ13SQSGHFTTEY43YJYAEFY2EH",
       polygonMumbai: process.env.POLYGON_API_KEY,
       goerli: process.env.ETH_API_KEY,
+      opera: process.env.FTM_API_KEY
     },
   },
   mocha: {

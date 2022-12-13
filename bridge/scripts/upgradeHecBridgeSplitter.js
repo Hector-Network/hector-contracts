@@ -1,6 +1,8 @@
 const { ethers, upgrades } = require("hardhat");
+const { helpers } = require("../helper");
+const exec = require("child_process").exec;
 
-const UPGRADEABLE_PROXY = "0x71D05b8Ea8e4c8eB5659E3cf44D81E25d1565EA1";
+const UPGRADEABLE_PROXY = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -12,16 +14,22 @@ async function main() {
   const gas = await ethers.provider.getGasPrice();
   const UpgradeContract = await ethers.getContractFactory("HecBridgeSplitter");
   console.log("Upgrading HecBridgeSplitter...");
-  let upgrade = await upgrades.upgradeProxy(UPGRADEABLE_PROXY, UpgradeContract, {
-    gasPrice: gas,
-  });
-  
-  const cmdForVerify = `npx hardhat verify --contract "contracts/HecBridgeSplitter.sol:HecBridgeSplitter" ${upgrade.address} --network mumbai`;
-  exec(cmdForVerify, (error, stdout, stderr) => {
-    if (error !== null) {
-      console.log(`exec error: ${error}`);
+  let upgrade = await upgrades.upgradeProxy(
+    UPGRADEABLE_PROXY,
+    UpgradeContract,
+    {
+      gasPrice: gas,
     }
-  });
+  );
+
+  // await helpers.waitSeconds(10);
+
+  // const cmdForVerify = `npx hardhat verify --contract "contracts/HecBridgeSplitter.sol:HecBridgeSplitter" ${upgrade.address} --network ftm`;
+  // exec(cmdForVerify, (error, stdout, stderr) => {
+  //   if (error !== null) {
+  //     console.log(`exec error: ${error}`);
+  //   }
+  // });
 
   console.log("HecBridgeSplitter contract upgraded to:", upgrade.address);
 }

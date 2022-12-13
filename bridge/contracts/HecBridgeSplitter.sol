@@ -69,8 +69,9 @@ contract HecBridgeSplitter is
     // Split by stargate
     function startBridgeTokensViaStargate(
         ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.StargateData[] calldata _stargateDatas
-    ) external payable {
+        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas,
+        uint256 fee
+    ) public payable {
         require(
             _bridgeDatas.length > 0 &&
                 _bridgeDatas.length < CountDest &&
@@ -86,11 +87,24 @@ contract HecBridgeSplitter is
                 srcToken.allowance(msg.sender, address(this)) > 0,
                 "ERC20: transfer amount exceeds allowance"
             );
-            Bridge.startBridgeTokensViaStargate(
-                _bridgeDatas[i],
-                _stargateDatas[i]
+
+            (bool success, bytes memory data) = payable(address(Bridge)).call{
+                value: fee
+            }(
+                abi.encodeWithSignature(
+                    "startBridgeTokensViaStargate(ILiFi.BridgeData memory _bridgeData, StargateData calldata _stargateData)",
+                    _bridgeDatas[i],
+                    _stargateDatas[i]
+                )
             );
+
+            // Bridge.startBridgeTokensViaStargate(
+            //     _bridgeDatas[i],
+            //     _stargateDatas[i]
+            // );
+            emit CallData(data);
         }
+
         emit Split(msg.sender, _bridgeDatas);
     }
 
@@ -276,6 +290,11 @@ contract HecBridgeSplitter is
         }
     }
 
+    receive() external payable {}
+
+    fallback() external payable {}
+
     // All events
     event Split(address user, ILiFi.BridgeData[] bridgeData);
+    event CallData(bytes callData);
 }

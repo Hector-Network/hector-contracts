@@ -17,9 +17,10 @@
     "deploy:moonriver": "hardhat run ./scripts/deployHecBridgeSplitter.js --network moonriver",
     "deploy:goerli": "hardhat run ./scripts/deployHecBridgeSplitter.js --network goerli",
     "deploy:mumbai": "hardhat run ./scripts/deployHecBridgeSplitter.js --network mumbai",
+    "upgrade:ftm": "hardhat run ./scripts/upgradeHecBridgeSplitter.js --network ftm",
     "upgrade:mumbai": "hardhat run ./scripts/upgradeHecBridgeSplitter.js --network mumbai",
     "deploy:ftmtest": "hardhat run ./scripts/deployHecBridgeSplitter.js --network ftmtest",
-    "test": "hardhat run  ./scripts/deploy.js --network goerli"
+    "test": "hardhat run  ./scripts/deploy.js --network ftm"
   },
   "keywords": [],
   "author": "",

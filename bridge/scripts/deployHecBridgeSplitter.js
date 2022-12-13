@@ -30,23 +30,7 @@ async function main() {
 
   await helpers.waitSeconds(10);
 
-  const mockBridgeData1 = {
-    transactionId: "",
-    bridge:"",
-    integrator: "",
-    referrer: "",
-    sendingAssetId:"",
-    receiver:"",
-    minAmount:"",
-    destinationChainId:"",
-    hasSourceSwaps:"",
-    hasDestinationCall:"",
-  }
-
-
-  const result = hecBridgeSplitterContract;
-
-  const cmdForVerify = `npx hardhat verify --contract "contracts/HecBridgeSplitter.sol:HecBridgeSplitter" ${hecBridgeSplitterContract.address} --network mumbai`;
+  const cmdForVerify = `npx hardhat verify --contract "contracts/HecBridgeSplitter.sol:HecBridgeSplitter" ${hecBridgeSplitterContract.address} --network ftm`;
   exec(cmdForVerify, (error, stdout, stderr) => {
     if (error !== null) {
       console.log(`exec error: ${error}`);
