@@ -115,7 +115,7 @@ interface ILockFarm {
     function rewardToken() external view returns (address);
 }
 
-contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
+contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -144,6 +144,7 @@ contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
     IPriceOracleAggregator public priceOracleAggregator; // bond price oracle aggregator
     ILockFarm public lockFarm; // auto staking farm
     IERC721Enumerable public fnft; // FNFT
+    address public tokenVault; // TokenVault
 
     uint256 rewardUnit; // HEC: 1e9, WETH: 1e18
 
@@ -168,7 +169,7 @@ contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
 
     string public name; // name of this bond
 
-    string public constant VERSION = '3.0'; // version number
+    string public constant VERSION = '3.1'; // version number
 
     enum CONFIG {
         DEPOSIT_TOKEN,
@@ -219,18 +220,19 @@ contract AutoStakingBond is OwnableUpgradeable, PausableUpgradeable {
         DAO = _DAO;
         require(_priceOracleAggregator != address(0));
         priceOracleAggregator = IPriceOracleAggregator(_priceOracleAggregator);
-
         require(_lockFarm != address(0));
         lockFarm = ILockFarm(_lockFarm);
-        IERC20Upgradeable(_rewardToken).safeApprove(_lockFarm, 2**256 - 1);
         require(_fnft != address(0));
         fnft = IERC721Enumerable(_fnft);
         require(_tokenVault != address(0));
-        fnft.setApprovalForAll(_tokenVault, true);
+        tokenVault = _tokenVault;
 
         name = _name;
         rewardUnit = 10**(IERC20MetadataUpgradeable(_rewardToken).decimals());
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
+
+        IERC20Upgradeable(_rewardToken).safeApprove(_lockFarm, 2**256 - 1);
+        fnft.setApprovalForAll(_tokenVault, true);
 
         __Ownable_init();
         __Pausable_init();

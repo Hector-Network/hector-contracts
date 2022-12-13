@@ -106,7 +106,7 @@ library CountersUpgradeable {
     }
 }
 
-contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
+contract BondNoTreasuryV3 is OwnableUpgradeable, PausableUpgradeable {
     using CountersUpgradeable for CountersUpgradeable.Counter;
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
