@@ -22,9 +22,12 @@ bridge/.env
 bridge/coverage
 bridge/coverage.json
 bridge/typechain
+bridge/bin
+bridge/.openzeppelin
 
 #Hardhat files
 voting/cache
 voting/artifacts
 voting/types
 
+.gitignore
