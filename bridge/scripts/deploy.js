@@ -16,8 +16,7 @@ async function main() {
   console.log("Testing account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
   const USDC = "0x04068da6c83afcfa0e13ba15a6696662335d5b75";
-  // const HecBridgeSplitterAddress = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
-  const HecBridgeSplitterAddress = "0xA8398Dcb0D049612e11cDA226B2145f1ee75Bf47";
+  const HecBridgeSplitterAddress = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
 
   const Bridge = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
 
@@ -39,11 +38,9 @@ async function main() {
   await tx.wait();
   console.log("Done token allowance setting");
 
-  // var nonce = await provider.getTransactionCount(deployer.address);
-
   const mockBridgeData1 = {
     transactionId:
-      "0xdd82b80588cd7cd1774747ece9c56de633391a189b3d9fa241874d42cdf47a04",
+      "0xeec899c1c9fc2999279dca9f326f4b51e96bd049cf4b1161302bdf17676ac8a7",
     bridge: "stargate",
     integrator: "transferto.xyz",
     referrer: ZERO_ADDRESS,
@@ -57,20 +54,21 @@ async function main() {
 
   const mockStargateData1 = {
     dstPoolId: "1",
-    minAmountLD: "19888",
+    minAmountLD: "9944",
     dstGasForCall: "0",
-    lzFee: "85814826586549789",
-    refundAddress: "0x552008c0f6870c2f77e5cC1d2eb9bdff03e30Ea0",
+    lzFee: "611216441123863490",
+    refundAddress: "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
     callTo: "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
     callData: "0x",
   };
 
-  const fee = "0x0130e0214f272e1d";
+  const fee = "0x097b7a1d6610fbc2";
 
   mockBridgeDatas.push(mockBridgeData1);
   mockStargateDatas.push(mockStargateData1);
 
   console.log("Executing startBridgeTokensViaStargate...");
+
   const result = await testHecBridgeSplitterContract.startStargateBridgeSplit(
     mockBridgeDatas,
     mockStargateDatas,
@@ -78,10 +76,12 @@ async function main() {
       value: fee,
     }
   );
+
   console.log(await result.wait());
 
-  // withdraw
+  // Withdraw
   // const withdraw = await testHecBridgeSplitterContract.withdraw(USDC);
+  // await withdraw.wait();
   // console.log("Done withdraw");
 
   const _swapData = [

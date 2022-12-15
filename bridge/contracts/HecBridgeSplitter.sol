@@ -66,6 +66,16 @@ contract HecBridgeSplitter is
         );
     }
 
+    struct StargateData {
+        uint256 dstPoolId;
+        uint256 minAmountLD;
+        uint256 dstGasForCall;
+        uint256 lzFee;
+        address payable refundAddress;
+        bytes callTo;
+        bytes callData;
+    }
+
     // Split by stargate
     function startStargateBridgeSplit(
         ILiFi.BridgeData[] memory _bridgeDatas,
@@ -101,15 +111,16 @@ contract HecBridgeSplitter is
                 _stargateDatas[i]
             );
 
-            (bool success, ) = payable(address(Bridge)).call{
-                value: msg.value
-            }(callData);
+            (bool success, ) = payable(address(Bridge)).call{value: msg.value}(
+                callData
+            );
 
             // Bridge.startBridgeTokensViaStargate(
             //     _bridgeDatas[i],
             //     _stargateDatas[i]
             // );
             emit CallData(success, callData);
+            require(success, "Failed: Bridge tx is failed");
         }
 
         emit Split(msg.sender, _bridgeDatas);
