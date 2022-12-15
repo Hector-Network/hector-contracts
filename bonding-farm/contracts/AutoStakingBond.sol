@@ -113,6 +113,11 @@ interface ILockFarm {
     function withdraw(uint256 fnftId) external;
 
     function rewardToken() external view returns (address);
+
+    function pendingReward(uint256 fnftId)
+        external
+        view
+        returns (uint256 reward);
 }
 
 contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
@@ -174,7 +179,8 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     enum CONFIG {
         DEPOSIT_TOKEN,
         FEE_RECIPIENT,
-        FUND_RECIPIENT
+        FUND_RECIPIENT,
+        AUTO_STAKING_FEE_RECIPIENT
     }
     mapping(CONFIG => bool) public initialized;
     uint256 constant ONEinBPS = 10000;
@@ -185,7 +191,10 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     address[] public feeRecipients;
     uint256[] public feeWeightBps;
     mapping(address => uint256) feeWeightFor; // feeRecipient=>feeWeight
-    bool public stakingFee;
+
+    bool public autoStakingFee;
+    address public autoStakingFeeRecipient;
+    uint256 public autoStakingFeeBps; // 10000=100%, 100=1%
 
     /* ======== STRUCTS ======== */
 
@@ -231,7 +240,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         rewardUnit = 10**(IERC20MetadataUpgradeable(_rewardToken).decimals());
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
 
-        IERC20Upgradeable(_rewardToken).safeApprove(_lockFarm, 2**256 - 1);
+        IERC20Upgradeable(_rewardToken).safeApprove(_tokenVault, 2**256 - 1);
         fnft.setApprovalForAll(_tokenVault, true);
 
         __Ownable_init();
@@ -330,6 +339,30 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         feeBps = _feeBps;
     }
 
+    /**
+     *  @notice initialize the auto staking fee recipient and the fee percentage in basis points
+     */
+    function initializeAutoStakingFee(
+        bool _autoStakingFee,
+        address _autoStakingFeeRecipient,
+        uint256 _autoStakingFeeBps
+    ) external onlyPolicy {
+        require(
+            !initialized[CONFIG.AUTO_STAKING_FEE_RECIPIENT],
+            'initialzed already'
+        );
+        initialized[CONFIG.AUTO_STAKING_FEE_RECIPIENT] = true;
+
+        require(
+            _autoStakingFeeRecipient != address(0),
+            '_fundRecipient address invalid'
+        );
+        autoStakingFeeRecipient = _autoStakingFeeRecipient;
+
+        autoStakingFee = _autoStakingFee;
+        autoStakingFeeBps = _autoStakingFeeBps;
+    }
+
     /* ======== POLICY FUNCTIONS ======== */
 
     /**
@@ -367,8 +400,8 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         minimumPrice = _minimumPrice;
     }
 
-    function toggleStakingFee() external onlyPolicy {
-        stakingFee = !stakingFee;
+    function toggleAutoStakingFee() external onlyPolicy {
+        autoStakingFee = !autoStakingFee;
     }
 
     function updateName(string memory _name) external onlyPolicy {
@@ -385,6 +418,24 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         fundRecipient = _fundRecipient;
 
         feeBps = _feeBps;
+    }
+
+    function updateAutoStakingFeeWeights(
+        address _autoStakingFeeRecipient,
+        uint256 _autoStakingFeeBps
+    ) external onlyPolicy {
+        require(
+            initialized[CONFIG.AUTO_STAKING_FEE_RECIPIENT],
+            'not yet initialzed'
+        );
+
+        require(
+            _autoStakingFeeRecipient != address(0),
+            '_fundRecipient address invalid'
+        );
+        autoStakingFeeRecipient = _autoStakingFeeRecipient;
+
+        autoStakingFeeBps = _autoStakingFeeBps;
     }
 
     function updateFeeWeights(
@@ -581,23 +632,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             withdraw and claim from lock farm
          */
         if (info.stake) {
-            IERC20Upgradeable farmRewardToken = IERC20Upgradeable(
-                lockFarm.rewardToken()
-            );
-            uint256 before = farmRewardToken.balanceOf(address(this));
-            lockFarm.withdraw(info.fnftId); // withdraw from lock farm
-            uint256 claimedAmount = farmRewardToken.balanceOf(address(this)) -
-                before;
-
-            if (stakingFee) {
-                uint256 fee = (claimedAmount * feeBps) / ONEinBPS;
-                tokenBalances[address(farmRewardToken)][fundRecipient] += fee;
-                claimedAmount -= fee;
-            }
-
-            if (claimedAmount > 0) {
-                farmRewardToken.safeTransfer(_recipient, claimedAmount);
-            }
+            processAutoStakingReward(info.fnftId, _recipient);
         }
 
         IERC20Upgradeable(rewardToken).safeTransfer(_recipient, info.payout); // send payout
@@ -628,6 +663,18 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
         tokenBalances[_principal][fundRecipient] = 0;
         IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
+    }
+
+    function claimAutoStakingFee() external {
+        address _rewardToken = lockFarm.rewardToken();
+        uint256 fee = tokenBalances[_rewardToken][autoStakingFeeRecipient];
+        require(fee > 0);
+
+        tokenBalances[_rewardToken][autoStakingFeeRecipient] = 0;
+        IERC20Upgradeable(_rewardToken).safeTransfer(
+            autoStakingFeeRecipient,
+            fee
+        );
     }
 
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
@@ -683,6 +730,37 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             tokenBalances[_principal][
                 feeRecipients[feeRecipients.length - 1]
             ] += theLast;
+        }
+    }
+
+    /**
+     *  @notice process auto staking reward on redeem
+     */
+    function processAutoStakingReward(uint256 _fnftId, address _recipient)
+        internal
+    {
+        require(
+            initialized[CONFIG.AUTO_STAKING_FEE_RECIPIENT],
+            'please complete initialize for AutoStakingFeeRecipient'
+        );
+
+        IERC20Upgradeable _rewardToken = IERC20Upgradeable(
+            lockFarm.rewardToken()
+        );
+        uint256 before = _rewardToken.balanceOf(address(this));
+        lockFarm.withdraw(_fnftId); // withdraw from lock farm
+        uint256 claimedAmount = _rewardToken.balanceOf(address(this)) - before;
+
+        if (autoStakingFee) {
+            uint256 fee = (claimedAmount * autoStakingFeeBps) / ONEinBPS;
+            tokenBalances[address(_rewardToken)][
+                autoStakingFeeRecipient
+            ] += fee;
+            claimedAmount -= fee;
+        }
+
+        if (claimedAmount > 0) {
+            _rewardToken.safeTransfer(_recipient, claimedAmount);
         }
     }
 
@@ -785,6 +863,18 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     }
 
     /**
+     *  @notice return auto staking reward token
+     *  @return rewardToken_ address
+     */
+    function autoStakingRewardToken()
+        external
+        view
+        returns (address rewardToken_)
+    {
+        rewardToken_ = lockFarm.rewardToken();
+    }
+
+    /**
      *  @notice return minimum principal amount to deposit
      *  @param _principal address
      *  @param _discount uint
@@ -850,23 +940,55 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     }
 
     /**
+     *  @notice show bond info for a particular depositId
+     *  @param _depositId deposit Id
+     *  @return bondInfo_ bond info
+     *  @return pendingPayout_ pending payout
+     *  @return pendingReward_ pending reward from the auto staking
+     */
+    function bondInfoFor(uint256 _depositId)
+        external
+        view
+        returns (
+            Bond memory bondInfo_,
+            uint256 pendingPayout_,
+            uint256 pendingReward_
+        )
+    {
+        bondInfo_ = bondInfo[_depositId];
+        pendingPayout_ = pendingPayoutFor(_depositId);
+        pendingReward_ = lockFarm.pendingReward(bondInfo_.fnftId);
+    }
+
+    /**
      *  @notice show all bond infos for a particular owner
      *  @param _owner owner
      *  @return bondInfos_ bond infos
      *  @return pendingPayouts_ pending payouts
+     *  @return pendingRewards_ pending rewards from the auto staking
      */
     function allBondInfos(address _owner)
         external
         view
-        returns (Bond[] memory bondInfos_, uint256[] memory pendingPayouts_)
+        returns (
+            Bond[] memory bondInfos_,
+            uint256[] memory pendingPayouts_,
+            uint256[] memory pendingRewards_
+        )
     {
         uint256 length = depositCounts[_owner];
         bondInfos_ = new Bond[](length);
         pendingPayouts_ = new uint256[](length);
+        pendingRewards_ = new uint256[](length);
         for (uint256 i = 0; i < length; i++) {
             uint256 depositId = ownedDeposits[_owner][i];
             bondInfos_[i] = bondInfo[depositId];
             pendingPayouts_[i] = pendingPayoutFor(depositId);
+            if (bondInfos_[i].stake) {
+                pendingRewards_[i] = lockFarm.pendingReward(
+                    bondInfos_[i].fnftId
+                );
+            }
         }
     }
 
