@@ -40,7 +40,7 @@ async function main() {
 
   const mockBridgeData1 = {
     transactionId:
-      "0xeec899c1c9fc2999279dca9f326f4b51e96bd049cf4b1161302bdf17676ac8a7",
+      "0xbd44f3be0b56c7a402b72b2740499c6dd4615d0fe04998fb6dcaa71fe2415c66",
     bridge: "stargate",
     integrator: "transferto.xyz",
     referrer: ZERO_ADDRESS,
@@ -56,7 +56,7 @@ async function main() {
     dstPoolId: "1",
     minAmountLD: "9944",
     dstGasForCall: "0",
-    lzFee: "611216441123863490",
+    lzFee: "271618419143197836",
     refundAddress: "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
     callTo: "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
     callData: "0x",
