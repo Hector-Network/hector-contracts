@@ -431,7 +431,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
         require(
             _autoStakingFeeRecipient != address(0),
-            '_fundRecipient address invalid'
+            '_autoStakingFeeRecipient address invalid'
         );
         autoStakingFeeRecipient = _autoStakingFeeRecipient;
 
