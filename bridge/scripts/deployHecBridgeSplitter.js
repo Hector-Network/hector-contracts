@@ -20,15 +20,19 @@ async function main() {
   const hecBridgeSplitterFactory = await ethers.getContractFactory("HecBridgeSplitter");
   console.log("Deploying HecBridgeSplitter Contract...");
 
-  const hecBridgeSplitterContract = await hre.upgrades.deployProxy(hecBridgeSplitterFactory, [_countDest, _bridge], {
-    gas: gas,
-    initializer: "initialize",
-  });
+  // const hecBridgeSplitterContract = await hre.upgrades.deployProxy(hecBridgeSplitterFactory, [_countDest, _bridge], {
+  //   gas: gas,
+  //   initializer: "initialize",
+  // });
 
-  await hecBridgeSplitterContract.deployed();
+  const hecBridgeSplitterContract = await hecBridgeSplitterFactory.deploy();
   console.log("HecBridgeSplitter contract deployed to:", hecBridgeSplitterContract.address);
 
   await helpers.waitSeconds(10);
+
+  const tx = await hecBridgeSplitterContract.initialize(_countDest, _bridge);
+  await tx.wait();
+  console.log("Done initialization");
 
   const cmdForVerify = `npx hardhat verify --contract "contracts/HecBridgeSplitter.sol:HecBridgeSplitter" ${hecBridgeSplitterContract.address} --network ftm`;
   exec(cmdForVerify, (error, stdout, stderr) => {

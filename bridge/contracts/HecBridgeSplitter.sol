@@ -67,10 +67,9 @@ contract HecBridgeSplitter is
     }
 
     // Split by stargate
-    function startBridgeTokensViaStargate(
+    function startStargateBridgeSplit(
         ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas,
-        uint256 fee
+        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas
     ) public payable {
         require(
             _bridgeDatas.length > 0 &&
@@ -82,27 +81,35 @@ contract HecBridgeSplitter is
             IERC20Upgradeable srcToken = IERC20Upgradeable(
                 _bridgeDatas[i].sendingAssetId
             );
-            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+
             require(
                 srcToken.allowance(msg.sender, address(this)) > 0,
                 "ERC20: transfer amount exceeds allowance"
             );
 
-            (bool success, bytes memory data) = payable(address(Bridge)).call{
-                value: fee
-            }(
-                abi.encodeWithSignature(
-                    "startBridgeTokensViaStargate(ILiFi.BridgeData memory _bridgeData, StargateData calldata _stargateData)",
-                    _bridgeDatas[i],
-                    _stargateDatas[i]
-                )
+            srcToken.safeTransferFrom(
+                msg.sender,
+                address(this),
+                _bridgeDatas[i].minAmount
             );
+
+            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+
+            bytes memory callData = abi.encodeWithSelector(
+                0x3b00e807,
+                _bridgeDatas[i],
+                _stargateDatas[i]
+            );
+
+            (bool success, ) = payable(address(Bridge)).call{
+                value: msg.value
+            }(callData);
 
             // Bridge.startBridgeTokensViaStargate(
             //     _bridgeDatas[i],
             //     _stargateDatas[i]
             // );
-            emit CallData(data);
+            emit CallData(success, callData);
         }
 
         emit Split(msg.sender, _bridgeDatas);
@@ -292,9 +299,7 @@ contract HecBridgeSplitter is
 
     receive() external payable {}
 
-    fallback() external payable {}
-
     // All events
     event Split(address user, ILiFi.BridgeData[] bridgeData);
-    event CallData(bytes callData);
+    event CallData(bool success, bytes callData);
 }
