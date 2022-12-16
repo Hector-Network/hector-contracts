@@ -64,12 +64,7 @@ abstract contract OwnableUpgradeable is
         _owner = address(0);
     }
 
-    function pushManagement(address newOwner_)
-        public
-        virtual
-        override
-        onlyPolicy
-    {
+    function pushManagement(address newOwner_) public virtual override {
         require(
             newOwner_ != address(0),
             'Ownable: new owner is the zero address'
@@ -406,6 +401,11 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
     function updateName(string memory _name) external onlyPolicy {
         name = _name;
+    }
+
+    function updateDAO(address _DAO) external onlyPolicy {
+        require(_DAO != address(0));
+        DAO = _DAO;
     }
 
     function updateFundWeights(address _fundRecipient, uint256 _feeBps)
