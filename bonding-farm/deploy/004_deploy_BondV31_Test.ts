@@ -40,9 +40,9 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const uniswapFactory = '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 
   // LockFarm Addres
-  const lockFarmAddress = '0xC464e6d45004Bf56772E70e22d9cF61C5Ae63970';
-  const fnftAddress = '0x7b88137d10394537F1EEa6cEd3ec4f778EEfAAc3';
-  const tokenVaultAddress = '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
+  const lockFarmAddress = '0x39A629FB11D9B70944e4d0821E481055464E588F';
+  const fnftAddress = '0xfB6E3489e8B9B2acFC97e744F73F3C26446fed8c';
+  const tokenVaultAddress = '0x8580B6aC5C96501909a8AC9DbF100CA8c4b9238e';
 
   /// PriceOracleAggregator
   const priceOracleAggregator = await deploy('PriceOracleAggregator', {
@@ -320,7 +320,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepositoryImplementation,
         contract:
-          'contracts/HectorBondV3NoTreasuryFTMDepository.sol:BondNoTreasury',
+          'contracts/HectorBondV31NoTreasuryFTMDepository.sol:BondNoTreasury',
         constructorArguments: [],
       });
     } catch (_) {}
