@@ -983,7 +983,28 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     {
         bondInfo_ = bondInfo[_depositId];
         pendingPayout_ = pendingPayoutFor(_depositId);
-        pendingReward_ = lockFarm.pendingReward(bondInfo_.fnftId);
+        if (bondInfo_.stake) {
+            pendingReward_ = lockFarm.pendingReward(bondInfo_.fnftId);
+        }
+    }
+
+    /**
+     *  @notice show auto staking fee for a particular depositId
+     *  @param _depositId deposit Id
+     *  @return fee_ auto staking fee
+     */
+    function bondAutoStakingFeeFor(uint256 _depositId)
+        external
+        view
+        returns (uint256 fee_)
+    {
+        Bond memory bondInfo_ = bondInfo[_depositId];
+
+        if (bondInfo_.stake) {
+            fee_ =
+                (lockFarm.pendingReward(bondInfo_.fnftId) * autoStakingFeeBps) /
+                ONEinBPS;
+        }
     }
 
     /**
