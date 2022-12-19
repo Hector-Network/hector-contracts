@@ -107,6 +107,8 @@ interface ILockFarm {
 
     function withdraw(uint256 fnftId) external;
 
+    function claim(uint256 fnftId) external;
+
     function rewardToken() external view returns (address);
 
     function pendingReward(uint256 fnftId)
@@ -135,6 +137,11 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         address indexed recipient,
         uint256 payout,
         uint256 remaining
+    );
+    event BondClaimed(
+        uint256 depositId,
+        address indexed recipient,
+        uint256 reward
     );
 
     /* ======== STATE VARIABLES ======== */
@@ -187,7 +194,8 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     uint256[] public feeWeightBps;
     mapping(address => uint256) feeWeightFor; // feeRecipient=>feeWeight
 
-    bool public autoStakingFee;
+    bool public isAutoStakingEnabled;
+    bool public autoStaking;
     address public autoStakingFeeRecipient;
     uint256 public autoStakingFeeBps; // 10000=100%, 100=1%
 
@@ -338,7 +346,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      *  @notice initialize the auto staking fee recipient and the fee percentage in basis points
      */
     function initializeAutoStakingFee(
-        bool _autoStakingFee,
+        bool _autoStaking,
         address _autoStakingFeeRecipient,
         uint256 _autoStakingFeeBps
     ) external onlyPolicy {
@@ -354,7 +362,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         );
         autoStakingFeeRecipient = _autoStakingFeeRecipient;
 
-        autoStakingFee = _autoStakingFee;
+        autoStaking = _autoStaking;
         autoStakingFeeBps = _autoStakingFeeBps;
     }
 
@@ -395,8 +403,12 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         minimumPrice = _minimumPrice;
     }
 
-    function toggleAutoStakingFee() external onlyPolicy {
-        autoStakingFee = !autoStakingFee;
+    function toggleAutoStaking() external onlyPolicy {
+        autoStaking = !autoStaking;
+    }
+
+    function toggleAutoStakingEnable() external onlyPolicy {
+        isAutoStakingEnabled = !isAutoStakingEnabled;
     }
 
     function updateName(string memory _name) external onlyPolicy {
@@ -506,15 +518,13 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      *  @param _amount uint
      *  @param _maxPrice uint
      *  @param _lockingPeriod uint
-     *  @param _stake bool
      *  @return uint
      */
     function deposit(
         address _principal,
         uint256 _amount,
         uint256 _maxPrice,
-        uint256 _lockingPeriod,
-        bool _stake
+        uint256 _lockingPeriod
     ) external onlyPrincipal(_principal) whenNotPaused returns (uint256) {
         require(_amount > 0, 'Amount zero');
 
@@ -572,14 +582,14 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             lastBlockAt: block.timestamp,
             pricePaid: priceInUSD,
             depositor: msg.sender,
-            stake: _stake,
+            stake: isAutoStakingEnabled,
             fnftId: 0
         });
 
         /**
             auto staking payout
         */
-        if (_stake) {
+        if (isAutoStakingEnabled) {
             lockFarm.stake(payout, _lockingPeriod);
             bondInfo[depositId].fnftId = fnft.tokenByIndex(
                 fnft.totalSupply() - 1
@@ -595,7 +605,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             depositId,
             _principal,
             _amount,
-            _stake,
+            isAutoStakingEnabled,
             payout,
             block.timestamp + _lockingPeriod,
             priceInUSD
@@ -633,6 +643,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
          */
         if (info.stake) {
             processAutoStakingReward(info.fnftId, _recipient);
+            lockFarm.withdraw(info.fnftId);
         }
 
         IERC20Upgradeable(rewardToken).safeTransfer(_recipient, info.payout); // send payout
@@ -642,6 +653,27 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         removeDepositId(_recipient, _depositId);
 
         return info.payout;
+    }
+
+    /**
+     *  @notice claim for auto staked bond
+     *  @param _depositId uint
+     *  @return claimedAmount_ uint
+     */
+    function claim(uint256 _depositId)
+        external
+        whenNotPaused
+        returns (uint256 claimedAmount_)
+    {
+        Bond memory info = bondInfo[_depositId];
+        address _recipient = info.depositor;
+        require(msg.sender == _recipient, 'Cant claim others bond');
+
+        if (info.stake) {
+            claimedAmount_ = processAutoStakingReward(info.fnftId, _recipient);
+        }
+
+        emit BondClaimed(_depositId, _recipient, claimedAmount_);
     }
 
     function claimFee(address _principal, address feeRecipient) external {
@@ -738,6 +770,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      */
     function processAutoStakingReward(uint256 _fnftId, address _recipient)
         internal
+        returns (uint256)
     {
         require(
             initialized[CONFIG.AUTO_STAKING_FEE_RECIPIENT],
@@ -748,10 +781,10 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             lockFarm.rewardToken()
         );
         uint256 before = _rewardToken.balanceOf(address(this));
-        lockFarm.withdraw(_fnftId); // withdraw from lock farm
+        lockFarm.claim(_fnftId); // claim from lock farm
         uint256 claimedAmount = _rewardToken.balanceOf(address(this)) - before;
 
-        if (autoStakingFee) {
+        if (autoStaking) {
             uint256 fee = (claimedAmount * autoStakingFeeBps) / ONEinBPS;
             tokenBalances[address(_rewardToken)][
                 autoStakingFeeRecipient
@@ -762,6 +795,8 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         if (claimedAmount > 0) {
             _rewardToken.safeTransfer(_recipient, claimedAmount);
         }
+
+        return claimedAmount;
     }
 
     /* ======== VIEW FUNCTIONS ======== */
