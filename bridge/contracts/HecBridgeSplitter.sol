@@ -2,9 +2,8 @@
 pragma solidity ^0.8.7;
 
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol";
@@ -25,6 +24,7 @@ contract HecBridgeSplitter is
 
     IHecBridgeSplitterInterface public Bridge;
     uint256 public CountDest; // Count of the destination wallets
+    mapping(string => bytes4) public selectors; // All selectors for each bridges
 
     // Interface
 
@@ -46,45 +46,17 @@ contract HecBridgeSplitter is
     //               USER CALLED FUNCTIONS               //
     ///////////////////////////////////////////////////////
 
-    // Split by multichain
+    /// @notice Bridges tokens via Multichain
+    /// @param _bridgeDatas the core information needed for bridging
+    /// @param _multichainDatas data specific to Multichain
     function startBridgeTokensViaMultichain(
-        ILiFi.BridgeData memory _bridgeData,
-        IHecBridgeSplitterInterface.MultichainData calldata _multichainData
-    ) public payable {
-        Bridge.startBridgeTokensViaMultichain(_bridgeData, _multichainData);
-    }
-
-    function swapAndStartBridgeTokensViaMultichain(
-        ILiFi.BridgeData memory _bridgeData,
-        LibSwap.SwapData[] calldata _swapData,
-        IHecBridgeSplitterInterface.MultichainData calldata _multichainData
-    ) public payable {
-        Bridge.swapAndStartBridgeTokensViaMultichain(
-            _bridgeData,
-            _swapData,
-            _multichainData
-        );
-    }
-
-    struct StargateData {
-        uint256 dstPoolId;
-        uint256 minAmountLD;
-        uint256 dstGasForCall;
-        uint256 lzFee;
-        address payable refundAddress;
-        bytes callTo;
-        bytes callData;
-    }
-
-    // Split by stargate
-    function startStargateBridgeSplit(
         ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas
+        IHecBridgeSplitterInterface.MultichainData[] calldata _multichainDatas
     ) public payable {
         require(
             _bridgeDatas.length > 0 &&
-                _bridgeDatas.length < CountDest &&
-                _bridgeDatas.length == _stargateDatas.length,
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == _multichainDatas.length,
             "Error: Destinations is not allowed"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
@@ -106,203 +78,257 @@ contract HecBridgeSplitter is
             srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
 
             bytes memory callData = abi.encodeWithSelector(
-                0x3b00e807,
+                selectors["startBridgeTokensViaMultichain"],
                 _bridgeDatas[i],
-                _stargateDatas[i]
+                _multichainDatas[i]
             );
 
-            (bool success, ) = payable(address(Bridge)).call{value: msg.value}(
-                callData
-            );
-
-            // Bridge.startBridgeTokensViaStargate(
-            //     _bridgeDatas[i],
-            //     _stargateDatas[i]
-            // );
-            emit CallData(success, callData);
+            (bool success, ) = payable(address(Bridge)).call(callData);
             require(success, "Failed: Bridge tx is failed");
+
+            emit CallData(success, callData);
         }
 
         emit Split(msg.sender, _bridgeDatas);
     }
 
-    function swapAndStartBridgeTokensViaStargate(
+    /// @notice Performs a swap before bridging via Multichain
+    /// @param _bridgeDatas the core information needed for bridging
+    /// @param _swapDatas an array of swap related data for performing swaps before bridging
+    /// @param _multichainDatas data specific to Multichain
+    function swapAndStartBridgeTokensViaMultichain(
         ILiFi.BridgeData[] memory _bridgeDatas,
-        LibSwap.SwapData[][] calldata _swapDatas,
-        IHecBridgeSplitterInterface.StargateData[] calldata _stargateDatas
-    ) external payable {
+        LibSwap.SwapData[] calldata _swapDatas,
+        IHecBridgeSplitterInterface.MultichainData[] calldata _multichainDatas
+    ) public payable {
         require(
             _bridgeDatas.length > 0 &&
-                _bridgeDatas.length < CountDest &&
-                _bridgeDatas.length == _stargateDatas.length,
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == _multichainDatas.length &&
+                _bridgeDatas.length == _swapDatas.length,
             "Error: Destinations is not allowed"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             IERC20Upgradeable srcToken = IERC20Upgradeable(
                 _bridgeDatas[i].sendingAssetId
             );
-            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+
             require(
                 srcToken.allowance(msg.sender, address(this)) > 0,
                 "ERC20: transfer amount exceeds allowance"
             );
-            Bridge.swapAndStartBridgeTokensViaStargate(
+
+            srcToken.safeTransferFrom(
+                msg.sender,
+                address(this),
+                _bridgeDatas[i].minAmount
+            );
+
+            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+
+            bytes memory callData = abi.encodeWithSelector(
+                selectors["swapAndStartBridgeTokensViaMultichain"],
+                _bridgeDatas[i],
+                _swapDatas[i],
+                _multichainDatas[i]
+            );
+
+            (bool success, ) = payable(address(Bridge)).call(callData);
+            require(success, "Failed: Bridge tx is failed");
+
+            emit CallData(success, callData);
+        }
+
+        emit Split(msg.sender, _bridgeDatas);
+    }
+
+    /// @notice Bridges tokens via Stargate Bridge
+    /// @param _bridgeDatas Array Data used purely for tracking and analytics
+    /// @param _stargateDatas Array Data specific to Stargate Bridge
+    function startBridgeTokensViaStargate(
+        ILiFi.BridgeData[] memory _bridgeDatas,
+        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas
+    ) public payable {
+        require(
+            _bridgeDatas.length > 0 &&
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == _stargateDatas.length,
+            "Error: Destinations is not allowed"
+        );
+        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
+            if (_bridgeDatas[i].sendingAssetId != address(0)) {
+                IERC20Upgradeable srcToken = IERC20Upgradeable(
+                    _bridgeDatas[i].sendingAssetId
+                );
+
+                require(
+                    srcToken.allowance(msg.sender, address(this)) > 0,
+                    "ERC20: transfer amount exceeds allowance"
+                );
+
+                srcToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _bridgeDatas[i].minAmount
+                );
+
+                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+            }
+
+            bytes memory callData = abi.encodeWithSelector(
+                selectors["startBridgeTokensViaStargate"],
+                _bridgeDatas[i],
+                _stargateDatas[i]
+            );
+
+            (bool success, ) = payable(address(Bridge)).call{
+                value: _stargateDatas[i].lzFee
+            }(callData);
+            require(success, "Failed: Bridge tx is failed");
+
+            emit CallData(success, callData);
+        }
+
+        emit Split(msg.sender, _bridgeDatas);
+    }
+
+    /// @notice Performs a swap before bridging via Stargate Bridge
+    /// @param _bridgeDatas Array Data used purely for tracking and analytics
+    /// @param _swapDatas An array of array swap related data for performing swaps before bridging
+    /// @param _stargateDatas Array Data specific to Stargate Bridge
+    function swapAndStartBridgeTokensViaStargate(
+        ILiFi.BridgeData[] memory _bridgeDatas,
+        LibSwap.SwapData[][] calldata _swapDatas,
+        IHecBridgeSplitterInterface.StargateData[] calldata _stargateDatas,
+        uint256[] memory fees
+    ) external payable {
+        require(
+            _bridgeDatas.length > 0 &&
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == _stargateDatas.length &&
+                _bridgeDatas.length == _swapDatas.length,
+            "Error: Destinations is not allowed"
+        );
+        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
+            if (_swapDatas[i][0].sendingAssetId != address(0)) {
+                IERC20Upgradeable srcToken = IERC20Upgradeable(
+                    _bridgeDatas[i].sendingAssetId
+                );
+
+                require(
+                    srcToken.allowance(msg.sender, address(this)) > 0,
+                    "ERC20: transfer amount exceeds allowance"
+                );
+
+                srcToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _bridgeDatas[i].minAmount
+                );
+
+                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+            }
+
+            bytes memory callData = abi.encodeWithSelector(
+                selectors["swapAndStartBridgeTokensViaStargate"],
                 _bridgeDatas[i],
                 _swapDatas[i],
                 _stargateDatas[i]
             );
+
+            (bool success, ) = payable(address(Bridge)).call{
+                value: fees[i]
+            }(callData);
+            require(success, "Failed: Bridge tx is failed");
+
+            emit CallData(success, callData);
         }
+
         emit Split(msg.sender, _bridgeDatas);
     }
 
-    // // Splitter by Arbitrum
-    // function startBridgeTokensViaArbitrumBridge(
-    //     // BridgeData
-    //     bytes32 _transactionId,
-    //     string memory _bridge,
-    //     string memory _integrator,
-    //     address _referrer,
-    //     address _sendingAssetId,
-    //     address[] memory _receivers,
-    //     uint256 _minAmount,
-    //     uint256[] memory _amounts,
-    //     uint256 _destinationChainId,
-    //     bool _hasSourceSwaps,
-    //     bool _hasDestinationCall,
-    //     // ArbitrumData
-    //     uint256 _maxSubmissionCost,
-    //     uint256 _maxGas,
-    //     uint256 _maxGasPrice
-    // ) external payable {
-    //     require(
-    //         _receivers.length > 0 &&
-    //             _receivers.length < CountDest &&
-    //             _receivers.length == _amounts.length,
-    //         "Error: Destinations is not allowed"
-    //     );
-    //     uint256 totalAmount = 0;
-    //     for (uint256 j = 0; j < _amounts.length; j++) {
-    //         totalAmount = totalAmount.add(_amounts[j]);
-    //     }
-    //     require(_minAmount == totalAmount, "Destination amount is wrong");
-
-    //     for (uint256 i = 0; i < _receivers.length; i++) {
-    //         ILiFi.BridgeData memory _bridgeData = ILiFi.BridgeData({
-    //             transactionId: _transactionId,
-    //             bridge: _bridge,
-    //             integrator: _integrator,
-    //             referrer: _referrer,
-    //             sendingAssetId: _sendingAssetId,
-    //             receiver: _receivers[i],
-    //             minAmount: _amounts[i],
-    //             destinationChainId: _destinationChainId,
-    //             hasSourceSwaps: _hasSourceSwaps,
-    //             hasDestinationCall: _hasDestinationCall
-    //         });
-
-    //         IHecBridgeSplitterInterface.ArbitrumData
-    //             memory _arbitrumData = IHecBridgeSplitterInterface
-    //                 .ArbitrumData({
-    //                     maxSubmissionCost: _maxSubmissionCost,
-    //                     maxGas: _maxGas,
-    //                     maxGasPrice: _maxGasPrice
-    //                 });
-
-    //         Bridge.startBridgeTokensViaArbitrumBridge(
-    //             _bridgeData,
-    //             _arbitrumData
-    //         );
-
-    //         emit Split(msg.sender, _bridgeData, _receivers, _amounts);
-    //     }
-    // }
-
-    // function swapAndStartBridgeTokensViaArbitrumBridge(
-    //     // BridgeData
-    //     bytes32 transactionId,
-    //     string memory bridge,
-    //     string memory integrator,
-    //     address referrer,
-    //     address sendingAssetId,
-    //     address[] memory receivers,
-    //     uint256[] memory minAmounts,
-    //     uint256 destinationChainId,
-    //     bool hasSourceSwaps,
-    //     bool hasDestinationCall,
-    //     // SwapData
-    //     address callTo,
-    //     address approveTo,
-    //     address sendingAssetIdForSwap,
-    //     address receivingAssetId,
-    //     uint256 fromAmount,
-    //     bytes calldata callData,
-    //     bool requiresDeposit,
-    //     // ArbitrumData
-    //     uint256 maxSubmissionCost,
-    //     uint256 maxGas,
-    //     uint256 maxGasPrice
-    // ) external payable {
-    //     // require(
-    //     //     receivers.length < CountDest,
-    //     //     "Error: Destinations is not allowed"
-    //     // );
-    //     // for (uint256 i = 0; i < receivers.length; i++) {
-    //     //     ILiFi.BridgeData memory _bridgeData = ILiFi.BridgeData({
-    //     //         transactionId: transactionId,
-    //     //         bridge: bridge,
-    //     //         integrator: integrator,
-    //     //         referrer: referrer,
-    //     //         sendingAssetId: sendingAssetId,
-    //     //         receiver: receivers[i],
-    //     //         minAmount: minAmounts[i],
-    //     //         destinationChainId: destinationChainId,
-    //     //         hasSourceSwaps: hasSourceSwaps,
-    //     //         hasDestinationCall: hasDestinationCall
-    //     //     });
-    //     //     LibSwap.SwapData memory _swapData = LibSwap.SwapData({
-    //     //         callTo: callTo,
-    //     //         approveTo: approveTo,
-    //     //         sendingAssetId: sendingAssetIdForSwap,
-    //     //         receivingAssetId: receivingAssetId,
-    //     //         fromAmount: fromAmount,
-    //     //         callData: callData,
-    //     //         requiresDeposit: requiresDeposit
-    //     //     });
-    //     //     IHecBridgeSplitterInterface.ArbitrumData
-    //     //         memory _arbitrumData = IHecBridgeSplitterInterface
-    //     //             .ArbitrumData({
-    //     //                 maxSubmissionCost: maxSubmissionCost,
-    //     //                 maxGas: maxGas,
-    //     //                 maxGasPrice: maxGasPrice
-    //     //             });
-    //     //     Bridge.swapAndStartBridgeTokensViaArbitrumBridge(
-    //     //         _bridgeData,
-    //     //         _swapData,
-    //     //         _arbitrumData
-    //     //     );
-    //     // }
-    // }
-
+    /// @notice Performs multiple swaps in one transaction
+    /// @param _transactionIds the transaction id associated with the operation
+    /// @param _integrators the name of the integrator
+    /// @param _referrers the address of the referrer
+    /// @param _receivers the address to receive the swapped tokens into (also excess tokens)
+    /// @param _minAmounts the minimum amount of the final asset to receive
+    /// @param _swapDatas an object containing swap related data to perform swaps before bridging
     function swapTokensGeneric(
-        bytes32 _transactionId,
-        string calldata _integrator,
-        string calldata _referrer,
-        address payable _receiver,
-        uint256 _minAmount,
-        LibSwap.SwapData[] calldata _swapData
+        bytes32[] memory _transactionIds,
+        string[] calldata _integrators,
+        string[] calldata _referrers,
+        address[] memory _receivers,
+        uint256[] memory _minAmounts,
+        LibSwap.SwapData[][] calldata _swapDatas
     ) external payable {
-        Bridge.swapTokensGeneric(
-            _transactionId,
-            _integrator,
-            _referrer,
-            _receiver,
-            _minAmount,
-            _swapData
+        require(
+            _swapDatas.length > 0 &&
+                _swapDatas.length <= CountDest &&
+                _swapDatas.length == _transactionIds.length &&
+                _swapDatas.length == _integrators.length &&
+                _swapDatas.length == _referrers.length &&
+                _swapDatas.length == _receivers.length &&
+                _swapDatas.length == _minAmounts.length,
+            "Error: SwapDatas is not allowed"
         );
+
+        for (uint256 i = 0; i < _swapDatas.length; i++) {
+            if (_swapDatas[i][0].sendingAssetId != address(0)) {
+                IERC20Upgradeable srcToken = IERC20Upgradeable(
+                    _swapDatas[i][0].sendingAssetId
+                );
+
+                require(
+                    srcToken.allowance(msg.sender, address(this)) > 0,
+                    "ERC20: transfer amount exceeds allowance"
+                );
+
+                srcToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _swapDatas[i][0].fromAmount
+                );
+
+                srcToken.approve(address(Bridge), _swapDatas[i][0].fromAmount);
+            }
+            bytes memory callData = abi.encodeWithSelector(
+                selectors["swapTokensGeneric"],
+                _transactionIds[i],
+                _integrators[i],
+                _referrers[i],
+                _receivers[i],
+                _minAmounts[i],
+                _swapDatas[i]
+            );
+
+            (bool success, ) = _swapDatas[i][0].sendingAssetId == address(0)
+                ? payable(address(Bridge)).call{
+                    value: _swapDatas[i][0].fromAmount
+                }(callData)
+                : address(Bridge).call(callData);
+
+            require(success, "Failed: Bridge tx is failed");
+            emit CallData(success, callData);
+        }
     }
 
-    function withdraw(IERC20Upgradeable erc20) external {
-        erc20.safeTransfer(msg.sender, erc20.balanceOf(address(this)));
+    // Set selector
+    function setSelectors(string[] memory _names, bytes4[] memory _selectors)
+        external
+        onlyOwner
+    {
+        require(_names.length == _selectors.length, "Error: not match lengths");
+        for (uint256 i = 0; i < _names.length; i++) {
+            selectors[_names[i]] = _selectors[i];
+        }
+    }
+
+    // Withdraw dummy erc20 tokens
+    function withdraw(IERC20Upgradeable erc20) external onlyOwner {
+        if (erc20.balanceOf(address(this)) > 0) {
+            erc20.safeTransfer(msg.sender, erc20.balanceOf(address(this)));
+        }
         if (address(this).balance > 0) {
             payable(msg.sender).transfer(address(this).balance);
         }

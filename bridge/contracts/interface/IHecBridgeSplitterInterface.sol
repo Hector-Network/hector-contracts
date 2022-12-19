@@ -144,8 +144,6 @@ interface IHecBridgeSplitterInterface {
         ArbitrumData calldata _arbitrumData
     ) external payable;
 
-    
-
     /// @notice Performs multiple swaps in one transaction
     /// @param _transactionId the transaction id associated with the operation
     /// @param _integrator the name of the integrator
