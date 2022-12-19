@@ -194,7 +194,6 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     uint256[] public feeWeightBps;
     mapping(address => uint256) feeWeightFor; // feeRecipient=>feeWeight
 
-    bool public isAutoStakingEnabled;
     bool public autoStaking;
     address public autoStakingFeeRecipient;
     uint256 public autoStakingFeeBps; // 10000=100%, 100=1%
@@ -407,10 +406,6 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         autoStaking = !autoStaking;
     }
 
-    function toggleAutoStakingEnable() external onlyPolicy {
-        isAutoStakingEnabled = !isAutoStakingEnabled;
-    }
-
     function updateName(string memory _name) external onlyPolicy {
         name = _name;
     }
@@ -582,14 +577,14 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             lastBlockAt: block.timestamp,
             pricePaid: priceInUSD,
             depositor: msg.sender,
-            stake: isAutoStakingEnabled,
+            stake: autoStaking,
             fnftId: 0
         });
 
         /**
             auto staking payout
         */
-        if (isAutoStakingEnabled) {
+        if (autoStaking) {
             lockFarm.stake(payout, _lockingPeriod);
             bondInfo[depositId].fnftId = fnft.tokenByIndex(
                 fnft.totalSupply() - 1
@@ -605,7 +600,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             depositId,
             _principal,
             _amount,
-            isAutoStakingEnabled,
+            autoStaking,
             payout,
             block.timestamp + _lockingPeriod,
             priceInUSD
@@ -784,13 +779,9 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         lockFarm.claim(_fnftId); // claim from lock farm
         uint256 claimedAmount = _rewardToken.balanceOf(address(this)) - before;
 
-        if (autoStaking) {
-            uint256 fee = (claimedAmount * autoStakingFeeBps) / ONEinBPS;
-            tokenBalances[address(_rewardToken)][
-                autoStakingFeeRecipient
-            ] += fee;
-            claimedAmount -= fee;
-        }
+        uint256 fee = (claimedAmount * autoStakingFeeBps) / ONEinBPS;
+        tokenBalances[address(_rewardToken)][autoStakingFeeRecipient] += fee;
+        claimedAmount -= fee;
 
         if (claimedAmount > 0) {
             _rewardToken.safeTransfer(_recipient, claimedAmount);
