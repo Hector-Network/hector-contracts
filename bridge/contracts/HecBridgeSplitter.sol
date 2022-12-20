@@ -57,7 +57,7 @@ contract HecBridgeSplitter is
             _bridgeDatas.length > 0 &&
                 _bridgeDatas.length <= CountDest &&
                 _bridgeDatas.length == _multichainDatas.length,
-            "Error: Destinations is not allowed"
+            "Splitter: bridge or multichain call data is invalid"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             IERC20Upgradeable srcToken = IERC20Upgradeable(
@@ -84,7 +84,7 @@ contract HecBridgeSplitter is
             );
 
             (bool success, ) = payable(address(Bridge)).call(callData);
-            require(success, "Failed: Bridge tx is failed");
+            require(success, "Splitter: bridge swap transaction was failed");
 
             emit CallData(success, callData);
         }
@@ -106,7 +106,7 @@ contract HecBridgeSplitter is
                 _bridgeDatas.length <= CountDest &&
                 _bridgeDatas.length == _multichainDatas.length &&
                 _bridgeDatas.length == _swapDatas.length,
-            "Error: Destinations is not allowed"
+            "Splitter: bridge or swap call data is invalid"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             IERC20Upgradeable srcToken = IERC20Upgradeable(
@@ -134,7 +134,7 @@ contract HecBridgeSplitter is
             );
 
             (bool success, ) = payable(address(Bridge)).call(callData);
-            require(success, "Failed: Bridge tx is failed");
+            require(success, "Splitter: bridge swap transaction was failed");
 
             emit CallData(success, callData);
         }
@@ -153,7 +153,7 @@ contract HecBridgeSplitter is
             _bridgeDatas.length > 0 &&
                 _bridgeDatas.length <= CountDest &&
                 _bridgeDatas.length == _stargateDatas.length,
-            "Error: Destinations is not allowed"
+            "Splitter: bridge or stargate data is invalid"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             if (_bridgeDatas[i].sendingAssetId != address(0)) {
@@ -184,7 +184,7 @@ contract HecBridgeSplitter is
             (bool success, ) = payable(address(Bridge)).call{
                 value: _stargateDatas[i].lzFee
             }(callData);
-            require(success, "Failed: Bridge tx is failed");
+            require(success, "Splitter: bridge swap transaction was failed");
 
             emit CallData(success, callData);
         }
@@ -207,7 +207,7 @@ contract HecBridgeSplitter is
                 _bridgeDatas.length <= CountDest &&
                 _bridgeDatas.length == _stargateDatas.length &&
                 _bridgeDatas.length == _swapDatas.length,
-            "Error: Destinations is not allowed"
+            "Splitter: bridge or swap call data is invalid"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             if (_swapDatas[i][0].sendingAssetId != address(0)) {
@@ -236,10 +236,10 @@ contract HecBridgeSplitter is
                 _stargateDatas[i]
             );
 
-            (bool success, ) = payable(address(Bridge)).call{
-                value: fees[i]
-            }(callData);
-            require(success, "Failed: Bridge tx is failed");
+            (bool success, ) = payable(address(Bridge)).call{value: fees[i]}(
+                callData
+            );
+            require(success, "Splitter: bridge swap transaction was failed");
 
             emit CallData(success, callData);
         }
@@ -270,7 +270,7 @@ contract HecBridgeSplitter is
                 _swapDatas.length == _referrers.length &&
                 _swapDatas.length == _receivers.length &&
                 _swapDatas.length == _minAmounts.length,
-            "Error: SwapDatas is not allowed"
+            "Splitter: passed parameter data is invalid"
         );
 
         for (uint256 i = 0; i < _swapDatas.length; i++) {
@@ -308,7 +308,8 @@ contract HecBridgeSplitter is
                 }(callData)
                 : address(Bridge).call(callData);
 
-            require(success, "Failed: Bridge tx is failed");
+            require(success, "Splitter: bridge swap transaction was failed");
+
             emit CallData(success, callData);
         }
     }
@@ -318,7 +319,7 @@ contract HecBridgeSplitter is
         external
         onlyOwner
     {
-        require(_names.length == _selectors.length, "Error: not match lengths");
+        require(_names.length == _selectors.length, "Splitter: not matched names and selectors length");
         for (uint256 i = 0; i < _names.length; i++) {
             selectors[_names[i]] = _selectors[i];
         }
