@@ -3,20 +3,19 @@ const { ethers } = require("hardhat");
 const abi = require("../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json");
 const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json");
 const { BigNumber } = require("@ethersproject/bignumber");
+const tempData = require("./tempData.json");
 require("dotenv").config();
 
 async function main() {
-  const mode = "multi"; // mode: single, multi
-  const isNativeFrom = false;
-  const isNativeTo = true;
+  const mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
-  const USDC = "0x04068da6c83afcfa0e13ba15a6696662335d5b75";
-  const DAI = "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e";
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-  const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
+
+  const isNativeFrom = tempData.action.fromToken.address == ZERO_ADDRESS;
+  const isNativeTo = tempData.action.toToken.address == ZERO_ADDRESS;
 
   const HecBridgeSplitterAddress = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
 
@@ -28,54 +27,22 @@ async function main() {
 
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
-  const _transactionId1 = "0xa8965892da93856105fbc199540b9094f4d117ccd734292fd4c8ea1b03dfb19a";
-  const _integrator1 = "transferto.xyz";
-  const _referrer1 = ONE_ADDRESS;
-  const _receiver1 = "0xda66b6206bbaea5213a5065530858a3fd6ee1ec4";
-  const _minAmount1 = isNativeTo
-    ? "42832903188171412"
-    : isNativeFrom
-    ? "22950344068863093"
-    : "9925";
+  const includedSteps0 = tempData.includedSteps[0];
+
+  const _transactionId1 = "0x640632755c04dc3f43d3026270fbed4bf2a67ad0c7e41c2a6c88944f5c2f55b1";
+  const _integrator1 = tempData.integrator;
+  const _referrer1 = tempData.referrer;
+  const _receiver1 = tempData.action.toAddress;
+  const _minAmount1 = tempData.estimate.toAmountMin;
 
   const _swapData1 = [
     {
-      callTo: "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
-      approveTo: "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
-      sendingAssetId: isNativeFrom ? ZERO_ADDRESS : USDC,
-      receivingAssetId: isNativeTo ? ZERO_ADDRESS : isNativeFrom ? DAI : USDC,
-      fromAmount: isNativeTo ? "10000" : isNativeFrom ? "100000000000000000" : "10000000000000000",
-      callData: isNativeTo
-        ? "0x18cbafe5000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000982c4c6b3aca9400000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c2933000000000000000000000000000000000000000000000000000000000000000200000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b7500000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83"
-        : isNativeFrom
-        ? "0x7ff36ab50000000000000000000000000000000000000000000000000051893761b2947500000000000000000000000000000000000000000000000000000000000000800000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c200c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c830000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e"
-        : "0x38ed1739000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000026c500000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c12c100000000000000000000000000000000000000000000000000000000000000020000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e00000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75",
-      requiresDeposit: true,
-    },
-  ];
-
-  const _transactionId2 = "0xa8965892da93856105fbc199540b9094f4d117ccd734292fd4c8ea1b03dfb19a";
-  const _integrator2 = "transferto.xyz";
-  const _referrer2 = ONE_ADDRESS;
-  const _receiver2 = "0xda66b6206bbaea5213a5065530858a3fd6ee1ec4";
-  const _minAmount2 = isNativeTo
-    ? "42832903188171412"
-    : isNativeFrom
-    ? "22950344068863093"
-    : "9925";
-
-  const _swapData2 = [
-    {
-      callTo: "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
-      approveTo: "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
-      sendingAssetId: isNativeFrom ? ZERO_ADDRESS : USDC,
-      receivingAssetId: isNativeTo ? ZERO_ADDRESS : isNativeFrom ? DAI : USDC,
-      fromAmount: isNativeTo ? "10000" : isNativeFrom ? "100000000000000000" : "10000000000000000",
-      callData: isNativeTo
-        ? "0x18cbafe5000000000000000000000000000000000000000000000000000000000000271000000000000000000000000000000000000000000000000000982c4c6b3aca9400000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c2933000000000000000000000000000000000000000000000000000000000000000200000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b7500000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83"
-        : isNativeFrom
-        ? "0x7ff36ab50000000000000000000000000000000000000000000000000051893761b2947500000000000000000000000000000000000000000000000000000000000000800000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c200c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c830000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e"
-        : "0x38ed1739000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000026c500000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae00000000000000000000000000000000000000000000000000000000639c12c100000000000000000000000000000000000000000000000000000000000000020000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e00000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75",
+      callTo: includedSteps0.estimate.approvalAddress,
+      approveTo: includedSteps0.estimate.approvalAddress,
+      sendingAssetId: includedSteps0.action.fromToken.address,
+      receivingAssetId: includedSteps0.action.toToken.address,
+      fromAmount: includedSteps0.action.fromAmount,
+      callData: includedSteps0.transactionRequest.data,
       requiresDeposit: true,
     },
   ];
@@ -95,28 +62,35 @@ async function main() {
   _swapDatas.push(_swapData1);
 
   if (mode == "multi") {
-    _transactionIds.push(_transactionId2);
-    _integrators.push(_integrator2);
-    _referrers.push(_referrer2);
-    _receivers.push(_receiver2);
-    _minAmounts.push(_minAmount2);
-    _swapDatas.push(_swapData2);
+    _transactionIds.push(_transactionId1);
+    _integrators.push(_integrator1);
+    _referrers.push(_referrer1);
+    _receivers.push(_receiver1);
+    _minAmounts.push(_minAmount1);
+    _swapDatas.push(_swapData1);
   }
+
+  console.log("_transactionId1:", _transactionId1);
+  console.log("_integrator1:", _integrator1);
+  console.log("_referrer1:", _referrer1);
+  console.log("_receiver1:", _receiver1);
+  console.log("_minAmount1:", _minAmount1);
+  console.log("_swapData1:", _swapData1);
 
   const fee = !isNativeFrom
     ? 0
     : mode == "multi"
-    ? BigNumber.from(_swapData1[0].fromAmount).add(BigNumber.from(_swapData2[0].fromAmount))
-    : BigNumber.from(_swapData1[0].fromAmount);
+      ? BigNumber.from(_swapData1[0].fromAmount).add(BigNumber.from(_swapData1[0].fromAmount))
+      : BigNumber.from(_swapData1[0].fromAmount);
 
   console.log("fee:", fee);
 
   if (!isNativeFrom) {
-    console.log("Approve the ERC20 token to HecBridgeSplitter...");
     const ERC20Contract = new ethers.Contract(_swapData1[0].sendingAssetId, erc20Abi.abi, deployer);
+    console.log("Approve the ERC20 token to HecBridgeSplitter...");
     const approveAmount =
       mode == "multi"
-        ? BigNumber.from(_swapData1[0].fromAmount).add(BigNumber.from(_swapData2[0].fromAmount))
+        ? BigNumber.from(_swapData1[0].fromAmount).add(BigNumber.from(_swapData1[0].fromAmount))
         : BigNumber.from(_swapData1[0].fromAmount);
     console.log("Approve amount:", approveAmount);
 
@@ -124,6 +98,7 @@ async function main() {
       HecBridgeSplitterAddress,
       approveAmount
     );
+
     await txApprove.wait();
     console.log("Done token allowance setting");
   }
@@ -147,7 +122,7 @@ async function main() {
     );
 
     const resultWait = await result.wait();
-    console.log("Done bridge Tx:", resultWait);
+    console.log("Done bridge Tx:", resultWait.transactionHash);
   } catch (e) {
     console.log(e);
   }
