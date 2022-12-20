@@ -319,7 +319,10 @@ contract HecBridgeSplitter is
         external
         onlyOwner
     {
-        require(_names.length == _selectors.length, "Splitter: not matched names and selectors length");
+        require(
+            _names.length == _selectors.length,
+            "Splitter: not matched names and selectors length"
+        );
         for (uint256 i = 0; i < _names.length; i++) {
             selectors[_names[i]] = _selectors[i];
         }

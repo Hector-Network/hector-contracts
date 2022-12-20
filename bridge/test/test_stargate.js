@@ -7,6 +7,11 @@ const tempData = require("./tempData.json");
 const { toNamespacedPath } = require("path");
 require("dotenv").config();
 
+/**
+ * When native => native trasactionrequest.data is needed
+ * When native => erc20 trasactionrequest.data is needed
+ */
+
 async function main() {
   const mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
@@ -15,8 +20,6 @@ async function main() {
 
   const Bridge = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
   const HecBridgeSplitterAddress = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
-  const USDC = "0x04068da6c83afcfa0e13ba15a6696662335d5b75";
-  const DAI = "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e";
 
   const testHecBridgeSplitterContract = new ethers.Contract(
     HecBridgeSplitterAddress,
@@ -35,33 +38,29 @@ async function main() {
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
   const originSteps = tempData.steps[0];
-  const enableSwap = originSteps.estimate.data.fromToken ? true : false;
+  const originStargateData = originSteps.includedSteps.find((element) => element.type == "cross")
+    .estimate.data.stargateData;
+
+  const enableSwap = originSteps.includedSteps[0].type == "swap" ? true : false;
   const destinationCall =
-    originSteps.includedSteps[0].action.toAddress &&
-    originSteps.includedSteps[0].action.toAddress != Bridge
+    originStargateData.callTo != Bridge && originStargateData.callTo != tempData.toAddress
       ? true
       : false;
-      
+
   const mockBridgeData1 = {
     transactionId: tempData.id,
     bridge: originSteps.tool,
     integrator: originSteps.integrator,
     referrer: originSteps.referrer == "" ? ZERO_ADDRESS : ONE_ADDRESS,
-    sendingAssetId: originSteps.estimate.data.fromToken
+    sendingAssetId: enableSwap
       ? originSteps.estimate.data.toToken.address
       : tempData.fromToken.address,
     receiver: tempData.toAddress,
-    minAmount: originSteps.estimate.data.fromToken
-      ? originSteps.estimate.data.toTokenAmount
-      : tempData.fromAmount,
+    minAmount: enableSwap ? originSteps.estimate.data.toTokenAmount : tempData.fromAmount,
     destinationChainId: tempData.toChainId,
     hasSourceSwaps: enableSwap,
     hasDestinationCall: destinationCall,
   };
-
-  const originStargateData = originSteps.estimate.data.fromToken
-    ? originSteps.includedSteps[originSteps.includedSteps.length - 1].estimate.data.stargateData
-    : originSteps.includedSteps[0].estimate.data.stargateData;
 
   const mockStargateData1 = {
     dstPoolId: originStargateData.dstPoolId,
@@ -69,7 +68,7 @@ async function main() {
     dstGasForCall: originStargateData.dstGasForCall,
     lzFee: originStargateData.lzFee,
     refundAddress: deployer.address,
-    callTo: destinationCall ? originSteps.includedSteps[0].action.toAddress : tempData.toAddress,
+    callTo: destinationCall ? originStargateData.callTo : tempData.toAddress,
     callData: originStargateData.callData,
   };
 
@@ -79,20 +78,19 @@ async function main() {
       callTo: originSwapData.approvalAddress,
       approveTo: originSwapData.approvalAddress,
       sendingAssetId:
-        originSwapData.data.fromToken.address == ETH_ADDRESS
+        (enableSwap && originSwapData.data.fromToken.address == ETH_ADDRESS) || isNativeFrom
           ? ZERO_ADDRESS
           : originSwapData.data.fromToken.address,
-      receivingAssetId: originSwapData.data.toToken.address,
-      fromAmount: originSwapData.fromAmount,
-      callData: originSteps.includedSteps[0].transactionRequest.data
+      receivingAssetId: originSteps.includedSteps[0].action.toToken.address,
+      fromAmount: originSteps.includedSteps[0].action.fromAmount,
+      callData: originSteps.includedSteps[0].transactionRequest && originSteps.includedSteps[0].transactionRequest.data
         ? originSteps.includedSteps[0].transactionRequest.data
-        : "",
+        : "0x",
       requiresDeposit: true,
     },
   ];
 
   const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
-  const isNativeTo = false;
 
   const fees = [];
 
@@ -135,7 +133,7 @@ async function main() {
   console.log("mockStargateData1:", mockStargateData1);
   console.log("mockSwapData1:", mockSwapData1);
 
-  return;
+  // return;
 
   if (!isNativeFrom) {
     console.log("Approve the ERC20 token to HecBridgeSplitter...");
@@ -161,21 +159,21 @@ async function main() {
   try {
     const result = mockBridgeData1.hasSourceSwaps
       ? await testHecBridgeSplitterContract.swapAndStartBridgeTokensViaStargate(
-          mockBridgeDatas,
-          mockSwapDatas,
-          mockStargateDatas,
-          fees,
-          {
-            value: fee,
-          }
-        )
+        mockBridgeDatas,
+        mockSwapDatas,
+        mockStargateDatas,
+        fees,
+        {
+          value: fee,
+        }
+      )
       : await testHecBridgeSplitterContract.startBridgeTokensViaStargate(
-          mockBridgeDatas,
-          mockStargateDatas,
-          {
-            value: fee,
-          }
-        );
+        mockBridgeDatas,
+        mockStargateDatas,
+        {
+          value: fee,
+        }
+      );
     const resultWait = await result.wait();
     console.log("Done bridge Tx:", resultWait.transactionHash);
   } catch (e) {
