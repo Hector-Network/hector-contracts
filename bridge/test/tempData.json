@@ -1,222 +1,494 @@
 {
-  "id": "74a3af2e-dae2-4ddc-95f2-50381c0f9dbb",
-  "type": "lifi",
-  "action": {
+    "id": "0x3276bdbebae4957e6e5ca544a5086a158008e9bb57039387d870553892088477",
     "fromChainId": 250,
-    "fromAmount": "10000000000000000",
+    "fromAmountUSD": "0.20",
+    "fromAmount": "1000000000000000000",
     "fromToken": {
-      "address": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-      "chainId": 250,
-      "symbol": "DAI",
-      "decimals": 18,
-      "name": "Dai Stablecoin",
-      "priceUSD": "0.9998",
-      "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e/549c4205dbb199f1b8b03af783f35e71.png",
-      "coinKey": "XDAI"
-    },
-    "toChainId": 250,
-    "toToken": {
-      "address": "0x0000000000000000000000000000000000000000",
-      "chainId": 250,
-      "symbol": "FTM",
-      "decimals": 18,
-      "name": "FTM",
-      "priceUSD": "0.2046",
-      "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-      "coinKey": "FTM"
-    },
-    "slippage": 0.005,
-    "fromAddress": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc",
-    "toAddress": "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4"
-  },
-  "estimate": {
-    "fromAmount": "10000000000000000",
-    "toAmount": "48596006345913529",
-    "toAmountMin": "48353026314183961",
-    "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-    "executionDuration": 30,
-    "feeCosts": [
-      {
-        "name": "LP Fee",
-        "percentage": "0.003",
-        "token": {
-          "address": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-          "chainId": 250,
-          "symbol": "DAI",
-          "decimals": 18,
-          "name": "Dai Stablecoin",
-          "priceUSD": "0.9998",
-          "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e/549c4205dbb199f1b8b03af783f35e71.png",
-          "coinKey": "XDAI"
-        },
-        "amount": "30000000000000"
-      }
-    ],
-    "gasCosts": [
-      {
-        "type": "SEND",
-        "price": "45964800000",
-        "estimate": "300000",
-        "limit": "375000",
-        "amount": "13789440000000000",
-        "amountUSD": "0.00",
-        "token": {
-          "address": "0x0000000000000000000000000000000000000000",
-          "chainId": 250,
-          "symbol": "FTM",
-          "decimals": 18,
-          "name": "FTM",
-          "priceUSD": "0.2046",
-          "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-          "coinKey": "FTM"
-        }
-      }
-    ],
-    "data": {
-      "path": [
-        "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-        "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83"
-      ],
-      "routerAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29"
-    },
-    "fromAmountUSD": "0.01",
-    "toAmountUSD": "0.01"
-  },
-  "tool": "spookyswap-ftm",
-  "toolDetails": {
-    "key": "spookyswap-ftm",
-    "name": "SpookySwap",
-    "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/spooky.png"
-  },
-  "includedSteps": [
-    {
-      "id": "74a3af2e-dae2-4ddc-95f2-50381c0f9dbb",
-      "type": "swap",
-      "action": {
-        "fromChainId": 250,
-        "fromAmount": "10000000000000000",
-        "fromToken": {
-          "address": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-          "chainId": 250,
-          "symbol": "DAI",
-          "decimals": 18,
-          "name": "Dai Stablecoin",
-          "priceUSD": "0.9998",
-          "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e/549c4205dbb199f1b8b03af783f35e71.png",
-          "coinKey": "XDAI"
-        },
-        "toChainId": 250,
-        "toToken": {
-          "address": "0x0000000000000000000000000000000000000000",
-          "chainId": 250,
-          "symbol": "FTM",
-          "decimals": 18,
-          "name": "FTM",
-          "priceUSD": "0.2046",
-          "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-          "coinKey": "FTM"
-        },
-        "slippage": 0.005,
-        "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
-      },
-      "estimate": {
-        "fromAmount": "10000000000000000",
-        "toAmount": "48596006345913529",
-        "toAmountMin": "48353026314183961",
-        "approvalAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
-        "executionDuration": 30,
-        "feeCosts": [
-          {
-            "name": "LP Fee",
-            "percentage": "0.003",
-            "token": {
-              "address": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-              "chainId": 250,
-              "symbol": "DAI",
-              "decimals": 18,
-              "name": "Dai Stablecoin",
-              "priceUSD": "0.9998",
-              "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e/549c4205dbb199f1b8b03af783f35e71.png",
-              "coinKey": "XDAI"
-            },
-            "amount": "30000000000000"
-          }
-        ],
-        "gasCosts": [
-          {
-            "type": "SEND",
-            "price": "45964800000",
-            "estimate": "300000",
-            "limit": "375000",
-            "amount": "13789440000000000",
-            "amountUSD": "0.00",
-            "token": {
-              "address": "0x0000000000000000000000000000000000000000",
-              "chainId": 250,
-              "symbol": "FTM",
-              "decimals": 18,
-              "name": "FTM",
-              "priceUSD": "0.2046",
-              "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-              "coinKey": "FTM"
-            }
-          }
-        ],
-        "data": {
-          "path": [
-            "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
-            "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83"
-          ],
-          "routerAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29"
-        },
-        "fromAmountUSD": "0.01",
-        "toAmountUSD": "0.01"
-      },
-      "tool": "spookyswap-ftm",
-      "toolDetails": {
-        "key": "spookyswap-ftm",
-        "name": "SpookySwap",
-        "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/spooky.png"
-      },
-      "transactionRequest": {
-        "from": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "to": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+        "address": "0x0000000000000000000000000000000000000000",
         "chainId": 250,
-        "data": "0x18cbafe5000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000abc8d23d45a51900000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000063a18bbb00000000000000000000000000000000000000000000000000000000000000020000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-        "value": "0x00",
-        "gasLimit": "0x06ddd0",
-        "gasPrice": "0x0684ee1800"
-      }
-    }
-  ],
-  "integrator": "transferto.xyz",
-  "referrer": "0x0000000000000000000000000000000000000001",
-  "execution": {
-    "status": "PENDING",
-    "process": [
-      {
-        "type": "TOKEN_ALLOWANCE",
-        "startedAt": 1671527815190,
-        "message": "Token allowance set.",
-        "status": "DONE",
-        "doneAt": 1671527816130
-      },
-      {
-        "type": "SWAP",
-        "startedAt": 1671527816147,
-        "message": "Preparing swap transaction.",
-        "status": "STARTED"
-      }
+        "symbol": "FTM",
+        "decimals": 18,
+        "name": "FTM",
+        "priceUSD": "0.203",
+        "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+        "coinKey": "FTM"
+    },
+    "fromAddress": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc",
+    "toChainId": 137,
+    "toAmountUSD": "0.20",
+    "toAmount": "204804",
+    "toAmountMin": "202761",
+    "toToken": {
+        "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+        "symbol": "USDC",
+        "decimals": 6,
+        "chainId": 137,
+        "name": "USD Coin (PoS)",
+        "coinKey": "USDC",
+        "priceUSD": "1",
+        "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png"
+    },
+    "toAddress": "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
+    "gasCostUSD": "0.13",
+    "containsSwitchChain": false,
+    "steps": [
+        {
+            "id": "7a509856-4713-4250-9f27-7c9f7bf47080",
+            "type": "lifi",
+            "action": {
+                "fromChainId": 250,
+                "fromAmount": "1000000000000000000",
+                "fromToken": {
+                    "address": "0x0000000000000000000000000000000000000000",
+                    "chainId": 250,
+                    "symbol": "FTM",
+                    "decimals": 18,
+                    "name": "FTM",
+                    "priceUSD": "0.203",
+                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                    "coinKey": "FTM"
+                },
+                "toChainId": 137,
+                "toToken": {
+                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+                    "symbol": "USDC",
+                    "decimals": 6,
+                    "chainId": 137,
+                    "name": "USD Coin (PoS)",
+                    "coinKey": "USDC",
+                    "priceUSD": "1",
+                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png"
+                },
+                "slippage": 0.005,
+                "toAddress": "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4",
+                "fromAddress": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc"
+            },
+            "estimate": {
+                "fromAmount": "1000000000000000000",
+                "toAmount": "204804",
+                "toAmountMin": "202761",
+                "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                "executionDuration": 87,
+                "feeCosts": [
+                    {
+                        "name": "LayerZero fees",
+                        "description": "Infrastructure fee paid in native token",
+                        "amount": "615158739137216625",
+                        "percentage": "0.6124",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 250,
+                            "symbol": "FTM",
+                            "decimals": 18,
+                            "name": "FTM",
+                            "priceUSD": "0.203",
+                            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                            "coinKey": "FTM"
+                        },
+                        "amountUSD": "0.12"
+                    },
+                    {
+                        "name": "Equilibrium fees",
+                        "description": "The fee paid to users who rebalance tokens for the stargate protocol",
+                        "amount": "6",
+                        "percentage": "0.0000",
+                        "token": {
+                            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                            "chainId": 250,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "name": "USD Coin",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                            "coinKey": "USDC"
+                        },
+                        "amountUSD": "0.00"
+                    },
+                    {
+                        "name": "Liquidity provider fees",
+                        "description": "The fee paid to liquidity providers for the stargate protocol",
+                        "amount": "0",
+                        "percentage": "0.0000",
+                        "token": {
+                            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                            "chainId": 250,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "name": "USD Coin",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                            "coinKey": "USDC"
+                        },
+                        "amountUSD": "0.00"
+                    },
+                    {
+                        "name": "Protocol fees",
+                        "description": "The fee paid to the stargate protocol",
+                        "amount": "115",
+                        "percentage": "0.0006",
+                        "token": {
+                            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                            "chainId": 250,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "name": "USD Coin",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                            "coinKey": "USDC"
+                        },
+                        "amountUSD": "0.00"
+                    }
+                ],
+                "gasCosts": [
+                    {
+                        "type": "SEND",
+                        "price": "47405000000",
+                        "estimate": "802364",
+                        "limit": "1002955",
+                        "amount": "653194804557216625",
+                        "amountUSD": "0.13",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 250,
+                            "symbol": "FTM",
+                            "decimals": 18,
+                            "name": "FTM",
+                            "priceUSD": "0.203",
+                            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                            "coinKey": "FTM"
+                        }
+                    }
+                ],
+                "data": {
+                    "fromToken": {
+                        "symbol": "FTM",
+                        "name": "Fantom Token",
+                        "decimals": 18,
+                        "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "logoURI": "https://tokens.1inch.io/0x4e15361fd6b4bb609fa63c81a2be19d873717870.png",
+                        "tags": [
+                            "native"
+                        ]
+                    },
+                    "toToken": {
+                        "symbol": "USDC",
+                        "name": "USD Coin",
+                        "decimals": 6,
+                        "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                        "logoURI": "https://tokens.1inch.io/0xddafbb505ad214d7b80b1f830fccc89b60fb7a83.png",
+                        "eip2612": true,
+                        "tags": [
+                            "tokens",
+                            "PEG:USD"
+                        ]
+                    },
+                    "toTokenAmount": "204926",
+                    "fromTokenAmount": "1000000000000000000",
+                    "protocols": [
+                        [
+                            [
+                                {
+                                    "name": "SOLIDLY",
+                                    "part": 100,
+                                    "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                                    "toTokenAddress": "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+                                }
+                            ]
+                        ]
+                    ],
+                    "estimatedGas": 252364
+                },
+                "fromAmountUSD": "0.20",
+                "toAmountUSD": "0.20"
+            },
+            "tool": "stargate",
+            "toolDetails": {
+                "key": "stargate",
+                "name": "Stargate",
+                "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
+            },
+            "includedSteps": [
+                {
+                    "id": "7a509856-4713-4250-9f27-7c9f7bf47080",
+                    "type": "swap",
+                    "action": {
+                        "fromChainId": 250,
+                        "fromAmount": "1000000000000000000",
+                        "fromToken": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 250,
+                            "symbol": "FTM",
+                            "decimals": 18,
+                            "name": "FTM",
+                            "priceUSD": "0.203",
+                            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                            "coinKey": "FTM"
+                        },
+                        "toChainId": 250,
+                        "toToken": {
+                            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                            "chainId": 250,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "name": "USD Coin",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                            "coinKey": "USDC"
+                        },
+                        "slippage": 0.005,
+                        "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                        "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
+                    },
+                    "estimate": {
+                        "fromAmount": "1000000000000000000",
+                        "toAmount": "204926",
+                        "toAmountMin": "203901",
+                        "approvalAddress": "0x1111111254fb6c44bac0bed2854e76f90643097d",
+                        "executionDuration": 30,
+                        "feeCosts": [],
+                        "gasCosts": [
+                            {
+                                "type": "SEND",
+                                "price": "47405000000",
+                                "estimate": "252364",
+                                "limit": "315455",
+                                "amount": "11963315420000000",
+                                "amountUSD": "0.00",
+                                "token": {
+                                    "address": "0x0000000000000000000000000000000000000000",
+                                    "chainId": 250,
+                                    "symbol": "FTM",
+                                    "decimals": 18,
+                                    "name": "FTM",
+                                    "priceUSD": "0.203",
+                                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                                    "coinKey": "FTM"
+                                }
+                            }
+                        ],
+                        "data": {
+                            "fromToken": {
+                                "symbol": "FTM",
+                                "name": "Fantom Token",
+                                "decimals": 18,
+                                "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                                "logoURI": "https://tokens.1inch.io/0x4e15361fd6b4bb609fa63c81a2be19d873717870.png",
+                                "tags": [
+                                    "native"
+                                ]
+                            },
+                            "toToken": {
+                                "symbol": "USDC",
+                                "name": "USD Coin",
+                                "decimals": 6,
+                                "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                                "logoURI": "https://tokens.1inch.io/0xddafbb505ad214d7b80b1f830fccc89b60fb7a83.png",
+                                "eip2612": true,
+                                "tags": [
+                                    "tokens",
+                                    "PEG:USD"
+                                ]
+                            },
+                            "toTokenAmount": "204926",
+                            "fromTokenAmount": "1000000000000000000",
+                            "protocols": [
+                                [
+                                    [
+                                        {
+                                            "name": "SOLIDLY",
+                                            "part": 100,
+                                            "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                                            "toTokenAddress": "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+                                        }
+                                    ]
+                                ]
+                            ],
+                            "estimatedGas": 252364
+                        },
+                        "fromAmountUSD": "0.20",
+                        "toAmountUSD": "0.20"
+                    },
+                    "tool": "1inch",
+                    "toolDetails": {
+                        "key": "1inch",
+                        "name": "1inch",
+                        "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/oneinch.png"
+                    }
+                },
+                {
+                    "id": "98c74767-649c-4aab-a4f5-cde6748273e2",
+                    "type": "cross",
+                    "action": {
+                        "fromChainId": 250,
+                        "fromAmount": "203901",
+                        "fromToken": {
+                            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                            "chainId": 250,
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "name": "USD Coin",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                            "coinKey": "USDC"
+                        },
+                        "toChainId": 137,
+                        "toToken": {
+                            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+                            "symbol": "USDC",
+                            "decimals": 6,
+                            "chainId": 137,
+                            "name": "USD Coin (PoS)",
+                            "coinKey": "USDC",
+                            "priceUSD": "1",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png"
+                        },
+                        "slippage": 0.005,
+                        "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                        "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
+                    },
+                    "estimate": {
+                        "fromAmount": "204926",
+                        "toAmount": "204804",
+                        "toAmountMin": "202761",
+                        "approvalAddress": "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6",
+                        "executionDuration": 57,
+                        "feeCosts": [
+                            {
+                                "name": "LayerZero fees",
+                                "description": "Infrastructure fee paid in native token",
+                                "amount": "615158739137216625",
+                                "percentage": "0.6124",
+                                "token": {
+                                    "address": "0x0000000000000000000000000000000000000000",
+                                    "chainId": 250,
+                                    "symbol": "FTM",
+                                    "decimals": 18,
+                                    "name": "FTM",
+                                    "priceUSD": "0.203",
+                                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                                    "coinKey": "FTM"
+                                },
+                                "amountUSD": "0.12"
+                            },
+                            {
+                                "name": "Equilibrium fees",
+                                "description": "The fee paid to users who rebalance tokens for the stargate protocol",
+                                "amount": "6",
+                                "percentage": "0.0000",
+                                "token": {
+                                    "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                                    "chainId": 250,
+                                    "symbol": "USDC",
+                                    "decimals": 6,
+                                    "name": "USD Coin",
+                                    "priceUSD": "1",
+                                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                                    "coinKey": "USDC"
+                                },
+                                "amountUSD": "0.00"
+                            },
+                            {
+                                "name": "Liquidity provider fees",
+                                "description": "The fee paid to liquidity providers for the stargate protocol",
+                                "amount": "0",
+                                "percentage": "0.0000",
+                                "token": {
+                                    "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                                    "chainId": 250,
+                                    "symbol": "USDC",
+                                    "decimals": 6,
+                                    "name": "USD Coin",
+                                    "priceUSD": "1",
+                                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                                    "coinKey": "USDC"
+                                },
+                                "amountUSD": "0.00"
+                            },
+                            {
+                                "name": "Protocol fees",
+                                "description": "The fee paid to the stargate protocol",
+                                "amount": "115",
+                                "percentage": "0.0006",
+                                "token": {
+                                    "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+                                    "chainId": 250,
+                                    "symbol": "USDC",
+                                    "decimals": 6,
+                                    "name": "USD Coin",
+                                    "priceUSD": "1",
+                                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
+                                    "coinKey": "USDC"
+                                },
+                                "amountUSD": "0.00"
+                            }
+                        ],
+                        "gasCosts": [
+                            {
+                                "type": "SEND",
+                                "price": "47405000000",
+                                "estimate": "550000",
+                                "limit": "687500",
+                                "amount": "641231489137216625",
+                                "amountUSD": "0.13",
+                                "token": {
+                                    "address": "0x0000000000000000000000000000000000000000",
+                                    "chainId": 250,
+                                    "symbol": "FTM",
+                                    "decimals": 18,
+                                    "name": "FTM",
+                                    "priceUSD": "0.203",
+                                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                                    "coinKey": "FTM"
+                                }
+                            }
+                        ],
+                        "data": {
+                            "stargateData": {
+                                "dstPoolId": "1",
+                                "minAmountLD": "202761",
+                                "dstGasForCall": "0",
+                                "refundAddress": "0x552008c0f6870c2f77e5cC1d2eb9bdff03e30Ea0",
+                                "lzFee": "615158739137216625",
+                                "callTo": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                                "callData": "0x"
+                            },
+                            "offchainStargateData": {
+                                "sourcePoolId": "1",
+                                "destinationPoolId": "1",
+                                "router": "0xAf5191B0De278C7286d6C7CC6ab6BB8A73bA2Cd6",
+                                "layerZeroChainId": 109
+                            }
+                        },
+                        "fromAmountUSD": "0.20",
+                        "toAmountUSD": "0.20"
+                    },
+                    "tool": "stargate",
+                    "toolDetails": {
+                        "key": "stargate",
+                        "name": "Stargate",
+                        "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
+                    }
+                }
+            ],
+            "integrator": "transferto.xyz",
+            "referrer": "0x0000000000000000000000000000000000000001",
+            "execution": {
+                "status": "PENDING",
+                "process": [
+                    {
+                        "type": "CROSS_CHAIN",
+                        "startedAt": 1671552407736,
+                        "message": "Preparing bridge transaction.",
+                        "status": "STARTED"
+                    }
+                ]
+            }
+        }
+    ],
+    "tags": [
+        "RECOMMENDED",
+        "CHEAPEST",
+        "FASTEST",
+        "SAFEST"
     ]
-  },
-  "transactionRequest": {
-    "data": "0x4630a0d8f018882279f911684c69b9620745e84c2df75708c84ddd6ff88e3ee7f5b3c7d400000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000100000000000000000000000000da66b6206bbaea5213a5065530858a3fd6ee1ec400000000000000000000000000000000000000000000000000abc8d23d45a5190000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000e7472616e73666572746f2e78797a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a3078303030303030303030303030303030303030303030303030303030303030303030303030303030310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c29000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c290000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000010418cbafe5000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000abc8d23d45a51900000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000063a18bbb00000000000000000000000000000000000000000000000000000000000000020000000000000000000000008d11ec38a3eb5e956b052f67da8bdc9bef8abf3e00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000000000000000000000000000000000000",
-    "to": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-    "value": "0x00",
-    "from": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc",
-    "chainId": 250,
-    "gasLimit": "0x05d4e3",
-    "gasPrice": "0x0684ee1800"
-  }
 }

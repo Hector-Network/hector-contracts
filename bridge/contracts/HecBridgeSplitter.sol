@@ -24,7 +24,7 @@ contract HecBridgeSplitter is
 
     IHecBridgeSplitterInterface public Bridge;
     uint256 public CountDest; // Count of the destination wallets
-    mapping(string => bytes4) public selectors; // All selectors for each bridges
+    mapping(string => bytes4) public selectors; // Selector for each bridge
 
     // Interface
 
