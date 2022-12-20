@@ -20,7 +20,7 @@ import {
   HectorMinterMock,
 } from '../types';
 
-describe('BondV3 with no treasury', function () {
+describe('BondV3.1 with no treasury', function () {
   let owner: SignerWithAddress;
   let alice: SignerWithAddress;
   let bob: SignerWithAddress;
@@ -206,7 +206,7 @@ describe('BondV3 with no treasury', function () {
       lpPrincipal.address,
     ]);
     await bond.initializeAutoStakingFee(
-      true,
+      false,
       autoStakingFeeRecipient.address,
       autoStakingFeeBps
     );
@@ -314,14 +314,14 @@ describe('BondV3 with no treasury', function () {
       await expect(
         bond
           .connect(alice)
-          .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false)
+          .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays)
       ).to.be.revertedWith('Pausable: paused');
     });
 
     it('redeem when paused', async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
 
       await bond.pause();
       await increaseTime(fiveDays.toNumber());
@@ -334,7 +334,7 @@ describe('BondV3 with no treasury', function () {
     it('unpause', async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
 
       await bond.pause();
       await increaseTime(fiveDays.toNumber());
@@ -476,20 +476,14 @@ describe('BondV3 with no treasury', function () {
       await expect(
         bond
           .connect(alice)
-          .deposit(
-            stablePrincipal.address,
-            amount1,
-            maxPrice,
-            lockingPeriod,
-            false
-          )
+          .deposit(stablePrincipal.address, amount1, maxPrice, lockingPeriod)
       ).to.be.revertedWith('Invalid locking period');
     });
 
     it('payout with locking period', async function () {
       const tx = await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(1);
@@ -510,11 +504,11 @@ describe('BondV3 with no treasury', function () {
     it('payout with locking period - two times', async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
 
       const tx = await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(2);
@@ -535,10 +529,10 @@ describe('BondV3 with no treasury', function () {
     it('all bond infos with pendingPayoutFor', async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
 
       await increaseTime(fiveDays.toNumber());
 
@@ -575,13 +569,13 @@ describe('BondV3 with no treasury', function () {
     beforeEach(async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
     });
 
     it('redeem others bond', async function () {
@@ -666,26 +660,14 @@ describe('BondV3 with no treasury', function () {
       await expect(
         bond
           .connect(alice)
-          .deposit(
-            nonStablePrincipal.address,
-            amount1,
-            maxPrice,
-            lockingPeriod,
-            false
-          )
+          .deposit(nonStablePrincipal.address, amount1, maxPrice, lockingPeriod)
       ).to.be.revertedWith('Invalid locking period');
     });
 
     it('payout with locking period', async function () {
       const tx = await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount1,
-          maxPrice,
-          fiveDays,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount1, maxPrice, fiveDays);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(1);
@@ -706,23 +688,11 @@ describe('BondV3 with no treasury', function () {
     it('payout with locking period - two times', async function () {
       await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount1,
-          maxPrice,
-          fiveDays,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount1, maxPrice, fiveDays);
 
       const tx = await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount2,
-          maxPrice,
-          oneWeeks,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount2, maxPrice, oneWeeks);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(2);
@@ -743,22 +713,10 @@ describe('BondV3 with no treasury', function () {
     it('all bond infos with pendingPayoutFor', async function () {
       await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount1,
-          maxPrice,
-          fiveDays,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount2,
-          maxPrice,
-          oneWeeks,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount2, maxPrice, oneWeeks);
 
       await increaseTime(fiveDays.toNumber());
 
@@ -795,31 +753,13 @@ describe('BondV3 with no treasury', function () {
     beforeEach(async function () {
       await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount1,
-          maxPrice,
-          fiveDays,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(
-          nonStablePrincipal.address,
-          amount1,
-          maxPrice,
-          fiveDays,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(
-          nonStablePrincipal.address,
-          amount2,
-          maxPrice,
-          oneWeeks,
-          false
-        );
+        .deposit(nonStablePrincipal.address, amount2, maxPrice, oneWeeks);
     });
 
     it('redeem others bond', async function () {
@@ -904,14 +844,14 @@ describe('BondV3 with no treasury', function () {
       await expect(
         bond
           .connect(alice)
-          .deposit(lpPrincipal.address, amount1, maxPrice, lockingPeriod, false)
+          .deposit(lpPrincipal.address, amount1, maxPrice, lockingPeriod)
       ).to.be.revertedWith('Invalid locking period');
     });
 
     it('payout with locking period', async function () {
       const tx = await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(1);
@@ -932,11 +872,11 @@ describe('BondV3 with no treasury', function () {
     it('payout with locking period - two times', async function () {
       await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays);
 
       const tx = await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks);
       const reciept = await tx.wait();
 
       const info = await bond.bondInfo(2);
@@ -957,10 +897,10 @@ describe('BondV3 with no treasury', function () {
     it('all bond infos with pendingPayoutFor', async function () {
       await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks);
 
       await increaseTime(fiveDays.toNumber());
 
@@ -997,13 +937,13 @@ describe('BondV3 with no treasury', function () {
     beforeEach(async function () {
       await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(lpPrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(lpPrincipal.address, amount2, maxPrice, oneWeeks);
     });
 
     it('redeem others bond', async function () {
@@ -1083,13 +1023,13 @@ describe('BondV3 with no treasury', function () {
     beforeEach(async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
     });
 
     it('token balances for feeRecipients in fee: 10%', async function () {
@@ -1164,13 +1104,13 @@ describe('BondV3 with no treasury', function () {
     beforeEach(async function () {
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, false);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, false);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
     });
 
     it('token balances for fundRecipient in fee: 10%', async function () {
@@ -1219,15 +1159,17 @@ describe('BondV3 with no treasury', function () {
     const autoStakingFeeAmount2 = BigNumber.from('3278328779166');
 
     beforeEach(async function () {
+      await bond.toggleAutoStaking(); // enable auto staking
+
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, true);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(alice)
-        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays, true);
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
       await bond
         .connect(bob)
-        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks, true);
+        .deposit(stablePrincipal.address, amount2, maxPrice, oneWeeks);
       await increaseTime(fiveDays.toNumber());
       await emissionor.emitReward();
       await increaseTime(oneWeeks.toNumber());
@@ -1289,17 +1231,36 @@ describe('BondV3 with no treasury', function () {
       ).equal(autoStakingFeeAmount1.mul(2).add(autoStakingFeeAmount2));
     });
 
-    it('redeem with not staking fee', async function () {
-      await bond.toggleAutoStakingFee();
+    it('redeem with non auto staking', async function () {
+      await bond.toggleAutoStaking(); // disable auto staking
 
-      await bond.connect(alice).redeem(1);
-      expect(await rewardToken.balanceOf(alice.address)).equal(rewardAmount1);
+      await bond
+        .connect(bob)
+        .deposit(stablePrincipal.address, amount1, maxPrice, fiveDays);
+      await increaseTime(fiveDays.toNumber());
+
+      await bond.connect(bob).redeem(4);
+      expect(await rewardToken.balanceOf(bob.address)).equal(constants.Zero);
       expect(
         await bond.tokenBalances(
           rewardToken.address,
           autoStakingFeeRecipient.address
         )
       ).equal(constants.Zero);
+    });
+
+    it('claim reward', async function () {
+      await bond.connect(alice).claim(1);
+
+      expect(await rewardToken.balanceOf(alice.address)).equal(
+        rewardAmount1.sub(autoStakingFeeAmount1)
+      );
+      expect(
+        await bond.tokenBalances(
+          rewardToken.address,
+          autoStakingFeeRecipient.address
+        )
+      ).equal(autoStakingFeeAmount1);
     });
 
     it('claimAutoStakingFee', async function () {
