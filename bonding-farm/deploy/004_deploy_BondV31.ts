@@ -40,9 +40,9 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const uniswapFactory = '0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3';
 
   // LockFarm Address
-  const lockFarmAddress = '0x80993B75e38227f1A3AF6f456Cf64747F0E21612';
-  const fnftAddress = '0x51aEafAC5E4494E9bB2B9e5176844206AaC33Aa3';
-  const tokenVaultAddress = '0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0';
+  const lockFarmAddress = '0x95B7f9ac7f2E4cB09205AAa2Ac74527f55272229';
+  const fnftAddress = '0x6c6dFEa66A03423A8C4340a99c58DEA711CFB65d';
+  const tokenVaultAddress = '0x48a241f049595B13F891dae7C839836F95011693';
 
   /// PriceOracleAggregator
   const priceOracleAggregator = await deploy('PriceOracleAggregator', {
@@ -240,8 +240,6 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   await waitSeconds(5);
   (await contract.initializeDepositTokens(principleAddresses)).wait();
 
-  await waitSeconds(5);
-  (await contract.setLockingDiscount(5 * 60, 200)).wait(); // 5 minutes lock - 2%
   await waitSeconds(5);
   (await contract.setLockingDiscount(5 * 24 * 3600, 500)).wait(); // 5 days lock - 5%
   await waitSeconds(5);
