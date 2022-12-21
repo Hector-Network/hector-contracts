@@ -1,3 +1,4 @@
+import { Result } from '@ethersproject/abi';
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
@@ -1151,12 +1152,12 @@ describe('BondV3.1 with no treasury', function () {
     const maxPrice = 30000000000;
     const amount1 = utils.parseEther('10000');
     const payout1 = BigNumber.from('1052631578947368421052'); // 10000 * 1000000$ / 9.5$ = 1052631578.9473684    const rewardAmount1 = BigNumber.from('61891658926315');
-    const rewardAmount1 = BigNumber.from('61891658926315');
-    const autoStakingFeeAmount1 = BigNumber.from('6189165892631');
+    const rewardAmount1 = BigNumber.from('61890596682105');
+    const autoStakingFeeAmount1 = BigNumber.from('6189059668210');
     const amount2 = utils.parseEther('5000');
     const payout2 = BigNumber.from('555555555555555555555'); // 5000 * 1000000$ / 9$ = 5555555555555556
-    const rewardAmount2 = BigNumber.from('32783287791666');
-    const autoStakingFeeAmount2 = BigNumber.from('3278328779166');
+    const rewardAmount2 = BigNumber.from('32782725133333');
+    const autoStakingFeeAmount2 = BigNumber.from('3278272513333');
 
     beforeEach(async function () {
       await bond.toggleAutoStaking(); // enable auto staking
@@ -1272,6 +1273,46 @@ describe('BondV3.1 with no treasury', function () {
       expect(
         await rewardToken.balanceOf(autoStakingFeeRecipient.address)
       ).equal(autoStakingFeeAmount1.mul(2).add(autoStakingFeeAmount2));
+    });
+  });
+
+  describe('#nonautostaking', () => {
+    const maxPrice = 30000000000;
+    const amount1 = utils.parseEther('5000');
+    const payout1 = BigNumber.from('555555555555555555555'); // 5000 * 1000000$ / 9$ = 5555555555555556
+
+    beforeEach(async function () {
+      await bond.toggleAutoStaking(); // enable auto staking
+      await bond.setLockingDiscount(180, oneWeeksDiscount); // 3 minutes lock
+
+      await bond
+        .connect(alice)
+        .deposit(stablePrincipal.address, amount1, maxPrice, 180);
+      await increaseTime(fiveDays.toNumber());
+      await emissionor.emitReward();
+      await increaseTime(oneWeeks.toNumber());
+      await emissionor.emitReward();
+    });
+
+    it('lockedStakeMinTime', async function () {
+      expect(await bond.lockedStakeMinTime()).equal(
+        await lockFarm.lockedStakeMinTime()
+      );
+    });
+
+    it('deposit short period', async function () {
+      const result = await bond.bondInfoFor(1);
+      expect(result[0].stake).equal(false);
+      expect(result[0].fnftId).equal(BigNumber.from(0));
+      expect(result[1]).equal(payout1);
+      expect(result[2]).equal(BigNumber.from(0));
+
+      await bond.connect(alice).claim(1);
+      expect(await rewardToken.balanceOf(alice.address)).equal(constants.Zero);
+
+      await bond.connect(alice).redeem(1);
+      expect(await rewardToken.balanceOf(alice.address)).equal(constants.Zero);
+      expect(await hectorToken.balanceOf(alice.address)).equal(payout1);
     });
   });
 });

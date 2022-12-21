@@ -109,6 +109,8 @@ interface ILockFarm {
 
     function claim(uint256 fnftId) external;
 
+    function lockedStakeMinTime() external view returns (uint256);
+
     function rewardToken() external view returns (address);
 
     function pendingReward(uint256 fnftId)
@@ -567,6 +569,9 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         */
         uint256 depositId = depositIdGenerator.current();
         depositIdGenerator.increment();
+        // auto staking
+        bool autoStaking_ = autoStaking &&
+            (_lockingPeriod >= lockFarm.lockedStakeMinTime());
         // depositor info is stored
         bondInfo[depositId] = Bond({
             depositId: depositId,
@@ -577,14 +582,14 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             lastBlockAt: block.timestamp,
             pricePaid: priceInUSD,
             depositor: msg.sender,
-            stake: autoStaking,
+            stake: autoStaking_,
             fnftId: 0
         });
 
         /**
             auto staking payout
         */
-        if (autoStaking) {
+        if (autoStaking_) {
             lockFarm.stake(payout, _lockingPeriod);
             bondInfo[depositId].fnftId = fnft.tokenByIndex(
                 fnft.totalSupply() - 1
@@ -600,7 +605,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             depositId,
             _principal,
             _amount,
-            autoStaking,
+            autoStaking_,
             payout,
             block.timestamp + _lockingPeriod,
             priceInUSD
@@ -898,6 +903,18 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         returns (address rewardToken_)
     {
         rewardToken_ = lockFarm.rewardToken();
+    }
+
+    /**
+     *  @notice return lock farm locked stake min time
+     *  @return lockedStakeMinTime_ uint
+     */
+    function lockedStakeMinTime()
+        external
+        view
+        returns (uint256 lockedStakeMinTime_)
+    {
+        lockedStakeMinTime_ = lockFarm.lockedStakeMinTime();
     }
 
     /**
