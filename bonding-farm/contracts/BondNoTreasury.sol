@@ -661,7 +661,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      *  @return claimedAmount_ uint
      */
     function claim(uint256 _depositId)
-        external
+        internal
         whenNotPaused
         returns (uint256 claimedAmount_)
     {
@@ -682,7 +682,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      *  @return claimedAmount_ uint
      */
     function claimAll(address _owner)
-        external
+        internal
         whenNotPaused
         returns (uint256 claimedAmount_)
     {
