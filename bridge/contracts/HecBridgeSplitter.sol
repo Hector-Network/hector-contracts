@@ -26,8 +26,6 @@ contract HecBridgeSplitter is
     uint256 public CountDest; // Count of the destination wallets
     mapping(string => bytes4) public selectors; // Selector for each bridge
 
-    // Interface
-
     /**
      * @dev sets initials
      */
