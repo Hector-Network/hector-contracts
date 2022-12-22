@@ -39,7 +39,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const wftmChainlinkPriceFeeder = '0xe04676B9A9A2973BCb0D1478b5E1E9098BBB7f3D';
   const uniswapFactory = '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 
-  // LockFarm Addres
+  // LockFarm Address
   const lockFarmAddress = '0x39A629FB11D9B70944e4d0821E481055464E588F';
   const fnftAddress = '0xfB6E3489e8B9B2acFC97e744F73F3C26446fed8c';
   const tokenVaultAddress = '0x8580B6aC5C96501909a8AC9DbF100CA8c4b9238e';
@@ -319,8 +319,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     try {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepositoryImplementation,
-        contract:
-          'contracts/HectorBondV31NoTreasuryFTMDepository.sol:BondNoTreasury',
+        contract: 'contracts/BondNoTreasury.sol:BondNoTreasury',
         constructorArguments: [],
       });
     } catch (_) {}

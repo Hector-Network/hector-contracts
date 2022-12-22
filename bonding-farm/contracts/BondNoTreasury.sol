@@ -676,6 +676,31 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         emit BondClaimed(_depositId, _recipient, claimedAmount_);
     }
 
+    /**
+     *  @notice claim for all auto staked bonds
+     *  @param _owner address
+     *  @return claimedAmount_ uint
+     */
+    function claimAll(address _owner)
+        external
+        whenNotPaused
+        returns (uint256 claimedAmount_)
+    {
+        uint256 length = depositCounts[_owner];
+        for (uint256 i = 0; i < length; i++) {
+            uint256 depositId = ownedDeposits[_owner][i];
+            Bond memory info = bondInfo[depositId];
+            uint256 claimedAmount;
+
+            if (info.stake) {
+                claimedAmount = processAutoStakingReward(info.fnftId, _owner);
+            }
+            claimedAmount_ += claimedAmount;
+
+            emit BondClaimed(depositId, _owner, claimedAmount);
+        }
+    }
+
     function claimFee(address _principal, address feeRecipient) external {
         require(
             feeRecipient != fundRecipient,

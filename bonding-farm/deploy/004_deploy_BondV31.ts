@@ -343,7 +343,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: hectorBondNoTreasuryDepositoryImplementation,
         contract:
-          'contracts/HectorBondV31NoTreasuryFTMDepository.sol:BondNoTreasury',
+          'contracts/BondNoTreasury.sol:BondNoTreasury',
         constructorArguments: [],
       });
     } catch (error) {
