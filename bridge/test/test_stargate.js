@@ -133,8 +133,6 @@ async function main() {
   console.log("mockStargateData1:", mockStargateData1);
   console.log("mockSwapData1:", mockSwapData1);
 
-  // return;
-
   if (!isNativeFrom) {
     console.log("Approve the ERC20 token to HecBridgeSplitter...");
     const approveAmount =

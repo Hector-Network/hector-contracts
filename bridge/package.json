@@ -12,7 +12,7 @@
     "verify": "hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" 0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0 --network",
     "verify:all": "hardhat run  ./scripts/verify.js",
     "test:stargate": "hardhat run  ./test/test_stargate.js --network",
-    "test:multichain": "hardhat run  ./test/test_multichaine.js --network",
+    "test:multichain": "hardhat run  ./test/test_multichain.js --network",
     "test:cbridge": "hardhat run  ./test/test_cbridge.js --network",
     "test:generic": "hardhat run  ./test/test_generic.js --network",
     "withdraw": "hardhat run  ./test/test_withdraw.js --network"
