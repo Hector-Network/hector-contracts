@@ -21,3 +21,19 @@ voting/cache
 voting/artifacts
 voting/types
 
+bridge/.openzeppelin
+bridge/bin
+
+#### new-voting ####
+new-voting/node_modules/
+new-voting/.env
+new-voting/coverage
+new-voting/coverage.json
+new-voting/typechain
+new-voting/cache
+new-voting/artifacts
+new-voting/types
+new-voting/bin
+new-voting/.openzeppelin
+
+
