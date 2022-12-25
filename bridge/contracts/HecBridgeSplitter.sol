@@ -210,7 +210,7 @@ contract HecBridgeSplitter is
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
             if (_swapDatas[i][0].sendingAssetId != address(0)) {
                 IERC20Upgradeable srcToken = IERC20Upgradeable(
-                    _bridgeDatas[i].sendingAssetId
+                    _swapDatas[i][0].sendingAssetId
                 );
 
                 require(
@@ -221,10 +221,10 @@ contract HecBridgeSplitter is
                 srcToken.safeTransferFrom(
                     msg.sender,
                     address(this),
-                    _bridgeDatas[i].minAmount
+                    _swapDatas[i][0].fromAmount
                 );
 
-                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+                srcToken.approve(address(Bridge), _swapDatas[i][0].fromAmount);
             }
 
             bytes memory callData = abi.encodeWithSelector(

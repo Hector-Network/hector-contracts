@@ -4,6 +4,7 @@ const abi = require("../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplit
 const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json");
 const { BigNumber } = require("@ethersproject/bignumber");
 const tempData = require("./tempData.json");
+const tempStepData = require("./tempStepData.json");
 const { toNamespacedPath } = require("path");
 require("dotenv").config();
 
@@ -38,9 +39,10 @@ async function main() {
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
   const originSteps = tempData.steps[0];
-  const originStargateData = originSteps.includedSteps.find((element) => element.type == "cross")
+  const originStargateData = tempStepData.includedSteps.find((element) => element.type == "cross")
     .estimate.data.stargateData;
 
+  const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
   const enableSwap = originSteps.includedSteps[0].type == "swap" ? true : false;
   const destinationCall =
     originStargateData.callTo != Bridge && originStargateData.callTo != tempData.toAddress
@@ -72,7 +74,7 @@ async function main() {
     callData: originStargateData.callData,
   };
 
-  const originSwapData = originSteps.includedSteps[0].estimate;
+  const originSwapData = tempStepData.includedSteps[0].estimate;
   const mockSwapData1 = mockBridgeData1.hasSourceSwaps && [
     {
       callTo: originSwapData.approvalAddress,
@@ -81,16 +83,16 @@ async function main() {
         (enableSwap && originSwapData.data.fromToken.address == ETH_ADDRESS) || isNativeFrom
           ? ZERO_ADDRESS
           : originSwapData.data.fromToken.address,
-      receivingAssetId: originSteps.includedSteps[0].action.toToken.address,
-      fromAmount: originSteps.includedSteps[0].action.fromAmount,
-      callData: originSteps.includedSteps[0].transactionRequest && originSteps.includedSteps[0].transactionRequest.data
-        ? originSteps.includedSteps[0].transactionRequest.data
+      receivingAssetId: tempStepData.includedSteps[0].action.toToken.address,
+      fromAmount: tempStepData.includedSteps[0].action.fromAmount,
+      callData: tempStepData.includedSteps[0].transactionRequest && tempStepData.includedSteps[0].transactionRequest.data
+        ? tempStepData.includedSteps[0].transactionRequest.data
         : "0x",
       requiresDeposit: true,
     },
   ];
 
-  const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
+
 
   const fees = [];
 
@@ -113,7 +115,7 @@ async function main() {
     fee = fee.add(item);
   });
 
-  console.log("fee:", fee);
+  console.log({fee, fees});
 
   mockBridgeDatas.push(mockBridgeData1);
   mockStargateDatas.push(mockStargateData1);
@@ -135,15 +137,29 @@ async function main() {
 
   if (!isNativeFrom) {
     console.log("Approve the ERC20 token to HecBridgeSplitter...");
-    const approveAmount =
-      mode == "multi"
-        ? BigNumber.from(mockBridgeData1.minAmount).add(BigNumber.from(mockBridgeData1.minAmount))
-        : BigNumber.from(mockBridgeData1.minAmount);
+    let approveAmount;
+    if(mode == "multi" && enableSwap) {
+      approveAmount = BigNumber.from(mockSwapData1[0].fromAmount).add(BigNumber.from(mockSwapData1[0].minAmount))
+    }
+
+    if(mode == "single" && enableSwap) {
+      approveAmount = BigNumber.from(mockSwapData1[0].fromAmount)
+    }
+
+    if(mode == "multi" && !enableSwap) {
+      approveAmount = BigNumber.from(mockBridgeData1.fromAmount).add(BigNumber.from(mockBridgeData1.minAmount))
+    }
+
+    if(mode == "single" && !enableSwap) {
+      approveAmount = BigNumber.from(mockBridgeData1.fromAmount)
+    }
+
     const ERC20Contract = new ethers.Contract(
-      mockBridgeData1.sendingAssetId,
+      enableSwap ? mockSwapData1[0].sendingAssetId : mockBridgeData1.sendingAssetId,
       erc20Abi.abi,
       deployer
     );
+    
     let txApprove = await ERC20Contract.connect(deployer).approve(
       HecBridgeSplitterAddress,
       approveAmount

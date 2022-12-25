@@ -4,6 +4,7 @@ const abi = require("../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplit
 const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json");
 const { BigNumber } = require("@ethersproject/bignumber");
 const tempData = require("./tempData.json");
+const tempStepData = require("./tempStepData.json");
 require("dotenv").config();
 
 async function main() {
@@ -13,9 +14,10 @@ async function main() {
   console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const ONE_ADDRESS = "0x0000000000000000000000000000000000000001";
 
-  const isNativeFrom = tempData.action.fromToken.address == ZERO_ADDRESS;
-  const isNativeTo = tempData.action.toToken.address == ZERO_ADDRESS;
+  const isNativeFrom = tempStepData.action.fromToken.address == ZERO_ADDRESS;
+  const isNativeTo = tempStepData.action.toToken.address == ZERO_ADDRESS;
 
   const HecBridgeSplitterAddress = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
 
@@ -27,13 +29,13 @@ async function main() {
 
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
-  const includedSteps0 = tempData.includedSteps[0];
+  const includedSteps0 = tempStepData.includedSteps[0];
 
-  const _transactionId1 = "0x640632755c04dc3f43d3026270fbed4bf2a67ad0c7e41c2a6c88944f5c2f55b1";
-  const _integrator1 = tempData.integrator;
-  const _referrer1 = tempData.referrer;
-  const _receiver1 = tempData.action.toAddress;
-  const _minAmount1 = tempData.estimate.toAmountMin;
+  const _transactionId1 = tempData.id;
+  const _integrator1 = tempStepData.integrator;
+  const _referrer1 = tempStepData.referrer == "" ? ZERO_ADDRESS : ONE_ADDRESS;
+  const _receiver1 = tempStepData.action.toAddress;
+  const _minAmount1 = tempStepData.estimate.toAmountMin;
 
   const _swapData1 = [
     {
