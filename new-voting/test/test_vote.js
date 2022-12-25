@@ -12,7 +12,7 @@ async function main() {
   const mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
-  // console.log("Account balance:", (await deployer.getBalance()).toString());
+  console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const VOTING_ADDRESS = "0x7ABf20402BCE654d5F902C599A2547b5557b5406";
@@ -129,10 +129,31 @@ async function main() {
   });
 
   console.log("VOTING COUUNT:", fnftVotingInfoFromHistories.length)
-  return
 
   try {
-    console.log()
+    // fnftVotingInfoFromHistories.map((votingInfo) => {
+    //   const txVote = await votingContract.voteByTime(
+    //     votingInfo._farmVote,
+    //     votingInfo._weights,
+    //     votingInfo._stakingToken,
+    //     votingInfo._amount,
+    //     votingInfo._farmVote,
+    //     votingInfo._fnft,
+    //     votingInfo._fnftIds
+    //   )
+    // })
+    const votingInfo = fnftVotingInfoFromHistories[0];
+
+    const txVote = await votingContract.voteByTime(
+      votingInfo._farmVote,
+      votingInfo._weights,
+      votingInfo._stakingToken,
+      votingInfo._amount,
+      votingInfo._farmVote,
+      votingInfo._fnft,
+      votingInfo._fnftIds
+    )
+    console.log({txVote})
   } catch (e) {
     console.log(e);
   }

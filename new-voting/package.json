@@ -10,7 +10,7 @@
     "deploy": "hardhat run ./scripts/deployVoting.js --network ftm",
     "update": "hardhat run ./scripts/upgradeVoting.js --network ftm",
     "verify": "hardhat verify --contract \"contracts/Voting.sol:Voting\" 0x7ABf20402BCE654d5F902C599A2547b5557b5406 --network ftm",
-    "test": "hardhat run  ./test/test_vote.js --network"
+    "test": "hardhat run  ./test/test_vote.js --network ftm"
   },
   "keywords": [],
   "author": "",
