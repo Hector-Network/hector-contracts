@@ -3,11 +3,9 @@ const fetch = require('node-fetch');
 const { ethers } = require("hardhat");
 const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json");
 const { BigNumber } = require("@ethersproject/bignumber");
-const tempData = require("./tempData.json");
 require("dotenv").config();
 const abiDecoder = require('abi-decoder');
 const abi = require("../artifacts/contracts/Voting.sol/Voting.json");
-const { off } = require("process");
 
 async function main() {
   const mode = "single"; // mode: single, multi
@@ -40,7 +38,7 @@ async function main() {
   }
 
   const currentTime = await getCurrentTimeInSecond();
-  const startTimeStamp = currentTime - voteDelayTime; // 7 days
+  const startTimeStamp = currentTime - voteDelayTime * 2; // 7 days
 
 
   const startBlockApiResult = await fetch(
@@ -112,7 +110,7 @@ async function main() {
   }
 
   txHistories.map((history) => {
-    if (history.txreceipt_status) {
+    if (history.txreceipt_status && history.txreceipt_status != '0') {
       let _time = history.timeStamp;
       let [farmVote, weights, stakingToken, amount, fnft, fnftIds] = getVotingMethodDecode(history);
       const newWeights = [];
@@ -144,6 +142,7 @@ async function main() {
     for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
       const lastTime = await votingContract.lastTimeByOwner()
       if (lastTime == 0 || (fnftVotingInfoFromHistories[i].time > lastTime && fnftVotingInfoFromHistories[i].time != lastTime)) {
+        console.log(fnftVotingInfoFromHistories[i])
         console.log({ lastTime })
         const txVote = await votingContract.voteByTime(
           fnftVotingInfoFromHistories[i]._farmVote,
@@ -155,22 +154,25 @@ async function main() {
           fnftVotingInfoFromHistories[i].time
         )
         await txVote.wait()
-        console.log({hash:txVote.hash})
+        console.log({ hash: txVote.hash })
       }
     }
-
-    // const votingInfo = fnftVotingInfoFromHistories[0];
-    // if (votingInfo.time != lastTime) {
-    //   const txVote = await votingContract.voteByTime(
-    //     votingInfo._farmVote,
-    //     votingInfo._weights,
-    //     votingInfo._stakingToken,
-    //     votingInfo._amount,
-    //     votingInfo._fnft,
-    //     votingInfo._fnftIds,
-    //     votingInfo.time
-    //   )
-    //   console.log(txVote.transactionHash)
+    // for (let j = 0; j < 20; j++) {
+    //   for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
+    //     const lastTime = await votingContract.lastTimeByOwner()
+    //     console.log(fnftVotingInfoFromHistories[i])
+    //     const txVote = await votingContract.voteByTime(
+    //       fnftVotingInfoFromHistories[i]._farmVote,
+    //       fnftVotingInfoFromHistories[i]._weights,
+    //       fnftVotingInfoFromHistories[i]._stakingToken,
+    //       fnftVotingInfoFromHistories[i]._amount,
+    //       fnftVotingInfoFromHistories[i]._fnft,
+    //       fnftVotingInfoFromHistories[i]._fnftIds,
+    //       fnftVotingInfoFromHistories[i].time
+    //     )
+    //     await txVote.wait()
+    //     console.log({ hash: txVote.hash })
+    //   }
     // }
   } catch (e) {
     console.log(e);

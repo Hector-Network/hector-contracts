@@ -145,29 +145,6 @@ contract Voting is
             farmInfos[i]._farmWeight = 0;
             farmInfos[i].time = 0;
         }
-
-        // for (uint256 j = 0; j < farmInfo.length; j++) {
-        //     uint256 time = block.timestamp - farmInfo[j].time;
-        //     if (
-        //         time > voteDelay &&
-        //         farmInfo[j].time > 0 &&
-        //         farmInfo[j]._farmWeight > 0
-        //     ) {
-        //         LockFarm _farm = farmInfo[j]._lockFarm;
-        //         uint256 _votes = farmInfo[j]._farmWeight;
-        //         address _voter = farmInfo[j].voter;
-        //         if (_votes > 0) {
-        //             totalWeight = totalWeight - _votes;
-        //             farmWeights[_farm] = farmWeights[_farm] - _votes;
-        //             userWeight[_voter][_farm] =
-        //                 userWeight[_voter][_farm] -
-        //                 _votes;
-        //             totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
-        //             farmInfo[j]._farmWeight = 0;
-        //             farmInfo[j].time = 0;
-        //         }
-        //     }
-        // }
         emit Reset();
     }
 
@@ -233,8 +210,6 @@ contract Voting is
         uint256[] memory _fnftIds
     ) internal {
         uint256 _weight = getWeightByUser(
-            _stakingToken,
-            _amount,
             _fnft,
             _fnftIds
         );
@@ -290,8 +265,6 @@ contract Voting is
         uint256 time
     ) internal {
         uint256 _weight = getWeightByUser(
-            _stakingToken,
-            _amount,
             _fnft,
             _fnftIds
         );
@@ -423,8 +396,6 @@ contract Voting is
 
     // Get weight for voting
     function getWeightByUser(
-        IERC20Upgradeable _stakingToken,
-        uint256 _amount,
         FNFT _fnft,
         uint256[] memory _fnftIds
     ) internal view returns (uint256) {
@@ -451,9 +422,7 @@ contract Voting is
                 weightByFNFT += calcAmount;
             }
         }
-        // Calculate of ERC20 token weight if there is ERC20 voted
-        uint256 erc20Weight = convertToHEC(address(_stakingToken), _amount);
-        totalWeightByUser = weightByFNFT + erc20Weight;
+        totalWeightByUser = weightByFNFT;
 
         return totalWeightByUser;
     }
