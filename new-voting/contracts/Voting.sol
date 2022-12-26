@@ -480,7 +480,21 @@ contract Voting is
         returns (LockedFNFTInfo[] memory _lockedFNFTInfos)
     {
         uint256 fnftBalance = _fnft.balanceOf(owner);
-        LockedFNFTInfo[] memory lockedFNFTInfos = new LockedFNFTInfo[](fnftBalance);
+        uint256 countOfLockedFNFTInfos = 0;
+
+        // Get count of all Balance By user both of HEC and FNFT
+        for (uint256 i = 0; i < fnftBalance; i++) {
+            // FNFTInfoByUser memory fnftInfo;
+            uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
+            uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
+            uint256 time = block.timestamp - lastVoted;
+            if (time < voteDelay) {
+                countOfLockedFNFTInfos++;
+            }
+        }
+        LockedFNFTInfo[] memory lockedFNFTInfos = new LockedFNFTInfo[](
+            countOfLockedFNFTInfos
+        );
         // Get All Balance By user both of HEC and FNFT
         for (uint256 i = 0; i < fnftBalance; i++) {
             // FNFTInfoByUser memory fnftInfo;

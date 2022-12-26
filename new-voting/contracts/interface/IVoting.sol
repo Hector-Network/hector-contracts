@@ -21,8 +21,8 @@ struct FNFTInfoByUser {
 
 // Structure of locked FNFT info
 struct LockedFNFTInfo {
-    uint256 fnftId; // FNFT id
-    uint256 time; // The token being stored
+    uint256 id; // FNFT id
+    uint256 endTime; // The token being stored
 }
 
 // Interface of the LockFarm
