@@ -252,59 +252,6 @@ contract Voting is
         emit FarmVoted(_owner);
     }
 
-    function _voteByTime(
-        address _owner,
-        LockFarm[] memory _farmVote,
-        uint256[] memory _weights,
-        IERC20Upgradeable _stakingToken,
-        uint256 _amount,
-        FNFT _fnft,
-        uint256[] memory _fnftIds,
-        uint256 time
-    ) internal {
-        uint256 _weight = getWeightByUser(_fnft, _fnftIds);
-        uint256 _totalVotePercentage = 0;
-
-        for (uint256 i = 0; i < _farmVote.length; i++) {
-            _totalVotePercentage = _totalVotePercentage.add(_weights[i]);
-        }
-        require(
-            _totalVotePercentage == 100,
-            "Weights total percentage is not 100%"
-        );
-
-        // Reset every term for old data
-        reset();
-
-        for (uint256 i = 0; i < _farmVote.length; i++) {
-            LockFarm _farm = _farmVote[i];
-            uint256 _farmWeight = _weights[i].mul(_weight).div(
-                _totalVotePercentage
-            );
-            totalWeight = totalWeight.add(_farmWeight);
-            farmWeights[_farm] = farmWeights[_farm].add(_farmWeight);
-            userWeight[_owner][_farm] = userWeight[_owner][_farm] + _farmWeight;
-            totalUserWeight[_owner] = totalUserWeight[_owner] + _farmWeight;
-
-            if (_farmWeight != 0) {
-                // Store all voting infos
-                farmInfos[totalFarmVoteCount] = FarmInfo(
-                    _owner,
-                    _farm,
-                    _farmWeight,
-                    time
-                );
-                totalFarmVoteCount++;
-            }
-        }
-
-        for (uint256 j = 0; j < _fnftIds.length; j++) {
-            lastVotedByFNFT[_fnft][_fnftIds[j]] = time;
-        }
-
-        emit FarmVoted(_owner);
-    }
-
     // Can vote by owner
     function canVote(address owner) public view returns (bool) {
         // Check Farm is existed
@@ -600,31 +547,6 @@ contract Voting is
             _amount,
             _fnft,
             _fnftIds
-        );
-    }
-
-    // Vote
-    function voteByTime(
-        address owner,
-        LockFarm[] calldata _farmVote,
-        uint256[] calldata _weights,
-        IERC20Upgradeable _stakingToken,
-        uint256 _amount,
-        FNFT _fnft,
-        uint256[] memory _fnftIds,
-        uint256 time
-    ) external {
-        lastTimeByOwner = time;
-        // Vote
-        _voteByTime(
-            owner,
-            _farmVote,
-            _weights,
-            _stakingToken,
-            _amount,
-            _fnft,
-            _fnftIds,
-            time
         );
     }
 
