@@ -7,15 +7,16 @@ const tempData = require("./tempData.json");
 require("dotenv").config();
 const abiDecoder = require('abi-decoder');
 const abi = require("../artifacts/contracts/Voting.sol/Voting.json");
+const { off } = require("process");
 
 async function main() {
   const mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
-  console.log("Account balance:", (await deployer.getBalance()).toString());
+  // console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
-  const VOTING_ADDRESS = "0x7ABf20402BCE654d5F902C599A2547b5557b5406";
+  const VOTING_ADDRESS = process.env.VOTING_ADDRESS;
   const OLD_VOTING_ADDRESS = "0x4040761F70921d4E03A34B8F8E6d74097206E7e9";
   const ftmscanApiKey = process.env.FTM_API_KEY;
 
@@ -112,48 +113,65 @@ async function main() {
 
   txHistories.map((history) => {
     if (history.txreceipt_status) {
+      let _time = history.timeStamp;
       let [farmVote, weights, stakingToken, amount, fnft, fnftIds] = getVotingMethodDecode(history);
+      const newWeights = [];
+      weights.value.map((weight) => {
+        newWeights.push(BigNumber.from(weight))
+      })
+      const newFNFTIds = [];
+      fnftIds.value.map((fnftId) => {
+        newFNFTIds.push(BigNumber.from(fnftId))
+      })
 
       if (farmVote?.value && weights?.value) {
         fnftVotingInfoFromHistories.push({
           _farmVote: farmVote.value,
-          _weights: weights.value,
+          _weights: newWeights,
           _stakingToken: stakingToken.value,
-          _amount: amount.value,
+          _amount: BigNumber.from(amount.value),
           _farmVote: farmVote.value,
           _fnft: fnft.value,
-          _fnftIds: fnftIds.value
+          _fnftIds: newFNFTIds,
+          time: BigNumber.from(_time)
         });
       }
     }
   });
 
-  console.log("VOTING COUUNT:", fnftVotingInfoFromHistories.length)
-
+  console.log("TOTAL VOTED COUNT:", fnftVotingInfoFromHistories.length)
   try {
-    // fnftVotingInfoFromHistories.map((votingInfo) => {
+    for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
+      const lastTime = await votingContract.lastTimeByOwner()
+      if (lastTime == 0 || (fnftVotingInfoFromHistories[i].time > lastTime && fnftVotingInfoFromHistories[i].time != lastTime)) {
+        console.log({ lastTime })
+        const txVote = await votingContract.voteByTime(
+          fnftVotingInfoFromHistories[i]._farmVote,
+          fnftVotingInfoFromHistories[i]._weights,
+          fnftVotingInfoFromHistories[i]._stakingToken,
+          fnftVotingInfoFromHistories[i]._amount,
+          fnftVotingInfoFromHistories[i]._fnft,
+          fnftVotingInfoFromHistories[i]._fnftIds,
+          fnftVotingInfoFromHistories[i].time
+        )
+        await txVote.wait()
+        console.log({hash:txVote.hash})
+      }
+    }
+
+    // const votingInfo = fnftVotingInfoFromHistories[0];
+    // if (votingInfo.time != lastTime) {
     //   const txVote = await votingContract.voteByTime(
     //     votingInfo._farmVote,
     //     votingInfo._weights,
     //     votingInfo._stakingToken,
     //     votingInfo._amount,
-    //     votingInfo._farmVote,
     //     votingInfo._fnft,
-    //     votingInfo._fnftIds
+    //     votingInfo._fnftIds,
+    //     votingInfo.time
     //   )
-    // })
-    const votingInfo = fnftVotingInfoFromHistories[0];
-
-    const txVote = await votingContract.voteByTime(
-      votingInfo._farmVote,
-      votingInfo._weights,
-      votingInfo._stakingToken,
-      votingInfo._amount,
-      votingInfo._farmVote,
-      votingInfo._fnft,
-      votingInfo._fnftIds
-    )
-    console.log({txVote})
+    //   console.log(txVote.transactionHash)
+    // }
   } catch (e) {
     console.log(e);
   }

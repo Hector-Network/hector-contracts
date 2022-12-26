@@ -48,6 +48,7 @@ contract Voting is
     mapping(uint256 => FarmInfo) public farmInfos;
     mapping(address => mapping(LockFarm => uint256)) public userWeight; // Return user's voting weigths by lockfarm
     mapping(address => uint256) public totalUserWeight; // Return total user's voting weigths
+    uint256 public lastTimeByOwner;
 
     // Modifiers
     modifier hasVoted(
@@ -278,7 +279,7 @@ contract Voting is
         emit FarmVoted(_owner);
     }
 
-	function _voteByTime(
+    function _voteByTime(
         address _owner,
         LockFarm[] memory _farmVote,
         uint256[] memory _weights,
@@ -286,7 +287,7 @@ contract Voting is
         uint256 _amount,
         FNFT _fnft,
         uint256[] memory _fnftIds,
-		uint256 time
+        uint256 time
     ) internal {
         uint256 _weight = getWeightByUser(
             _stakingToken,
@@ -598,8 +599,7 @@ contract Voting is
         );
     }
 
-
-	 // Vote
+    // Vote
     function voteByTime(
         LockFarm[] calldata _farmVote,
         uint256[] calldata _weights,
@@ -607,8 +607,9 @@ contract Voting is
         uint256 _amount,
         FNFT _fnft,
         uint256[] memory _fnftIds,
-		uint256 time
+        uint256 time
     ) external {
+        lastTimeByOwner = time;
         // Vote
         _voteByTime(
             msg.sender,
@@ -618,10 +619,9 @@ contract Voting is
             _amount,
             _fnft,
             _fnftIds,
-			time
+            time
         );
     }
-
 
     // Add new lock farm
     function addLockFarmForOwner(

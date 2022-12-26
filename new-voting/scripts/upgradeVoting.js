@@ -3,7 +3,7 @@ const { helpers } = require("../helper");
 const { waitSeconds } = require("../helper/helpers");
 const exec = require("child_process").exec;
 
-const UPGRADEABLE_PROXY = "0x19Fc4D72A9D400A19540f41D3728027B89f5Ccd0";
+const UPGRADEABLE_PROXY = process.env.VOTING_ADDRESS;
 
 async function main() {
   const [deployer] = await ethers.getSigners();
