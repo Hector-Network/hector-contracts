@@ -1250,19 +1250,19 @@ describe('BondV3.1 with no treasury', function () {
       ).equal(constants.Zero);
     });
 
-    it('claim reward', async function () {
-      await bond.connect(alice).claim(1);
+    // it('claim reward', async function () {
+    //   await bond.connect(alice).claim(1);
 
-      expect(await rewardToken.balanceOf(alice.address)).equal(
-        rewardAmount1.sub(autoStakingFeeAmount1)
-      );
-      expect(
-        await bond.tokenBalances(
-          rewardToken.address,
-          autoStakingFeeRecipient.address
-        )
-      ).equal(autoStakingFeeAmount1);
-    });
+    //   expect(await rewardToken.balanceOf(alice.address)).equal(
+    //     rewardAmount1.sub(autoStakingFeeAmount1)
+    //   );
+    //   expect(
+    //     await bond.tokenBalances(
+    //       rewardToken.address,
+    //       autoStakingFeeRecipient.address
+    //     )
+    //   ).equal(autoStakingFeeAmount1);
+    // });
 
     it('claimAutoStakingFee', async function () {
       await bond.connect(alice).redeem(1);
@@ -1307,8 +1307,8 @@ describe('BondV3.1 with no treasury', function () {
       expect(result[1]).equal(payout1);
       expect(result[2]).equal(BigNumber.from(0));
 
-      await bond.connect(alice).claim(1);
-      expect(await rewardToken.balanceOf(alice.address)).equal(constants.Zero);
+      // await bond.connect(alice).claim(1);
+      // expect(await rewardToken.balanceOf(alice.address)).equal(constants.Zero);
 
       await bond.connect(alice).redeem(1);
       expect(await rewardToken.balanceOf(alice.address)).equal(constants.Zero);
