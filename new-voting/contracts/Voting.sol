@@ -591,6 +591,7 @@ contract Voting is
 
     // Vote
     function voteByTime(
+        address owner,
         LockFarm[] calldata _farmVote,
         uint256[] calldata _weights,
         IERC20Upgradeable _stakingToken,
@@ -602,7 +603,7 @@ contract Voting is
         lastTimeByOwner = time;
         // Vote
         _voteByTime(
-            msg.sender,
+            owner,
             _farmVote,
             _weights,
             _stakingToken,

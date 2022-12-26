@@ -112,6 +112,7 @@ async function main() {
   txHistories.map((history) => {
     if (history.txreceipt_status && history.txreceipt_status != '0') {
       let _time = history.timeStamp;
+      let _owner = history.from;
       let [farmVote, weights, stakingToken, amount, fnft, fnftIds] = getVotingMethodDecode(history);
       const newWeights = [];
       weights.value.map((weight) => {
@@ -124,6 +125,7 @@ async function main() {
 
       if (farmVote?.value && weights?.value) {
         fnftVotingInfoFromHistories.push({
+          owner: _owner,
           _farmVote: farmVote.value,
           _weights: newWeights,
           _stakingToken: stakingToken.value,
@@ -138,6 +140,10 @@ async function main() {
   });
 
   console.log("TOTAL VOTED COUNT:", fnftVotingInfoFromHistories.length)
+  console.log("getLockedFNFTInfos", await votingContract.votingContract(
+    "0x441D0e1d4207A6Dbd90A6Ba6cEF17399eb92e62D",
+    "0x51aEafAC5E4494E9bB2B9e5176844206AaC33Aa3"
+  ))
   try {
     for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
       const lastTime = await votingContract.lastTimeByOwner()
@@ -147,8 +153,8 @@ async function main() {
         )
       ) {
         console.log(fnftVotingInfoFromHistories[i])
-        console.log({ lastTime })
         const txVote = await votingContract.voteByTime(
+          fnftVotingInfoFromHistories[i].owner,
           fnftVotingInfoFromHistories[i]._farmVote,
           fnftVotingInfoFromHistories[i]._weights,
           fnftVotingInfoFromHistories[i]._stakingToken,
