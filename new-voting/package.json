@@ -9,7 +9,7 @@
     "size": "hardhat size-contracts",
     "deploy": "hardhat run ./scripts/deployVoting.js --network ftm",
     "update": "hardhat run ./scripts/upgradeVoting.js --network ftm",
-    "verify": "hardhat verify --contract \"contracts/Voting.sol:Voting\" 0xbE21117b5D13ef0c515cba8c650Db3f686a335df --network ftm",
+    "verify": "hardhat verify --contract \"contracts/Voting.sol:Voting\" 0xEa87503874C94076d83D3bC6701C8984017b2AAa --network ftm",
     "test": "hardhat run  ./test/test_vote.js --network ftm"
   },
   "keywords": [],

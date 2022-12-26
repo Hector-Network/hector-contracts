@@ -38,7 +38,7 @@ async function main() {
   }
 
   const currentTime = await getCurrentTimeInSecond();
-  const startTimeStamp = currentTime - voteDelayTime * 2; // 7 days
+  const startTimeStamp = currentTime - voteDelayTime; // 7 days
 
 
   const startBlockApiResult = await fetch(
@@ -141,7 +141,11 @@ async function main() {
   try {
     for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
       const lastTime = await votingContract.lastTimeByOwner()
-      if (lastTime == 0 || (fnftVotingInfoFromHistories[i].time > lastTime && fnftVotingInfoFromHistories[i].time != lastTime)) {
+      if (lastTime == 0 ||
+        (fnftVotingInfoFromHistories[i].time > lastTime
+          && fnftVotingInfoFromHistories[i].time != lastTime
+        )
+      ) {
         console.log(fnftVotingInfoFromHistories[i])
         console.log({ lastTime })
         const txVote = await votingContract.voteByTime(
@@ -157,23 +161,7 @@ async function main() {
         console.log({ hash: txVote.hash })
       }
     }
-    // for (let j = 0; j < 20; j++) {
-    //   for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
-    //     const lastTime = await votingContract.lastTimeByOwner()
-    //     console.log(fnftVotingInfoFromHistories[i])
-    //     const txVote = await votingContract.voteByTime(
-    //       fnftVotingInfoFromHistories[i]._farmVote,
-    //       fnftVotingInfoFromHistories[i]._weights,
-    //       fnftVotingInfoFromHistories[i]._stakingToken,
-    //       fnftVotingInfoFromHistories[i]._amount,
-    //       fnftVotingInfoFromHistories[i]._fnft,
-    //       fnftVotingInfoFromHistories[i]._fnftIds,
-    //       fnftVotingInfoFromHistories[i].time
-    //     )
-    //     await txVote.wait()
-    //     console.log({ hash: txVote.hash })
-    //   }
-    // }
+
   } catch (e) {
     console.log(e);
   }

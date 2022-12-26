@@ -132,20 +132,21 @@ contract Voting is
 
     // Reset every new tern if thers are some old voting history
     function reset() internal {
-        for (uint256 i = totalFarmVoteCount; i >= 0; i--) {
-            uint256 time = block.timestamp - farmInfos[i].time;
-            if (time > voteDelay) break;
-            LockFarm _farm = farmInfos[i]._lockFarm;
-            uint256 _votes = farmInfos[i]._farmWeight;
-            address _voter = farmInfos[i].voter;
-            totalWeight = totalWeight - _votes;
-            farmWeights[_farm] = farmWeights[_farm] - _votes;
-            userWeight[_voter][_farm] = userWeight[_voter][_farm] - _votes;
-            totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
-            farmInfos[i]._farmWeight = 0;
-            farmInfos[i].time = 0;
+        if (totalFarmVoteCount > 0) {
+            for (uint256 i = totalFarmVoteCount - 1; i > 0; ) {
+                uint256 time = block.timestamp - farmInfos[i].time;
+                if (time < voteDelay) break;
+                LockFarm _farm = farmInfos[i]._lockFarm;
+                uint256 _votes = farmInfos[i]._farmWeight;
+                address _voter = farmInfos[i].voter;
+                totalWeight = totalWeight - _votes;
+                farmWeights[_farm] = farmWeights[_farm] - _votes;
+                userWeight[_voter][_farm] = userWeight[_voter][_farm] - _votes;
+                totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
+                i = i - 1;
+            }
+            emit Reset();
         }
-        emit Reset();
     }
 
     // Verify farms array is valid
@@ -209,10 +210,7 @@ contract Voting is
         FNFT _fnft,
         uint256[] memory _fnftIds
     ) internal {
-        uint256 _weight = getWeightByUser(
-            _fnft,
-            _fnftIds
-        );
+        uint256 _weight = getWeightByUser(_fnft, _fnftIds);
         uint256 _totalVotePercentage = 0;
 
         for (uint256 i = 0; i < _farmVote.length; i++) {
@@ -264,10 +262,7 @@ contract Voting is
         uint256[] memory _fnftIds,
         uint256 time
     ) internal {
-        uint256 _weight = getWeightByUser(
-            _fnft,
-            _fnftIds
-        );
+        uint256 _weight = getWeightByUser(_fnft, _fnftIds);
         uint256 _totalVotePercentage = 0;
 
         for (uint256 i = 0; i < _farmVote.length; i++) {
@@ -291,15 +286,16 @@ contract Voting is
             userWeight[_owner][_farm] = userWeight[_owner][_farm] + _farmWeight;
             totalUserWeight[_owner] = totalUserWeight[_owner] + _farmWeight;
 
-            // Store all voting infos
-            farmInfos[totalFarmVoteCount] = FarmInfo(
-                _owner,
-                _farm,
-                _farmWeight,
-                time
-            );
-
-            totalFarmVoteCount++;
+            if (_farmWeight != 0) {
+                // Store all voting infos
+                farmInfos[totalFarmVoteCount] = FarmInfo(
+                    _owner,
+                    _farm,
+                    _farmWeight,
+                    time
+                );
+                totalFarmVoteCount++;
+            }
         }
 
         for (uint256 j = 0; j < _fnftIds.length; j++) {
@@ -395,10 +391,11 @@ contract Voting is
     }
 
     // Get weight for voting
-    function getWeightByUser(
-        FNFT _fnft,
-        uint256[] memory _fnftIds
-    ) internal view returns (uint256) {
+    function getWeightByUser(FNFT _fnft, uint256[] memory _fnftIds)
+        internal
+        view
+        returns (uint256)
+    {
         uint256 totalWeightByUser = 0;
         uint256 weightByFNFT = 0;
 
@@ -474,6 +471,30 @@ contract Voting is
         }
 
         return hecWeight;
+    }
+
+    // Get locked FNFT IDs by Owner
+    function getLockedFNFTInfos(address owner, FNFT _fnft)
+        external
+        view
+        returns (LockedFNFTInfo[] memory _lockedFNFTInfos)
+    {
+        uint256 fnftBalance = _fnft.balanceOf(owner);
+        LockedFNFTInfo[] memory lockedFNFTInfos = new LockedFNFTInfo[](fnftBalance);
+        // Get All Balance By user both of HEC and FNFT
+        for (uint256 i = 0; i < fnftBalance; i++) {
+            // FNFTInfoByUser memory fnftInfo;
+            uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
+            uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
+            uint256 time = block.timestamp - lastVoted;
+            if (time < voteDelay) {
+                lockedFNFTInfos[i] = LockedFNFTInfo(
+                    tokenOfOwnerByIndex,
+                    lastVoted + voteDelay
+                );
+            }
+        }
+        return lockedFNFTInfos;
     }
 
     // Get available FNFT IDs by Owner

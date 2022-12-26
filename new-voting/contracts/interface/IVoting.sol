@@ -19,6 +19,12 @@ struct FNFTInfoByUser {
     uint256 depositAmount; // How many tokens
 }
 
+// Structure of locked FNFT info
+struct LockedFNFTInfo {
+    uint256 fnftId; // FNFT id
+    uint256 time; // The token being stored
+}
+
 // Interface of the LockFarm
 interface LockFarm {
     function fnfts(uint256)
