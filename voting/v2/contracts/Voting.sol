@@ -505,18 +505,8 @@ contract Voting is
         returns (LockedFNFTInfo[] memory _lockedFNFTInfos)
     {
         uint256 fnftBalance = _fnft.balanceOf(owner);
-        uint256 countOfLockedFNFTInfos = 0;
+        uint256 countOfLockedFNFTInfos = getCountLockedFNFTInfos(owner, _fnft);
 
-        // Get count of all Balance By user both of HEC and FNFT
-        for (uint256 i = 0; i < fnftBalance; i++) {
-            // FNFTInfoByUser memory fnftInfo;
-            uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
-            uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
-            uint256 time = block.timestamp - lastVoted;
-            if (time < voteDelay) {
-                countOfLockedFNFTInfos++;
-            }
-        }
         LockedFNFTInfo[] memory lockedFNFTInfos = new LockedFNFTInfo[](
             countOfLockedFNFTInfos
         );
@@ -534,6 +524,24 @@ contract Voting is
             }
         }
         return lockedFNFTInfos;
+    }
+
+    // Count of the locked FNFT infos
+    function getCountLockedFNFTInfos(address owner, FNFT _fnft) internal view returns(uint256) {
+        uint256 fnftBalance = _fnft.balanceOf(owner);
+        uint256 countOfLockedFNFTInfos = 0;
+
+        // Get count of all Balance By user both of HEC and FNFT
+        for (uint256 i = 0; i < fnftBalance; i++) {
+            // FNFTInfoByUser memory fnftInfo;
+            uint256 tokenOfOwnerByIndex = _fnft.tokenOfOwnerByIndex(owner, i);
+            uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
+            uint256 time = block.timestamp - lastVoted;
+            if (time < voteDelay) {
+                countOfLockedFNFTInfos++;
+            }
+        }
+        return countOfLockedFNFTInfos;
     }
 
     // Get available FNFT IDs by Owner
