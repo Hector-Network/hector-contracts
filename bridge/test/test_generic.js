@@ -8,7 +8,7 @@ const tempStepData = require("./tempStepData.json");
 require("dotenv").config();
 
 async function main() {
-  const mode = "single"; // mode: single, multi
+  const mode = "multi"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());

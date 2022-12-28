@@ -5,7 +5,6 @@ const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC2
 const { BigNumber } = require("@ethersproject/bignumber");
 const tempData = require("./tempData.json");
 const tempStepData = require("./tempStepData.json");
-const { toNamespacedPath } = require("path");
 require("dotenv").config();
 
 /**
@@ -49,8 +48,27 @@ async function main() {
       ? true
       : false;
 
+  console.log("Mode:", mode);
+  console.log("SwapEnable:", enableSwap);
+  console.log("DestinationCall:", destinationCall);
+
   const mockBridgeData1 = {
-    transactionId: tempData.id,
+    transactionId: "0x1eddd3c2b895ad225d6d2f4fb68c36a5ca1c73f8dfa9a3158e595f9209bd0a86",
+    bridge: originSteps.tool,
+    integrator: originSteps.integrator,
+    referrer: originSteps.referrer == "" ? ZERO_ADDRESS : ONE_ADDRESS,
+    sendingAssetId: enableSwap
+      ? originSteps.estimate.data.toToken.address
+      : tempData.fromToken.address,
+    receiver: tempData.toAddress,
+    minAmount: enableSwap ? originSteps.estimate.data.toTokenAmount : tempData.fromAmount,
+    destinationChainId: tempData.toChainId,
+    hasSourceSwaps: enableSwap,
+    hasDestinationCall: destinationCall,
+  };
+
+  const mockBridgeData2 = {
+    transactionId: "0x1eddd3c2b895ad225d6d2f4fb68c36a5ca1c73f8dfa9a3158e595f9209bd0a87",
     bridge: originSteps.tool,
     integrator: originSteps.integrator,
     referrer: originSteps.referrer == "" ? ZERO_ADDRESS : ONE_ADDRESS,
@@ -115,21 +133,17 @@ async function main() {
     fee = fee.add(item);
   });
 
-  console.log({fee, fees});
+
 
   mockBridgeDatas.push(mockBridgeData1);
   mockStargateDatas.push(mockStargateData1);
   mockBridgeData1.hasSourceSwaps && mockSwapDatas.push(mockSwapData1);
 
   if (mode == "multi") {
-    mockBridgeDatas.push(mockBridgeData1);
+    mockBridgeDatas.push(mockBridgeData2);
     mockStargateDatas.push(mockStargateData1);
     mockBridgeData1.hasSourceSwaps && mockSwapDatas.push(mockSwapData1);
   }
-
-  console.log("Mode:", mode);
-  console.log("SwapEnable:", enableSwap);
-  console.log("DestinationCall:", destinationCall);
 
   console.log("mockBridgeData1:", mockBridgeData1);
   console.log("mockStargateData1:", mockStargateData1);
@@ -138,20 +152,20 @@ async function main() {
   if (!isNativeFrom) {
     console.log("Approve the ERC20 token to HecBridgeSplitter...");
     let approveAmount;
-    if(mode == "multi" && enableSwap) {
-      approveAmount = BigNumber.from(mockSwapData1[0].fromAmount).add(BigNumber.from(mockSwapData1[0].minAmount))
+    if (mode == "multi" && enableSwap) {
+      approveAmount = BigNumber.from(mockSwapData1[0].fromAmount).add(BigNumber.from(mockSwapData1[0].fromAmount))
     }
 
-    if(mode == "single" && enableSwap) {
+    if (mode == "single" && enableSwap) {
       approveAmount = BigNumber.from(mockSwapData1[0].fromAmount)
     }
 
-    if(mode == "multi" && !enableSwap) {
-      approveAmount = BigNumber.from(mockBridgeData1.fromAmount).add(BigNumber.from(mockBridgeData1.minAmount))
+    if (mode == "multi" && !enableSwap) {
+      approveAmount = BigNumber.from(mockBridgeData1.minAmount).add(BigNumber.from(mockBridgeData1.minAmount))
     }
 
-    if(mode == "single" && !enableSwap) {
-      approveAmount = BigNumber.from(mockBridgeData1.fromAmount)
+    if (mode == "single" && !enableSwap) {
+      approveAmount = BigNumber.from(mockBridgeData1.minAmount)
     }
 
     const ERC20Contract = new ethers.Contract(
@@ -159,7 +173,7 @@ async function main() {
       erc20Abi.abi,
       deployer
     );
-    
+
     let txApprove = await ERC20Contract.connect(deployer).approve(
       HecBridgeSplitterAddress,
       approveAmount
@@ -168,7 +182,11 @@ async function main() {
     console.log("Done token allowance setting");
   }
 
-  console.log("Executing startBridgeTokensViaStargate...");
+  console.log({ fee, fees });
+
+  mockBridgeData1.hasSourceSwaps
+    ? console.log("Executing swapAndStartBridgeTokensViaStargate...")
+    : console.log("Executing startBridgeTokensViaStargate...")
 
   try {
     const result = mockBridgeData1.hasSourceSwaps
