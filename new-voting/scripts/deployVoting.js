@@ -16,7 +16,7 @@ async function main() {
   const _lockAddressRegistry = prod_mode ? '0x55639b1833Ddc160c18cA60f5d0eC9286201f525' : '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018';
   const _tokenVault = prod_mode ? '0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0' : '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
   const _maxPercentage = 100;
-  const _voteDelay = 604800;
+  const _voteDelay = 2;
 
   const lockFarm = ['0x80993B75e38227f1A3AF6f456Cf64747F0E21612', '0xd7faE64DD872616587Cc8914d4848947403078B8'];
   const stakingToken = ['0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0', '0x0b9589A2C1379138D4cC5043cE551F466193c8dE'];
