@@ -21,7 +21,7 @@ async function main() {
   const _voteDelay = 604800;
 
   const lockFarm = ['0x80993B75e38227f1A3AF6f456Cf64747F0E21612', '0xd7faE64DD872616587Cc8914d4848947403078B8'];
-  const stakingToken = ['0x5C4FDfc5233f935f20D2aDbA572F770c2E377Ab0', '0x0b9589A2C1379138D4cC5043cE551F466193c8dE'];
+  const stakingToken = [_hec, _hecUsdc];
 
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());

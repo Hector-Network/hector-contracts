@@ -449,52 +449,50 @@ contract Voting is
         uint256 hecWeight = 0;
         // Can input token can be weights
         ERC20Upgradeable sToken = ERC20Upgradeable(address(_stakingToken));
-        require(
+        if (
+            _stakingToken != address(0) &&
             compareStringsbyBytes(
                 stakingTokenSymbol[address(_stakingToken)],
                 sToken.symbol()
-            ),
-            "ERC20: invalid stakingToken"
-        );
-
-        // Check LP token
-        IERC20Upgradeable _token = IERC20Upgradeable(_stakingToken);
-
-        if (
-            address(lockFarmByERC20[_token]) != address(0) &&
-            (address(_stakingToken) == address(HECUSDC) ||
-                address(_stakingToken) == address(HECTOR))
+            )
         ) {
-            SpookySwapPair _lpToken = SpookySwapPair(_stakingToken);
-            // HEC-USDC
-            (uint256 reserve0, uint256 reserve1, ) = _lpToken.getReserves();
-            uint256 amount0 = (_amount * reserve0) / _lpToken.totalSupply();
-            uint256 amount1 = (_amount * reserve1) / _lpToken.totalSupply();
+            IERC20Upgradeable _token = IERC20Upgradeable(_stakingToken);
+            if (
+                address(lockFarmByERC20[_token]) != address(0) &&
+                (address(_stakingToken) == address(HECUSDC) ||
+                    address(_stakingToken) == address(HECTOR))
+            ) {
+                SpookySwapPair _lpToken = SpookySwapPair(_stakingToken);
+                // HEC-USDC, HEC-TOR
+                (uint256 reserve0, uint256 reserve1, ) = _lpToken.getReserves();
+                uint256 amount0 = (_amount * reserve0) / _lpToken.totalSupply();
+                uint256 amount1 = (_amount * reserve1) / _lpToken.totalSupply();
 
-            if (_lpToken.token0() == address(HEC)) {
-                hecWeight = amount0;
+                if (_lpToken.token0() == address(HEC)) {
+                    hecWeight = amount0;
+                }
+
+                if (_lpToken.token1() == address(HEC)) {
+                    hecWeight = amount1;
+                }
             }
 
-            if (_lpToken.token1() == address(HEC)) {
-                hecWeight = amount1;
+            if (
+                address(lockFarmByERC20[_token]) != address(0) &&
+                (address(_stakingToken) == address(HEC) ||
+                    address(_stakingToken) == address(sHEC))
+            ) {
+                // HEC, sHEC
+                hecWeight = _amount;
             }
-        }
 
-        if (
-            address(lockFarmByERC20[_token]) != address(0) &&
-            (address(_stakingToken) == address(HEC) ||
-                address(_stakingToken) == address(sHEC))
-        ) {
-            // HEC, sHEC
-            hecWeight = _amount;
-        }
-
-        if (
-            address(lockFarmByERC20[_token]) != address(0) &&
-            address(_stakingToken) == address(wsHec)
-        ) {
-            // wsHEC
-            hecWeight = wsHec.wsHECTosHEC(_amount);
+            if (
+                address(lockFarmByERC20[_token]) != address(0) &&
+                address(_stakingToken) == address(wsHec)
+            ) {
+                // wsHEC
+                hecWeight = wsHec.wsHECTosHEC(_amount);
+            }
         }
 
         return hecWeight;
