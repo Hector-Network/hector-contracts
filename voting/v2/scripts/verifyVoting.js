@@ -1,3 +1,4 @@
+require("dotenv").config();
 /**
  * Verifying script in all networks
  * If you want to verify in single network, please use this: yarn test ftm
@@ -6,7 +7,8 @@ const exec = require("child_process").exec;
 
 async function main() {
   console.log("Verifying on the FTM network...");
-  const cmdForVerify = `yarn verify ftm`;
+  const cmdForVerify = `hardhat verify --contract \"contracts/Voting.sol:Voting\" ${process.env.VOTING_ADDRESS} --network ftm`;
+  console.log(cmdForVerify)
   exec(cmdForVerify, (error, stdout, stderr) => {
     if (error !== null) {
       console.log(`exec error: ${error}`);

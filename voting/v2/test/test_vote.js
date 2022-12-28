@@ -1,7 +1,6 @@
 const hre = require("hardhat");
 const fetch = require('node-fetch');
 const { ethers } = require("hardhat");
-const erc20Abi = require("../artifacts/@openzeppelin/contracts/token/ERC20/IERC20.sol/IERC20.json");
 const { BigNumber } = require("@ethersproject/bignumber");
 require("dotenv").config();
 const abiDecoder = require('abi-decoder');
@@ -11,7 +10,7 @@ async function main() {
   const mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
-  // console.log("Account balance:", (await deployer.getBalance()).toString());
+  console.log("Account balance:", (await deployer.getBalance()).toString());
 
   const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
   const VOTING_ADDRESS = process.env.VOTING_ADDRESS;
@@ -161,9 +160,10 @@ async function main() {
         )
         await txVote.wait()
         console.log({ hash: txVote.hash })
+        console.log("totalWeight:", await votingContract.totalWeight());
+        console.log("voteResetIndex:", await votingContract.voteResetIndex());
       }
     }
-
   } catch (e) {
     console.log(e);
   }

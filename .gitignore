@@ -10,14 +10,21 @@ artifacts
 types
 
 #### Voting ####
-voting/node_modules/
-voting/.env
-voting/coverage
-voting/coverage.json
-voting/typechain
+voting/v1/node_modules/
+voting/v1/.env
+voting/v1/coverage
+voting/v1/coverage.json
+voting/v1/typechain
+voting/v1/cache
+voting/v1/artifacts
+voting/v1/types
 
-#Hardhat files
-voting/cache
-voting/artifacts
-voting/types
+voting/v2/node_modules/
+voting/v2/.env
+voting/v2/coverage
+voting/v2/coverage.json
+voting/v2/typechain
+voting/v2/cache
+voting/v2/artifacts
+voting/v2/types
 

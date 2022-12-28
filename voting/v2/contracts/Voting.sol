@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.7;
 
+import "@openzeppelin/contracts-upgradeable/token/ERC20/ERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
@@ -19,8 +20,10 @@ contract Voting is
     using SafeERC20Upgradeable for IERC20Upgradeable;
 
     IERC20Upgradeable public HEC; // HEC
-    IERC20Upgradeable public sHEC; // sHEC
-    wsHEC public wsHec; // wsHEC
+    IERC20Upgradeable internal sHEC; // sHEC
+    wsHEC internal wsHec; // wsHEC
+    IERC20Upgradeable internal HECUSDC;
+    IERC20Upgradeable internal HECTOR;
     SpookySwapFactory internal spookySwapFactory;
     TokenVault internal tokenVault;
 
@@ -41,6 +44,7 @@ contract Voting is
     mapping(LockFarm => bool) public farmStatus; // Return status of the farm
     mapping(LockFarm => FNFT) public fnft; // Return FNFT for each LockFarm
     mapping(LockFarm => IERC20Upgradeable) public stakingToken; // Return staking token for eack LockFarm
+    mapping(address => string) public stakingTokenSymbol; // Return symbol for staking token
     mapping(IERC20Upgradeable => LockFarm) public lockFarmByERC20; // Return staking token for each LockFarm
     mapping(LockFarm => LockAddressRegistry) public lockAddressRegistry; // Return LockAddressRegistry by LockFarm
     mapping(FNFT => bool) public canVoteByFNFT; // Return status of user can vote by FNFT
@@ -48,6 +52,7 @@ contract Voting is
     mapping(uint256 => FarmInfo) public farmInfos;
     mapping(address => mapping(LockFarm => uint256)) public userWeight; // Return user's voting weigths by lockfarm
     mapping(address => uint256) public totalUserWeight; // Return total user's voting weigths
+    uint256 public voteResetIndex;
     uint256 public lastTimeByOwner;
 
     // Modifiers
@@ -89,6 +94,8 @@ contract Voting is
         address _hec,
         address _sHec,
         address _wsHec,
+        address _hecUsdc,
+        address _hecTor,
         SpookySwapFactory _spookySwapFactory,
         TokenVault _tokenVault,
         uint256 _maxPercentage,
@@ -97,6 +104,8 @@ contract Voting is
         HEC = IERC20Upgradeable(_hec);
         sHEC = IERC20Upgradeable(_sHec);
         wsHec = wsHEC(_wsHec);
+        HECUSDC = IERC20Upgradeable(_hecUsdc);
+        HECTOR = IERC20Upgradeable(_hecTor);
         spookySwapFactory = _spookySwapFactory;
         tokenVault = _tokenVault;
         maxPercentage = _maxPercentage;
@@ -133,19 +142,26 @@ contract Voting is
     // Reset every new tern if thers are some old voting history
     function reset() internal {
         if (totalFarmVoteCount > 0) {
-            for (uint256 i = totalFarmVoteCount - 1; i > 0; ) {
+            uint256 lastIndex;
+            uint256 resetedWeights;
+            for (uint256 i = voteResetIndex; i < totalFarmVoteCount; i++) {
                 uint256 time = block.timestamp - farmInfos[i].time;
-                if (time < voteDelay) break;
-                LockFarm _farm = farmInfos[i]._lockFarm;
-                uint256 _votes = farmInfos[i]._farmWeight;
-                address _voter = farmInfos[i].voter;
-                totalWeight = totalWeight - _votes;
-                farmWeights[_farm] = farmWeights[_farm] - _votes;
-                userWeight[_voter][_farm] = userWeight[_voter][_farm] - _votes;
-                totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
-                i = i - 1;
+                if (time > voteDelay) {
+                    LockFarm _farm = farmInfos[i]._lockFarm;
+                    uint256 _votes = farmInfos[i]._farmWeight;
+                    address _voter = farmInfos[i].voter;
+                    totalWeight = totalWeight - _votes;
+                    farmWeights[_farm] = farmWeights[_farm] - _votes;
+                    userWeight[_voter][_farm] =
+                        userWeight[_voter][_farm] -
+                        _votes;
+                    totalUserWeight[_voter] = totalUserWeight[_voter] - _votes;
+                    lastIndex = i + 1;
+                    resetedWeights += _votes;
+                }
             }
-            emit Reset();
+            voteResetIndex = lastIndex;
+            emit Reset(voteResetIndex, resetedWeights);
         }
     }
 
@@ -247,6 +263,59 @@ contract Voting is
 
         for (uint256 j = 0; j < _fnftIds.length; j++) {
             lastVotedByFNFT[_fnft][_fnftIds[j]] = block.timestamp;
+        }
+
+        emit FarmVoted(_owner);
+    }
+
+    function _voteByTime(
+        address _owner,
+        LockFarm[] memory _farmVote,
+        uint256[] memory _weights,
+        IERC20Upgradeable _stakingToken,
+        uint256 _amount,
+        FNFT _fnft,
+        uint256[] memory _fnftIds,
+        uint256 time
+    ) internal {
+        uint256 _weight = getWeightByUser(_fnft, _fnftIds);
+        uint256 _totalVotePercentage = 0;
+
+        for (uint256 i = 0; i < _farmVote.length; i++) {
+            _totalVotePercentage = _totalVotePercentage.add(_weights[i]);
+        }
+        require(
+            _totalVotePercentage == 100,
+            "Weights total percentage is not 100%"
+        );
+
+        // Reset every term for old data
+        reset();
+
+        for (uint256 i = 0; i < _farmVote.length; i++) {
+            LockFarm _farm = _farmVote[i];
+            uint256 _farmWeight = _weights[i].mul(_weight).div(
+                _totalVotePercentage
+            );
+            totalWeight = totalWeight.add(_farmWeight);
+            farmWeights[_farm] = farmWeights[_farm].add(_farmWeight);
+            userWeight[_owner][_farm] = userWeight[_owner][_farm] + _farmWeight;
+            totalUserWeight[_owner] = totalUserWeight[_owner] + _farmWeight;
+
+            if (_farmWeight != 0) {
+                // Store all voting infos
+                farmInfos[totalFarmVoteCount] = FarmInfo(
+                    _owner,
+                    _farm,
+                    _farmWeight,
+                    time
+                );
+                totalFarmVoteCount++;
+            }
+        }
+
+        for (uint256 j = 0; j < _fnftIds.length; j++) {
+            lastVotedByFNFT[_fnft][_fnftIds[j]] = time;
         }
 
         emit FarmVoted(_owner);
@@ -378,14 +447,25 @@ contract Voting is
         returns (uint256)
     {
         uint256 hecWeight = 0;
+        // Can input token can be weights
+        ERC20Upgradeable sToken = ERC20Upgradeable(address(_stakingToken));
+        require(
+            compareStringsbyBytes(
+                stakingTokenSymbol[address(_stakingToken)],
+                sToken.symbol()
+            ),
+            "ERC20: invalid stakingToken"
+        );
+
         // Check LP token
-        SpookySwapPair _lpToken = SpookySwapPair(_stakingToken);
         IERC20Upgradeable _token = IERC20Upgradeable(_stakingToken);
+
         if (
             address(lockFarmByERC20[_token]) != address(0) &&
-            compareStringsbyBytes(_lpToken.symbol(), "spLP") &&
-            _lpToken.factory() == address(spookySwapFactory)
+            (address(_stakingToken) == address(HECUSDC) ||
+                address(_stakingToken) == address(HECTOR))
         ) {
+            SpookySwapPair _lpToken = SpookySwapPair(_stakingToken);
             // HEC-USDC
             (uint256 reserve0, uint256 reserve1, ) = _lpToken.getReserves();
             uint256 amount0 = (_amount * reserve0) / _lpToken.totalSupply();
@@ -550,6 +630,31 @@ contract Voting is
         );
     }
 
+    // Vote
+    function voteByTime(
+        address owner,
+        LockFarm[] calldata _farmVote,
+        uint256[] calldata _weights,
+        IERC20Upgradeable _stakingToken,
+        uint256 _amount,
+        FNFT _fnft,
+        uint256[] memory _fnftIds,
+        uint256 time
+    ) external {
+        lastTimeByOwner = time;
+        // Vote
+        _voteByTime(
+            owner,
+            _farmVote,
+            _weights,
+            _stakingToken,
+            _amount,
+            _fnft,
+            _fnftIds,
+            time
+        );
+    }
+
     // Add new lock farm
     function addLockFarmForOwner(
         LockFarm _lockFarm,
@@ -562,6 +667,8 @@ contract Voting is
         farmStatus[_lockFarm] = true;
         lockAddressRegistry[_lockFarm] = _lockAddressRegistry;
         stakingToken[_lockFarm] = _stakingToken;
+        ERC20Upgradeable sToken = ERC20Upgradeable(address(_stakingToken));
+        stakingTokenSymbol[address(_stakingToken)] = sToken.symbol();
 
         address fnftAddress = _lockAddressRegistry.getFNFT();
         fnft[_lockFarm] = FNFT(fnftAddress);
@@ -637,6 +744,6 @@ contract Voting is
     event SetVoteDelay(uint256 voteDelay, address admin);
     event SetStatusFNFT(FNFT farm, bool status);
     event SetStatusERC20(IERC20Upgradeable farm, bool status);
-    event Reset();
+    event Reset(uint256 lastIndex, uint256 resetedAmounts);
     event Withdraw(address[] stakingTokens, uint256[] amounts);
 }
