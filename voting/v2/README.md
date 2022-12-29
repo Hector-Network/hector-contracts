@@ -1,13 +1,25 @@
-# Sample Hardhat Project
+# Hector-Voting Contract
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+### Development
 
-Try running some of the following tasks:
+#### Setup
 
-```shell
-npx hardhat help
-npx hardhat test
-GAS_REPORT=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.ts
+Install dependencies with [Yarn](https://yarnpkg.com/en/):
+
+```bash
+yarn install
+```
+
+#### Testing
+
+```bash
+yarn test
+```
+
+#### Deployment
+
+Edit [hardhat.config.ts](hardhat.config.ts) and copy sample.env to .env and input the relevant variables, then run:
+
+```bash
+yarn deploy:[network]
 ```

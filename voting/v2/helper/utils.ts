@@ -1,26 +1,22 @@
-const { ethers } = require("ethers")
-const { BigNumber } = require("@ethersproject/bignumber")
+import { ethers } from "ethers";
+import { BigNumber } from "@ethersproject/bignumber";
 
-const ether = (amount) => {
+export const ether = (amount: number | string): BigNumber => {
   const weiString = ethers.utils.parseEther(amount.toString());
   return BigNumber.from(weiString);
 };
 
-const wei = (amount) => {
+export const wei = (amount: number | string): BigNumber => {
   const weiString = ethers.utils.parseUnits(amount.toString(), 0);
   return BigNumber.from(weiString);
 };
 
-const gWei = (amount) => {
+export const gWei = (amount: number): BigNumber => {
   const weiString = BigNumber.from("1000000000").mul(amount);
   return BigNumber.from(weiString);
 };
 
-const usdc = (amount) => {
+export const usdc = (amount: number): BigNumber => {
   const weiString = BigNumber.from("1000000").mul(amount);
   return BigNumber.from(weiString);
 };
-
-module.exports = {
-  ether, wei, gWei, usdc
-}
