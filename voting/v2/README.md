@@ -1,4 +1,4 @@
-# Hector-Voting Contract
+# Hector-Voting V2 Contract
 
 ### Development
 
