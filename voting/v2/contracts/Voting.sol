@@ -632,6 +632,12 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		return _fnft;
 	}
 
+	// Set Vote Delay
+	function setVersion(string memory _version) external onlyOwner {
+		version = _version;
+		emit SetVersion(_version, msg.sender);
+	}
+
 	// All events
 	event FarmVoted(address owner);
 	event FarmAddedByOwner(LockFarm farm);
@@ -642,6 +648,7 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	event SetVoteDelay(uint256 voteDelay, address admin);
 	event SetStatusFNFT(FNFT farm, bool status);
 	event SetStatusERC20(IERC20Upgradeable farm, bool status);
+	event SetVersion(string version, address admin);
 	event Reset(uint256 lastIndex, uint256 resetedAmounts);
 	event Withdraw(address[] stakingTokens, uint256[] amounts);
 }
