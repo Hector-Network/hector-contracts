@@ -65,15 +65,7 @@ async function main() {
 
 	const votingContract = await hre.upgrades.deployProxy(
 		votingFactory,
-		[
-			version,
-			_hec,
-			_sHec,
-			_wsHec,
-			_tokenVault,
-			_maxPercentage,
-			_voteDelay,
-		],
+		[version, _hec, _sHec, _wsHec, _tokenVault, _maxPercentage, _voteDelay],
 		{
 			gas: gas,
 			initializer: 'initialize',
@@ -83,9 +75,19 @@ async function main() {
 
 	// Add LockFarms
 	for (let i = 0; i < lockFarm.length; i++) {
-		await votingContract.addLockFarmForOwner(lockFarm[i], stakingToken[i], _lockAddressRegistry);
-		await waitSeconds(3);
+		const txAddLockFarm = await votingContract.addLockFarmForOwner(
+			lockFarm[i],
+			stakingToken[i],
+			_lockAddressRegistry
+		);
+		await txAddLockFarm.wait();
 	}
+
+	// Add LPTokens
+	const txAddLPHECUSDC = await votingContract.addLPTokens(_hecUsdc, true);
+	await txAddLPHECUSDC.wait();
+	const txAddLPHECTOR = await votingContract.addLPTokens(_hecTor, true);
+	await txAddLPHECTOR.wait();
 }
 
 main().catch((error) => {

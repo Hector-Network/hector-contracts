@@ -1,30 +1,30 @@
 {
   "manifestVersion": "3.2",
   "admin": {
-    "address": "0x74a8cedeE66300565399c290e1224E96ecB0BA1a",
-    "txHash": "0x24a459ecbd1084493ca5629ff736ae81b8b18bb2e98d7d2d02621abb202ad4bc"
+    "address": "0x7127A3d09481f9915db1DB9f9567DfB28eE4d518",
+    "txHash": "0x31b6debfaad5f89c7fcd1d660680b1064b39e29ad7dd33d8bf33fe3420c02470"
   },
   "proxies": [
     {
-      "address": "0xF9322b3Ec5107a8C099dAA1Dadf97c538AE51498",
-      "txHash": "0xeb1fc25005c1b0a93f87109bac16b43f2fb495b961f8a988ae854a2c045b0ad1",
+      "address": "0xFAef5B778c47C1f6f39ac5605B4E45B30c589E50",
+      "txHash": "0x596679e45dc5632ced88aa7d1e60da2c766dd0ef0e46dbe4f14570648dd19ed7",
       "kind": "transparent"
     },
     {
-      "address": "0xeABe73D87B09b54e911DA4D98990916F90fEd4c5",
-      "txHash": "0x721e8148af38972d2f27aa937aaac7cf2b4f41ba88668a983bb96f06135dabb6",
+      "address": "0x9ef6A3954F40DD1d956A08FA32de4bf3E6A5fF92",
+      "txHash": "0x683a715ef9306a1b27fa46b38f4c38553da00b7b9ad6342f699259654774d931",
       "kind": "transparent"
     },
     {
-      "address": "0x27B391464bf9442800FC460fc79eA7E3324f3698",
-      "txHash": "0xdcfd4de481df7eb5564ad37aa634905d91c6b391c62ed6b3d2083536c16365a4",
+      "address": "0xd44EAd4d2E7ab8a834555B636426b29Ec359A6E2",
+      "txHash": "0x1ce96a9fe30b001a680de47ce69ca6918eaea6b8bd699854662a486c9ab2635e",
       "kind": "transparent"
     }
   ],
   "impls": {
-    "7ecb67b4980e0b4e57be88befe7e2f51012b90847ef4da9eaad184cb78159fdb": {
-      "address": "0xEeb0dEC67f4bE987A304Dd0d5A0f57874D2F01BA",
-      "txHash": "0xd1c2ea6db1af6c80fd8bff5c8ba670a7f501cd3e09b42d6b1056b6db46ed9750",
+    "1f27d46da0a606ef11a423993de817950503aaae6c2ed3ad4f196c7f991c6f97": {
+      "address": "0x8b9e8Fcc3E065e97F1e92249A137024b3633b23F",
+      "txHash": "0x3c9127e3b2e6d31b06a711c5145d4900cc38c0bcbc4af1342793776aa509f7d5",
       "layout": {
         "storage": [
           {
@@ -111,44 +111,44 @@
             "label": "wsHec",
             "offset": 0,
             "slot": "154",
-            "type": "t_contract(wsHEC)4566",
+            "type": "t_contract(wsHEC)4511",
             "contract": "Voting",
             "src": "contracts\\Voting.sol:21"
           },
           {
-            "label": "HECUSDC",
+            "label": "tokenVault",
             "offset": 0,
             "slot": "155",
-            "type": "t_contract(IERC20Upgradeable)846",
+            "type": "t_contract(TokenVault)4527",
             "contract": "Voting",
             "src": "contracts\\Voting.sol:22"
           },
           {
-            "label": "HECTOR",
+            "label": "totalWeight",
             "offset": 0,
             "slot": "156",
-            "type": "t_contract(IERC20Upgradeable)846",
+            "type": "t_uint256",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:23"
+            "src": "contracts\\Voting.sol:31"
           },
           {
-            "label": "spookySwapFactory",
+            "label": "maxPercentage",
             "offset": 0,
             "slot": "157",
-            "type": "t_contract(SpookySwapFactory)4497",
+            "type": "t_uint256",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:24"
+            "src": "contracts\\Voting.sol:32"
           },
           {
-            "label": "tokenVault",
+            "label": "voteDelay",
             "offset": 0,
             "slot": "158",
-            "type": "t_contract(TokenVault)4582",
+            "type": "t_uint256",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:25"
+            "src": "contracts\\Voting.sol:33"
           },
           {
-            "label": "totalWeight",
+            "label": "totalFarmVoteCount",
             "offset": 0,
             "slot": "159",
             "type": "t_uint256",
@@ -156,156 +156,132 @@
             "src": "contracts\\Voting.sol:34"
           },
           {
-            "label": "maxPercentage",
+            "label": "farmWeights",
             "offset": 0,
             "slot": "160",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:35"
-          },
-          {
-            "label": "voteDelay",
-            "offset": 0,
-            "slot": "161",
-            "type": "t_uint256",
+            "type": "t_mapping(t_contract(LockFarm)4328,t_uint256)",
             "contract": "Voting",
             "src": "contracts\\Voting.sol:36"
           },
           {
-            "label": "totalFarmVoteCount",
+            "label": "farms",
             "offset": 0,
-            "slot": "162",
-            "type": "t_uint256",
+            "slot": "161",
+            "type": "t_array(t_contract(LockFarm)4328)dyn_storage",
             "contract": "Voting",
             "src": "contracts\\Voting.sol:37"
           },
           {
-            "label": "farmWeights",
-            "offset": 0,
-            "slot": "163",
-            "type": "t_mapping(t_contract(LockFarm)4383,t_uint256)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:39"
-          },
-          {
-            "label": "farms",
-            "offset": 0,
-            "slot": "164",
-            "type": "t_array(t_contract(LockFarm)4383)dyn_storage",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:40"
-          },
-          {
             "label": "farmStatus",
             "offset": 0,
-            "slot": "165",
-            "type": "t_mapping(t_contract(LockFarm)4383,t_bool)",
+            "slot": "162",
+            "type": "t_mapping(t_contract(LockFarm)4328,t_bool)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:41"
+            "src": "contracts\\Voting.sol:38"
           },
           {
             "label": "fnft",
             "offset": 0,
-            "slot": "166",
-            "type": "t_mapping(t_contract(LockFarm)4383,t_contract(FNFT)4412)",
+            "slot": "163",
+            "type": "t_mapping(t_contract(LockFarm)4328,t_contract(FNFT)4357)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:42"
+            "src": "contracts\\Voting.sol:39"
           },
           {
             "label": "stakingToken",
             "offset": 0,
-            "slot": "167",
-            "type": "t_mapping(t_contract(LockFarm)4383,t_contract(IERC20Upgradeable)846)",
+            "slot": "164",
+            "type": "t_mapping(t_contract(LockFarm)4328,t_contract(IERC20Upgradeable)846)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:43"
+            "src": "contracts\\Voting.sol:40"
           },
           {
             "label": "stakingTokenSymbol",
             "offset": 0,
-            "slot": "168",
+            "slot": "165",
             "type": "t_mapping(t_address,t_string_storage)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:44"
+            "src": "contracts\\Voting.sol:41"
           },
           {
             "label": "lockFarmByERC20",
             "offset": 0,
-            "slot": "169",
-            "type": "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4383)",
+            "slot": "166",
+            "type": "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4328)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:45"
+            "src": "contracts\\Voting.sol:42"
           },
           {
             "label": "lockAddressRegistry",
             "offset": 0,
-            "slot": "170",
-            "type": "t_mapping(t_contract(LockFarm)4383,t_contract(LockAddressRegistry)4428)",
+            "slot": "167",
+            "type": "t_mapping(t_contract(LockFarm)4328,t_contract(LockAddressRegistry)4373)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:46"
+            "src": "contracts\\Voting.sol:43"
           },
           {
             "label": "canVoteByFNFT",
             "offset": 0,
-            "slot": "171",
-            "type": "t_mapping(t_contract(FNFT)4412,t_bool)",
+            "slot": "168",
+            "type": "t_mapping(t_contract(FNFT)4357,t_bool)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:47"
+            "src": "contracts\\Voting.sol:44"
           },
           {
             "label": "lastVotedByFNFT",
             "offset": 0,
-            "slot": "172",
-            "type": "t_mapping(t_contract(FNFT)4412,t_mapping(t_uint256,t_uint256))",
+            "slot": "169",
+            "type": "t_mapping(t_contract(FNFT)4357,t_mapping(t_uint256,t_uint256))",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:48"
+            "src": "contracts\\Voting.sol:45"
           },
           {
             "label": "farmInfos",
             "offset": 0,
-            "slot": "173",
-            "type": "t_mapping(t_uint256,t_struct(FarmInfo)1753_storage)",
+            "slot": "170",
+            "type": "t_mapping(t_uint256,t_struct(FarmInfo)1744_storage)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:49"
+            "src": "contracts\\Voting.sol:46"
           },
           {
             "label": "userWeight",
             "offset": 0,
-            "slot": "174",
-            "type": "t_mapping(t_address,t_mapping(t_contract(LockFarm)4383,t_uint256))",
+            "slot": "171",
+            "type": "t_mapping(t_address,t_mapping(t_contract(LockFarm)4328,t_uint256))",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:50"
+            "src": "contracts\\Voting.sol:47"
           },
           {
             "label": "totalUserWeight",
             "offset": 0,
-            "slot": "175",
+            "slot": "172",
             "type": "t_mapping(t_address,t_uint256)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:51"
+            "src": "contracts\\Voting.sol:48"
           },
           {
             "label": "lpTokens",
             "offset": 0,
-            "slot": "176",
+            "slot": "173",
             "type": "t_mapping(t_address,t_bool)",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:52"
+            "src": "contracts\\Voting.sol:49"
           },
           {
             "label": "voteResetIndex",
             "offset": 0,
-            "slot": "177",
+            "slot": "174",
             "type": "t_uint256",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:53"
+            "src": "contracts\\Voting.sol:50"
           },
           {
             "label": "lastTimeByOwner",
             "offset": 0,
-            "slot": "178",
+            "slot": "175",
             "type": "t_uint256",
             "contract": "Voting",
-            "src": "contracts\\Voting.sol:54"
+            "src": "contracts\\Voting.sol:51"
           }
         ],
         "types": {
@@ -313,7 +289,7 @@
             "label": "address",
             "numberOfBytes": "20"
           },
-          "t_array(t_contract(LockFarm)4383)dyn_storage": {
+          "t_array(t_contract(LockFarm)4328)dyn_storage": {
             "label": "contract LockFarm[]",
             "numberOfBytes": "32"
           },
@@ -329,7 +305,7 @@
             "label": "bool",
             "numberOfBytes": "1"
           },
-          "t_contract(FNFT)4412": {
+          "t_contract(FNFT)4357": {
             "label": "contract FNFT",
             "numberOfBytes": "20"
           },
@@ -337,23 +313,19 @@
             "label": "contract IERC20Upgradeable",
             "numberOfBytes": "20"
           },
-          "t_contract(LockAddressRegistry)4428": {
+          "t_contract(LockAddressRegistry)4373": {
             "label": "contract LockAddressRegistry",
             "numberOfBytes": "20"
           },
-          "t_contract(LockFarm)4383": {
+          "t_contract(LockFarm)4328": {
             "label": "contract LockFarm",
             "numberOfBytes": "20"
           },
-          "t_contract(SpookySwapFactory)4497": {
-            "label": "contract SpookySwapFactory",
-            "numberOfBytes": "20"
-          },
-          "t_contract(TokenVault)4582": {
+          "t_contract(TokenVault)4527": {
             "label": "contract TokenVault",
             "numberOfBytes": "20"
           },
-          "t_contract(wsHEC)4566": {
+          "t_contract(wsHEC)4511": {
             "label": "contract wsHEC",
             "numberOfBytes": "20"
           },
@@ -361,7 +333,7 @@
             "label": "mapping(address => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_address,t_mapping(t_contract(LockFarm)4383,t_uint256))": {
+          "t_mapping(t_address,t_mapping(t_contract(LockFarm)4328,t_uint256))": {
             "label": "mapping(address => mapping(contract LockFarm => uint256))",
             "numberOfBytes": "32"
           },
@@ -373,39 +345,39 @@
             "label": "mapping(address => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(FNFT)4412,t_bool)": {
+          "t_mapping(t_contract(FNFT)4357,t_bool)": {
             "label": "mapping(contract FNFT => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(FNFT)4412,t_mapping(t_uint256,t_uint256))": {
+          "t_mapping(t_contract(FNFT)4357,t_mapping(t_uint256,t_uint256))": {
             "label": "mapping(contract FNFT => mapping(uint256 => uint256))",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4383)": {
+          "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4328)": {
             "label": "mapping(contract IERC20Upgradeable => contract LockFarm)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(LockFarm)4383,t_bool)": {
+          "t_mapping(t_contract(LockFarm)4328,t_bool)": {
             "label": "mapping(contract LockFarm => bool)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(LockFarm)4383,t_contract(FNFT)4412)": {
+          "t_mapping(t_contract(LockFarm)4328,t_contract(FNFT)4357)": {
             "label": "mapping(contract LockFarm => contract FNFT)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(LockFarm)4383,t_contract(IERC20Upgradeable)846)": {
+          "t_mapping(t_contract(LockFarm)4328,t_contract(IERC20Upgradeable)846)": {
             "label": "mapping(contract LockFarm => contract IERC20Upgradeable)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(LockFarm)4383,t_contract(LockAddressRegistry)4428)": {
+          "t_mapping(t_contract(LockFarm)4328,t_contract(LockAddressRegistry)4373)": {
             "label": "mapping(contract LockFarm => contract LockAddressRegistry)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_contract(LockFarm)4383,t_uint256)": {
+          "t_mapping(t_contract(LockFarm)4328,t_uint256)": {
             "label": "mapping(contract LockFarm => uint256)",
             "numberOfBytes": "32"
           },
-          "t_mapping(t_uint256,t_struct(FarmInfo)1753_storage)": {
+          "t_mapping(t_uint256,t_struct(FarmInfo)1744_storage)": {
             "label": "mapping(uint256 => struct Voting.FarmInfo)",
             "numberOfBytes": "32"
           },
@@ -417,7 +389,7 @@
             "label": "string",
             "numberOfBytes": "32"
           },
-          "t_struct(FarmInfo)1753_storage": {
+          "t_struct(FarmInfo)1744_storage": {
             "label": "struct Voting.FarmInfo",
             "members": [
               {
@@ -428,439 +400,7 @@
               },
               {
                 "label": "_lockFarm",
-                "type": "t_contract(LockFarm)4383",
-                "offset": 0,
-                "slot": "1"
-              },
-              {
-                "label": "_farmWeight",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "2"
-              },
-              {
-                "label": "time",
-                "type": "t_uint256",
-                "offset": 0,
-                "slot": "3"
-              }
-            ],
-            "numberOfBytes": "128"
-          },
-          "t_uint256": {
-            "label": "uint256",
-            "numberOfBytes": "32"
-          }
-        }
-      }
-    },
-    "998370a92c5af18dc08f5ecc2b03f397eba76d7bd9cd92cc517e3f0a065bea81": {
-      "address": "0x52e9A71E443c0c2e8f501D769Cd3AA9Ec688695B",
-      "txHash": "0x1b58878d2cbeb64cfa5aed87bc03e4c62d05d9657ecc16731c791d24993bcca3",
-      "layout": {
-        "storage": [
-          {
-            "label": "_initialized",
-            "offset": 0,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:23"
-          },
-          {
-            "label": "_initializing",
-            "offset": 1,
-            "slot": "0",
-            "type": "t_bool",
-            "contract": "Initializable",
-            "src": "@openzeppelin\\contracts-upgradeable\\proxy\\utils\\Initializable.sol:28"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "1",
-            "type": "t_array(t_uint256)50_storage",
-            "contract": "ContextUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\utils\\ContextUpgradeable.sol:31"
-          },
-          {
-            "label": "_owner",
-            "offset": 0,
-            "slot": "51",
-            "type": "t_address",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:20"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "52",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "OwnableUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\access\\OwnableUpgradeable.sol:74"
-          },
-          {
-            "label": "_status",
-            "offset": 0,
-            "slot": "101",
-            "type": "t_uint256",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:37"
-          },
-          {
-            "label": "__gap",
-            "offset": 0,
-            "slot": "102",
-            "type": "t_array(t_uint256)49_storage",
-            "contract": "ReentrancyGuardUpgradeable",
-            "src": "@openzeppelin\\contracts-upgradeable\\security\\ReentrancyGuardUpgradeable.sol:67"
-          },
-          {
-            "label": "version",
-            "offset": 0,
-            "slot": "151",
-            "type": "t_string_storage",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:18"
-          },
-          {
-            "label": "HEC",
-            "offset": 0,
-            "slot": "152",
-            "type": "t_contract(IERC20Upgradeable)846",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:19"
-          },
-          {
-            "label": "sHEC",
-            "offset": 0,
-            "slot": "153",
-            "type": "t_contract(IERC20Upgradeable)846",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:20"
-          },
-          {
-            "label": "wsHec",
-            "offset": 0,
-            "slot": "154",
-            "type": "t_contract(wsHEC)4520",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:21"
-          },
-          {
-            "label": "HECUSDC",
-            "offset": 0,
-            "slot": "155",
-            "type": "t_contract(IERC20Upgradeable)846",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:22"
-          },
-          {
-            "label": "HECTOR",
-            "offset": 0,
-            "slot": "156",
-            "type": "t_contract(IERC20Upgradeable)846",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:23"
-          },
-          {
-            "label": "spookySwapFactory",
-            "offset": 0,
-            "slot": "157",
-            "type": "t_contract(SpookySwapFactory)4451",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:24"
-          },
-          {
-            "label": "tokenVault",
-            "offset": 0,
-            "slot": "158",
-            "type": "t_contract(TokenVault)4536",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:25"
-          },
-          {
-            "label": "totalWeight",
-            "offset": 0,
-            "slot": "159",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:34"
-          },
-          {
-            "label": "maxPercentage",
-            "offset": 0,
-            "slot": "160",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:35"
-          },
-          {
-            "label": "voteDelay",
-            "offset": 0,
-            "slot": "161",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:36"
-          },
-          {
-            "label": "totalFarmVoteCount",
-            "offset": 0,
-            "slot": "162",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:37"
-          },
-          {
-            "label": "farmWeights",
-            "offset": 0,
-            "slot": "163",
-            "type": "t_mapping(t_contract(LockFarm)4337,t_uint256)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:39"
-          },
-          {
-            "label": "farms",
-            "offset": 0,
-            "slot": "164",
-            "type": "t_array(t_contract(LockFarm)4337)dyn_storage",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:40"
-          },
-          {
-            "label": "farmStatus",
-            "offset": 0,
-            "slot": "165",
-            "type": "t_mapping(t_contract(LockFarm)4337,t_bool)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:41"
-          },
-          {
-            "label": "fnft",
-            "offset": 0,
-            "slot": "166",
-            "type": "t_mapping(t_contract(LockFarm)4337,t_contract(FNFT)4366)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:42"
-          },
-          {
-            "label": "stakingToken",
-            "offset": 0,
-            "slot": "167",
-            "type": "t_mapping(t_contract(LockFarm)4337,t_contract(IERC20Upgradeable)846)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:43"
-          },
-          {
-            "label": "stakingTokenSymbol",
-            "offset": 0,
-            "slot": "168",
-            "type": "t_mapping(t_address,t_string_storage)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:44"
-          },
-          {
-            "label": "lockFarmByERC20",
-            "offset": 0,
-            "slot": "169",
-            "type": "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4337)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:45"
-          },
-          {
-            "label": "lockAddressRegistry",
-            "offset": 0,
-            "slot": "170",
-            "type": "t_mapping(t_contract(LockFarm)4337,t_contract(LockAddressRegistry)4382)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:46"
-          },
-          {
-            "label": "canVoteByFNFT",
-            "offset": 0,
-            "slot": "171",
-            "type": "t_mapping(t_contract(FNFT)4366,t_bool)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:47"
-          },
-          {
-            "label": "lastVotedByFNFT",
-            "offset": 0,
-            "slot": "172",
-            "type": "t_mapping(t_contract(FNFT)4366,t_mapping(t_uint256,t_uint256))",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:48"
-          },
-          {
-            "label": "farmInfos",
-            "offset": 0,
-            "slot": "173",
-            "type": "t_mapping(t_uint256,t_struct(FarmInfo)1753_storage)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:49"
-          },
-          {
-            "label": "userWeight",
-            "offset": 0,
-            "slot": "174",
-            "type": "t_mapping(t_address,t_mapping(t_contract(LockFarm)4337,t_uint256))",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:50"
-          },
-          {
-            "label": "totalUserWeight",
-            "offset": 0,
-            "slot": "175",
-            "type": "t_mapping(t_address,t_uint256)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:51"
-          },
-          {
-            "label": "lpTokens",
-            "offset": 0,
-            "slot": "176",
-            "type": "t_mapping(t_address,t_bool)",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:52"
-          },
-          {
-            "label": "voteResetIndex",
-            "offset": 0,
-            "slot": "177",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:53"
-          },
-          {
-            "label": "lastTimeByOwner",
-            "offset": 0,
-            "slot": "178",
-            "type": "t_uint256",
-            "contract": "Voting",
-            "src": "contracts\\Voting.sol:54"
-          }
-        ],
-        "types": {
-          "t_address": {
-            "label": "address",
-            "numberOfBytes": "20"
-          },
-          "t_array(t_contract(LockFarm)4337)dyn_storage": {
-            "label": "contract LockFarm[]",
-            "numberOfBytes": "32"
-          },
-          "t_array(t_uint256)49_storage": {
-            "label": "uint256[49]",
-            "numberOfBytes": "1568"
-          },
-          "t_array(t_uint256)50_storage": {
-            "label": "uint256[50]",
-            "numberOfBytes": "1600"
-          },
-          "t_bool": {
-            "label": "bool",
-            "numberOfBytes": "1"
-          },
-          "t_contract(FNFT)4366": {
-            "label": "contract FNFT",
-            "numberOfBytes": "20"
-          },
-          "t_contract(IERC20Upgradeable)846": {
-            "label": "contract IERC20Upgradeable",
-            "numberOfBytes": "20"
-          },
-          "t_contract(LockAddressRegistry)4382": {
-            "label": "contract LockAddressRegistry",
-            "numberOfBytes": "20"
-          },
-          "t_contract(LockFarm)4337": {
-            "label": "contract LockFarm",
-            "numberOfBytes": "20"
-          },
-          "t_contract(SpookySwapFactory)4451": {
-            "label": "contract SpookySwapFactory",
-            "numberOfBytes": "20"
-          },
-          "t_contract(TokenVault)4536": {
-            "label": "contract TokenVault",
-            "numberOfBytes": "20"
-          },
-          "t_contract(wsHEC)4520": {
-            "label": "contract wsHEC",
-            "numberOfBytes": "20"
-          },
-          "t_mapping(t_address,t_bool)": {
-            "label": "mapping(address => bool)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_mapping(t_contract(LockFarm)4337,t_uint256))": {
-            "label": "mapping(address => mapping(contract LockFarm => uint256))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_string_storage)": {
-            "label": "mapping(address => string)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_address,t_uint256)": {
-            "label": "mapping(address => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(FNFT)4366,t_bool)": {
-            "label": "mapping(contract FNFT => bool)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(FNFT)4366,t_mapping(t_uint256,t_uint256))": {
-            "label": "mapping(contract FNFT => mapping(uint256 => uint256))",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(IERC20Upgradeable)846,t_contract(LockFarm)4337)": {
-            "label": "mapping(contract IERC20Upgradeable => contract LockFarm)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(LockFarm)4337,t_bool)": {
-            "label": "mapping(contract LockFarm => bool)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(LockFarm)4337,t_contract(FNFT)4366)": {
-            "label": "mapping(contract LockFarm => contract FNFT)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(LockFarm)4337,t_contract(IERC20Upgradeable)846)": {
-            "label": "mapping(contract LockFarm => contract IERC20Upgradeable)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(LockFarm)4337,t_contract(LockAddressRegistry)4382)": {
-            "label": "mapping(contract LockFarm => contract LockAddressRegistry)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_contract(LockFarm)4337,t_uint256)": {
-            "label": "mapping(contract LockFarm => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_struct(FarmInfo)1753_storage)": {
-            "label": "mapping(uint256 => struct Voting.FarmInfo)",
-            "numberOfBytes": "32"
-          },
-          "t_mapping(t_uint256,t_uint256)": {
-            "label": "mapping(uint256 => uint256)",
-            "numberOfBytes": "32"
-          },
-          "t_string_storage": {
-            "label": "string",
-            "numberOfBytes": "32"
-          },
-          "t_struct(FarmInfo)1753_storage": {
-            "label": "struct Voting.FarmInfo",
-            "members": [
-              {
-                "label": "voter",
-                "type": "t_address",
-                "offset": 0,
-                "slot": "0"
-              },
-              {
-                "label": "_lockFarm",
-                "type": "t_contract(LockFarm)4337",
+                "type": "t_contract(LockFarm)4328",
                 "offset": 0,
                 "slot": "1"
               },
