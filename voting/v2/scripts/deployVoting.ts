@@ -1,6 +1,4 @@
 import hre from 'hardhat';
-const BigNumber = require('bignumber.js');
-const { boolean } = require('hardhat/internal/core/params/argumentTypes');
 import { waitSeconds } from '../helper';
 
 async function main() {
