@@ -1,4 +1,4 @@
-import { Voting } from './../typechain-types';
+import { Voting } from './../types';
 import { Contract } from 'ethers';
 import exec from 'child_process';
 require('dotenv').config();
@@ -21,14 +21,6 @@ export const deployContract = async <ContractType extends Contract>(
 	const txInit = await contract.connect(signers[0]).initialize(...args);
 	await txInit.wait();
 
-	// const cmd = exec.exec;
-	// const cmdForVerify = `hardhat verify --contract \"contracts/Voting.sol:Voting\" ${contract.address} --network ftmtest`;
-	// cmd(cmdForVerify, (error: any) => {
-	// 	if (error !== null) {
-	// 		console.log(`exec error: ${error}`);
-	// 	}
-	// });
-
 	return contract;
 };
 
@@ -37,9 +29,6 @@ export const deployVoting = async (
 	_hec: any,
 	_sHec: any,
 	_wsHec: any,
-	_hecUsdc: any,
-	_hecTor: any,
-	_spookySwapFactory: any,
 	_tokenVault: any,
 	_maxPercentage: any,
 	_voteDelay: any
@@ -49,9 +38,6 @@ export const deployVoting = async (
 		_hec,
 		_sHec,
 		_wsHec,
-		_hecUsdc,
-		_hecTor,
-		_spookySwapFactory,
 		_tokenVault,
 		_maxPercentage,
 		_voteDelay,

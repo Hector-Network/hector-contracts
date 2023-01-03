@@ -7,12 +7,12 @@ import 'hardhat-deploy';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-gas-reporter';
 
-require("@openzeppelin/hardhat-upgrades");
+require('@openzeppelin/hardhat-upgrades');
 require('dotenv').config();
 
 export default {
 	solidity: {
-		version: '0.8.17',
+		version: '0.8.9',
 		settings: {
 			optimizer: {
 				enabled: true,
@@ -20,7 +20,16 @@ export default {
 			},
 		},
 	},
-	defaultNetwork: 'goerli',
+	namedAccounts: {
+		deployer: {
+			default: 0,
+			42: '0x9De5B00012A27b3efd50d5B90bF2e07413cED178',
+		},
+	},
+	typechain: {
+		outDir: 'types/',
+		target: 'ethers-v5',
+	},
 	networks: {
 		hardhat: {
 			forking: {
@@ -73,7 +82,7 @@ export default {
 			polygonMumbai: process.env.POLYGON_API_KEY,
 			goerli: process.env.ETH_API_KEY,
 			opera: process.env.FTM_API_KEY,
-			ftmTestnet: process.env.FTM_API_KEY
+			ftmTestnet: process.env.FTM_API_KEY,
 		},
 	},
 	mocha: {

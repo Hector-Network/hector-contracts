@@ -9,8 +9,11 @@ import {
 	IERC20Upgradeable__factory,
 	LockFarm__factory,
 	FNFT__factory,
-} from '../typechain-types';
+} from '../types';
 import { deployVoting } from '../helper';
+
+const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
+const lockFarmAbi = require('./LockFarmAbi.json');
 
 describe('Voting Test', async () => {
 	let deployer: SignerWithAddress; // owner
@@ -29,11 +32,9 @@ describe('Voting Test', async () => {
 	let _hec = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
 	let _sHec = '0x71264c23604fa78D1eFcc32af1c73714F33dCdb4';
 	let _wsHec = '0x6225eeA79a0baF0c7e368Db4de1e8066589815B1';
-	let _usdc = '0x6f3da9C6700cAfBAb0323cF344F58C54B3ddB66b';
 	let _hecUsdc = '0x9C4Ee29CD1C219623eBEA40A42b5af11414D7C90';
 	let _hecTor = '0xd02a80B4A58308B1aD8652abe348Ae2Ca241E636';
 	let _spookySwapFactory = '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
-	let _spookySwapRotuer = '0xa6AD18C2aC47803E193F75c3677b14BF19B94883';
 	let _lockAddressRegistry = '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018';
 	let _tokenVault = '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
 	let NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -57,7 +58,7 @@ describe('Voting Test', async () => {
 
 	let fnftIds = [0];
 
-	before(async () => {
+	let locKFarmAbi = before(async () => {
 		const signers: SignerWithAddress[] = await ethers.getSigners();
 
 		deployer = signers[0];
@@ -80,15 +81,25 @@ describe('Voting Test', async () => {
 		farm2 = LockFarm__factory.connect(_farm2, deployer);
 		console.log('Farm2: ', farm2.address);
 
+		// Stake Hec and Get FNFT balance
+		const hecContract = new ethers.Contract(_hec, erc20Abi.abi, deployer);
+		console.log('Approve HEC to tokenVault');
+		const txApprove = await hecContract.connect(deployer).approve(_tokenVault, '1000000');
+		await txApprove.wait();
+
+		console.log('Stake HEC to lockFarm');
+		const lockFarmContract = new ethers.Contract(_farm1, lockFarmAbi, deployer);
+		const stakeMinTime = await lockFarmContract.lockedStakeMinTime();
+		const txStake = await lockFarmContract.connect(deployer).stake('1000000', stakeMinTime);
+		await txStake.wait();
+		console.log('Stake Done and Got FNFT!');
+
 		// Voting
 		Voting = await deployVoting(
 			_version,
 			_hec,
 			_sHec,
 			_wsHec,
-			_hecUsdc,
-			_hecTor,
-			_spookySwapFactory,
 			_tokenVault,
 			_maxPercentage,
 			_voteDelay
@@ -116,9 +127,6 @@ describe('Voting Test', async () => {
 					_hec,
 					_sHec,
 					_wsHec,
-					_hecUsdc,
-					_hecTor,
-					_spookySwapFactory,
 					_tokenVault,
 					_maxPercentage,
 					_voteDelay
@@ -168,29 +176,13 @@ describe('Voting Test', async () => {
 	describe('#setConfiguration', async () => {
 		it('Failed - only admin can set configuration', async function () {
 			await expect(
-				Voting.connect(alice).setConfiguration(
-					hec.address,
-					_sHec,
-					_wsHec,
-					_hecUsdc,
-					_hecTor,
-					_spookySwapFactory,
-					_tokenVault
-				)
+				Voting.connect(alice).setConfiguration(hec.address, _sHec, _wsHec, _tokenVault)
 			).to.be.revertedWith('Ownable: caller is not the owner');
 		});
 
 		it('Compare - configurations after set', async function () {
 			const thec = hec.address;
-			await Voting.connect(deployer).setConfiguration(
-				hec.address,
-				_sHec,
-				_wsHec,
-				_hecUsdc,
-				_hecTor,
-				_spookySwapFactory,
-				_tokenVault
-			);
+			await Voting.connect(deployer).setConfiguration(hec.address, _sHec, _wsHec, _tokenVault);
 
 			expect(thec).to.equal(await Voting.connect(deployer).HEC());
 		});
@@ -232,6 +224,21 @@ describe('Voting Test', async () => {
 			await Voting.connect(deployer).setVoteDelay(voteDelay);
 			const voteDelay1 = await Voting.connect(deployer).voteDelay();
 			expect(voteDelay).to.equal(voteDelay1);
+		});
+	});
+
+	describe('#addLPToken', async () => {
+		it('Failed - only admin can add lp token', async function () {
+			const voteDelay = 60;
+			await expect(Voting.connect(alice).addLPTokens(_hecTor, true)).to.be.revertedWith(
+				'Ownable: caller is not the owner'
+			);
+		});
+
+		it('Compare - check status after added lpToken', async function () {
+			await Voting.connect(deployer).addLPTokens(_hecTor, true);
+			const status = await Voting.checkLPTokens(_hecTor);
+			expect(status).to.equal(true);
 		});
 	});
 

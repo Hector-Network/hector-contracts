@@ -30,13 +30,17 @@ async function main() {
 
 	const currentTime = await getCurrentTimeInSecond();
 	const startTimeStamp = currentTime - voteDelayTime; // 7 days
-	const startBlockApiResult = await fetch(`https://api.ftmscan.com/api?module=block&action=getblocknobytime&timestamp=${startTimeStamp}&closest=before&apikey=${ftmscanApiKey}`).then((res: any) => res.json());
+	const startBlockApiResult = await fetch(
+		`https://api.ftmscan.com/api?module=block&action=getblocknobytime&timestamp=${startTimeStamp}&closest=before&apikey=${ftmscanApiKey}`
+	).then((res: any) => res.json());
 	let startBlock = 0;
 	if (startBlockApiResult?.message === 'OK') {
 		startBlock = startBlockApiResult.result;
 	}
 
-	let txHistories = await fetch(`https://api.ftmscan.com/api?module=account&action=txlist&address=${OLD_VOTING_ADDRESS}&startblock=${startBlock}&endblock=99999999&sort=asc&apikey=${ftmscanApiKey}`).then((res: any) => res.json());
+	let txHistories = await fetch(
+		`https://api.ftmscan.com/api?module=account&action=txlist&address=${OLD_VOTING_ADDRESS}&startblock=${startBlock}&endblock=99999999&sort=asc&apikey=${ftmscanApiKey}`
+	).then((res: any) => res.json());
 	if (txHistories?.message === 'OK') {
 		txHistories = txHistories.result;
 	} else {
@@ -123,7 +127,11 @@ async function main() {
 	try {
 		for (let i = 0; i < fnftVotingInfoFromHistories.length; i++) {
 			const lastTime = await votingContract.lastTimeByOwner();
-			if (lastTime == 0 || (fnftVotingInfoFromHistories[i].time > lastTime && fnftVotingInfoFromHistories[i].time != lastTime)) {
+			if (
+				lastTime == 0 ||
+				(fnftVotingInfoFromHistories[i].time > lastTime &&
+					fnftVotingInfoFromHistories[i].time != lastTime)
+			) {
 				console.log(fnftVotingInfoFromHistories[i]);
 				const txVote = await votingContract.voteByTime(
 					fnftVotingInfoFromHistories[i].owner,

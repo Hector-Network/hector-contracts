@@ -19,9 +19,6 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	IERC20Upgradeable public HEC; // HEC
 	IERC20Upgradeable internal sHEC; // sHEC
 	wsHEC internal wsHec; // wsHEC
-	IERC20Upgradeable internal HECUSDC;
-	IERC20Upgradeable internal HECTOR;
-	SpookySwapFactory internal spookySwapFactory;
 	TokenVault internal tokenVault;
 
 	struct FarmInfo {
@@ -49,6 +46,7 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	mapping(uint256 => FarmInfo) public farmInfos;
 	mapping(address => mapping(LockFarm => uint256)) public userWeight; // Return user's voting weigths by lockfarm
 	mapping(address => uint256) public totalUserWeight; // Return total user's voting weigths
+	mapping(address => bool) public lpTokens; // Return status of the lpToken
 	uint256 public voteResetIndex;
 	uint256 public lastTimeByOwner;
 
@@ -85,9 +83,6 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		address _hec,
 		address _sHec,
 		address _wsHec,
-		address _hecUsdc,
-		address _hecTor,
-		SpookySwapFactory _spookySwapFactory,
 		TokenVault _tokenVault,
 		uint256 _maxPercentage,
 		uint256 _voteDelay
@@ -96,9 +91,6 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		HEC = IERC20Upgradeable(_hec);
 		sHEC = IERC20Upgradeable(_sHec);
 		wsHec = wsHEC(_wsHec);
-		HECUSDC = IERC20Upgradeable(_hecUsdc);
-		HECTOR = IERC20Upgradeable(_hecTor);
-		spookySwapFactory = _spookySwapFactory;
 		tokenVault = _tokenVault;
 		maxPercentage = _maxPercentage;
 		voteDelay = _voteDelay;
@@ -394,12 +386,9 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 			compareStringsbyBytes(stakingTokenSymbol[address(_stakingToken)], sToken.symbol())
 		) {
 			IERC20Upgradeable _token = IERC20Upgradeable(_stakingToken);
-			if (
-				address(lockFarmByERC20[_token]) != address(0) &&
-				(address(_stakingToken) == address(HECUSDC) || address(_stakingToken) == address(HECTOR))
-			) {
+			if (address(lockFarmByERC20[_token]) != address(0) && checkLPTokens(_stakingToken)) {
 				SpookySwapPair _lpToken = SpookySwapPair(_stakingToken);
-				// HEC-USDC, HEC-TOR
+				// HEC LP
 				(uint256 reserve0, uint256 reserve1, ) = _lpToken.getReserves();
 				uint256 amount0 = (_amount * reserve0) / _lpToken.totalSupply();
 				uint256 amount1 = (_amount * reserve1) / _lpToken.totalSupply();
@@ -430,6 +419,18 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		}
 
 		return hecWeight;
+	}
+
+	// Add HEC LP tokens
+	function addLPTokens(address _lpToken, bool _status) external onlyOwner returns (address, bool) {
+		lpTokens[_lpToken] = _status;
+		emit AddLPToken(_lpToken, _status);
+		return (_lpToken, _status);
+	}
+
+	// Check HEC LP tokens
+	function checkLPTokens(address _lpToken) public view returns (bool) {
+		return lpTokens[_lpToken];
 	}
 
 	// Get locked FNFT IDs by Owner
@@ -598,17 +599,11 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		address _hec,
 		address _sHec,
 		address _wsHec,
-		address _hecUsdc,
-		address _hecTor,
-		SpookySwapFactory _spookySwapFactory,
 		TokenVault _tokenVault
 	) external onlyOwner {
 		HEC = IERC20Upgradeable(_hec);
 		sHEC = IERC20Upgradeable(_sHec);
-		HECUSDC = IERC20Upgradeable(_hecUsdc);
-		HECTOR = IERC20Upgradeable(_hecTor);
 		wsHec = wsHEC(_wsHec);
-		spookySwapFactory = _spookySwapFactory;
 		tokenVault = _tokenVault;
 		emit SetConfiguration(msg.sender);
 	}
@@ -649,6 +644,7 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	event SetStatusFNFT(FNFT farm, bool status);
 	event SetStatusERC20(IERC20Upgradeable farm, bool status);
 	event SetVersion(string version, address admin);
+	event AddLPToken(address lpToken, bool status);
 	event Reset(uint256 lastIndex, uint256 resetedAmounts);
 	event Withdraw(address[] stakingTokens, uint256[] amounts);
 }

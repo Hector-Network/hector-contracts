@@ -20,11 +20,8 @@ async function main() {
 		? '0x0b9589A2C1379138D4cC5043cE551F466193c8dE'
 		: '0x9C4Ee29CD1C219623eBEA40A42b5af11414D7C90';
 	const _hecTor = prod_mode
-		? '0xd02a80B4A58308B1aD8652abe348Ae2Ca241E636'
+		? '0x4339b475399ad7226be3ad2826e1d78bbfb9a0d9'
 		: '0xd02a80B4A58308B1aD8652abe348Ae2Ca241E636';
-	const _spookySwapFactory = prod_mode
-		? '0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3'
-		: '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 	const _lockAddressRegistry = prod_mode
 		? '0x55639b1833Ddc160c18cA60f5d0eC9286201f525'
 		: '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018';
@@ -32,10 +29,14 @@ async function main() {
 		? '0x1fA6693d9933CC7f578CDd35071FC6d6cc8451E0'
 		: '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
 	const _maxPercentage = 100;
-	const _voteDelay = 604800;
+	const _voteDelay = prod_mode ? 604800 : 5;
 
 	const lockFarm = prod_mode
-		? ['0x80993B75e38227f1A3AF6f456Cf64747F0E21612', '0xd7faE64DD872616587Cc8914d4848947403078B8']
+		? [
+				'0x80993B75e38227f1A3AF6f456Cf64747F0E21612',
+				'0xd7faE64DD872616587Cc8914d4848947403078B8',
+				'0xB13610B4e7168f664Fcef2C6EbC58990Ae835Ff1',
+		  ]
 		: [
 				'0xC464e6d45004Bf56772E70e22d9cF61C5Ae63970',
 				'0x55869De94AB1F18295C1C5aC3C1c80995F2D5a2E',
@@ -49,7 +50,7 @@ async function main() {
 		  ];
 
 	const stakingToken = prod_mode
-		? [_hec, _hecUsdc]
+		? [_hec, _hecUsdc, _hecTor]
 		: [_hec, _hec, _hec, _hec, _hec, _sHec, _wsHec, _hecUsdc, _hecTor];
 
 	console.log({ prod_mode });
@@ -69,9 +70,6 @@ async function main() {
 			_hec,
 			_sHec,
 			_wsHec,
-			_hecUsdc,
-			_hecTor,
-			_spookySwapFactory,
 			_tokenVault,
 			_maxPercentage,
 			_voteDelay,
