@@ -11,7 +11,6 @@ import {
 	FNFT__factory,
 } from '../types';
 import { deployVoting } from '../helper';
-import { doesNotMatch } from 'assert';
 
 const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
 const lockFarmAbi = require('./LockFarmAbi.json');
@@ -281,7 +280,7 @@ describe('Voting Test', async () => {
 			).to.be.revertedWith('Invalid Farms');
 		});
 
-		it('Successed - voting a lot of FNFTs', async function () {
+		it('Successed - voting with 20 FNFTs', async function () {
 			await expect(
 				Voting.connect(deployer).vote(VotingsData, votingWeightsData, NULL_ADDRESS, fnftIds)
 			).to.be.not.reverted;
