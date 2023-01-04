@@ -441,6 +441,7 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	{
 		uint256 fnftBalance = _fnft.balanceOf(owner);
 		uint256 countOfLockedFNFTInfos = getCountLockedFNFTInfos(owner, _fnft);
+		uint256 countIndex = 0;
 
 		LockedFNFTInfo[] memory lockedFNFTInfos = new LockedFNFTInfo[](countOfLockedFNFTInfos);
 		// Get All Balance By user both of HEC and FNFT
@@ -450,7 +451,8 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 			uint256 lastVoted = lastVotedByFNFT[_fnft][tokenOfOwnerByIndex]; // time of the last voted
 			uint256 time = block.timestamp - lastVoted;
 			if (time < voteDelay) {
-				lockedFNFTInfos[i] = LockedFNFTInfo(tokenOfOwnerByIndex, lastVoted + voteDelay);
+				lockedFNFTInfos[countIndex] = LockedFNFTInfo(tokenOfOwnerByIndex, lastVoted + voteDelay);
+				countIndex++;
 			}
 		}
 		return lockedFNFTInfos;
