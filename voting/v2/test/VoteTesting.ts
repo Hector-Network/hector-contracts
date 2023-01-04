@@ -11,6 +11,7 @@ import {
 	FNFT__factory,
 } from '../types';
 import { deployVoting } from '../helper';
+import { doesNotMatch } from 'assert';
 
 const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
 const lockFarmAbi = require('./LockFarmAbi.json');
@@ -34,10 +35,10 @@ describe('Voting Test', async () => {
 	let _wsHec = '0x6225eeA79a0baF0c7e368Db4de1e8066589815B1';
 	let _hecUsdc = '0x9C4Ee29CD1C219623eBEA40A42b5af11414D7C90';
 	let _hecTor = '0xd02a80B4A58308B1aD8652abe348Ae2Ca241E636';
-	let _spookySwapFactory = '0xEE4bC42157cf65291Ba2FE839AE127e3Cc76f741';
 	let _lockAddressRegistry = '0x2D86a40Ff217493cCE3a23627F6A749dAe1f9018';
 	let _tokenVault = '0x4b7dC9E2Cc8B97Fe6073d03667Aed96c071c532B';
 	let NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
+	let MAX_VALUE = '0xffffffffffffffffffffffffffffffffffffffff';
 	const _maxPercentage = 100;
 	const _voteDelay = 5;
 
@@ -56,7 +57,7 @@ describe('Voting Test', async () => {
 	let votingFakeWeightsData = ['59'];
 	let votingFakeWeightsData1 = ['30', '70', '10'];
 
-	let fnftIds = [0];
+	let fnftIds: any = [];
 
 	let locKFarmAbi = before(async () => {
 		const signers: SignerWithAddress[] = await ethers.getSigners();
@@ -84,15 +85,22 @@ describe('Voting Test', async () => {
 		// Stake Hec and Get FNFT balance
 		const hecContract = new ethers.Contract(_hec, erc20Abi.abi, deployer);
 		console.log('Approve HEC to tokenVault');
-		const txApprove = await hecContract.connect(deployer).approve(_tokenVault, '1000000');
+		const txApprove = await hecContract.connect(deployer).approve(_tokenVault, MAX_VALUE);
 		await txApprove.wait();
 
-		console.log('Stake HEC to lockFarm');
-		const lockFarmContract = new ethers.Contract(_farm1, lockFarmAbi, deployer);
-		const stakeMinTime = await lockFarmContract.lockedStakeMinTime();
-		const txStake = await lockFarmContract.connect(deployer).stake('1000000', stakeMinTime);
-		await txStake.wait();
-		console.log('Stake Done and Got FNFT!');
+		console.log('Stake HEC to lockFarm 20 times');
+		for (let i = 0; i < 20; i++) {
+			let lockFarmContract = new ethers.Contract(_farm1, lockFarmAbi, deployer);
+			let stakeMinTime = await lockFarmContract.lockedStakeMinTime();
+			const txStake = await lockFarmContract.connect(deployer).stake('100000', stakeMinTime);
+			await txStake.wait();
+			const txWaitStake = await txStake.wait();
+			const eventStaked = txWaitStake.events.filter((param: any) => param.address == _fnft);
+			const stakedFNFTId = eventStaked[0].topics[eventStaked[0].topics.length - 1];
+			fnftIds.push(stakedFNFTId);
+			console.log(i + 1, 'FNFTID #', stakedFNFTId);
+		}
+		console.log('Stake Done and Got 20 FNFTs!');
 
 		// Voting
 		Voting = await deployVoting(
@@ -271,6 +279,12 @@ describe('Voting Test', async () => {
 			await expect(
 				Voting.connect(deployer).vote(votingFakeFarmsData, votingWeightsData, NULL_ADDRESS, [])
 			).to.be.revertedWith('Invalid Farms');
+		});
+
+		it('Successed - voting a lot of FNFTs', async function () {
+			await expect(
+				Voting.connect(deployer).vote(VotingsData, votingWeightsData, NULL_ADDRESS, fnftIds)
+			).to.be.not.reverted;
 		});
 	});
 
