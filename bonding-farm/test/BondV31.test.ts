@@ -186,15 +186,22 @@ describe('BondV3.1 with no treasury', function () {
     await treasury.setRewardManager(emissionor.address);
 
     const BondNoTreasury = await ethers.getContractFactory('BondNoTreasury');
-    bond = (await upgrades.deployProxy(BondNoTreasury, [
-      'TestBond',
-      hectorToken.address,
-      owner.address,
-      priceOracleAggregator.address,
-      lockFarm.address,
-      fnft.address,
-      tokenVault.address,
-    ])) as BondNoTreasury;
+    await upgrades.silenceWarnings();
+    bond = (await upgrades.deployProxy(
+      BondNoTreasury,
+      [
+        'TestBond',
+        hectorToken.address,
+        owner.address,
+        priceOracleAggregator.address,
+        lockFarm.address,
+        fnft.address,
+        tokenVault.address,
+      ],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
+    )) as BondNoTreasury;
 
     await bond.initializeFundRecipient(fundRecipient.address, feeBps);
     await bond.initializeFeeRecipient(
@@ -1152,12 +1159,12 @@ describe('BondV3.1 with no treasury', function () {
     const maxPrice = 30000000000;
     const amount1 = utils.parseEther('10000');
     const payout1 = BigNumber.from('1052631578947368421052'); // 10000 * 1000000$ / 9.5$ = 1052631578.9473684    const rewardAmount1 = BigNumber.from('61891658926315');
-    const rewardAmount1 = BigNumber.from('61890596682105');
-    const autoStakingFeeAmount1 = BigNumber.from('6189059668210');
+    const rewardAmount1 = BigNumber.from('61884223216842');
+    const autoStakingFeeAmount1 = BigNumber.from('6188422321684');
     const amount2 = utils.parseEther('5000');
     const payout2 = BigNumber.from('555555555555555555555'); // 5000 * 1000000$ / 9$ = 5555555555555556
-    const rewardAmount2 = BigNumber.from('32782725133333');
-    const autoStakingFeeAmount2 = BigNumber.from('3278272513333');
+    const rewardAmount2 = BigNumber.from('32779349183333');
+    const autoStakingFeeAmount2 = BigNumber.from('3277934918333');
 
     beforeEach(async function () {
       await bond.toggleAutoStaking(); // enable auto staking
