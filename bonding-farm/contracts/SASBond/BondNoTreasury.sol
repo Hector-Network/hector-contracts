@@ -732,7 +732,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     function claimAutoStakingFee() external {
         address _rewardToken = lockFarm.rewardToken();
         uint256 fee = tokenBalances[_rewardToken][autoStakingFeeRecipient];
-        require(fee > 0);
+        require(fee > 0, 'claim amount is zero');
 
         tokenBalances[_rewardToken][autoStakingFeeRecipient] = 0;
         IERC20(_rewardToken).safeTransfer(autoStakingFeeRecipient, fee);
