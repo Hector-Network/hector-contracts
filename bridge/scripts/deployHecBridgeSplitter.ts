@@ -1,9 +1,5 @@
+import { BigNumber } from 'ethers';
 const hre = require("hardhat");
-const BigNumber = require("bignumber.js");
-const { boolean } = require("hardhat/internal/core/params/argumentTypes");
-const { helpers } = require("../helper");
-const { waitSeconds } = require("../helper/helpers");
-const exec = require("child_process").exec;
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();

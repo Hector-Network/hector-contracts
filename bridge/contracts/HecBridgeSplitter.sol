@@ -309,8 +309,6 @@ contract HecBridgeSplitter is
         emit SetCountDest(_countDest);
     }
 
-    receive() external payable {}
-
     // All events
     event SetCountDest(uint256 countDest);
     event Split(address user, ILiFi.BridgeData[] bridgeData);

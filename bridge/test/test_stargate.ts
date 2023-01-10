@@ -1,8 +1,8 @@
+import { BigNumber } from '@ethersproject/bignumber';
 const hre = require("hardhat");
 const { ethers } = require("hardhat");
 const abi = require("../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json");
 const erc20Abi = require("../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json");
-const { BigNumber } = require("@ethersproject/bignumber");
 const tempData = require("./tempData.json");
 const tempStepData = require("./tempStepData.json");
 require("dotenv").config();
@@ -13,7 +13,7 @@ require("dotenv").config();
  */
 
 async function main() {
-  const mode = "single"; // mode: single, multi
+  let mode = "single"; // mode: single, multi
   const [deployer] = await hre.ethers.getSigners();
   console.log("Testing account:", deployer.address);
   console.log("Account balance:", (await deployer.getBalance()).toString());
@@ -37,7 +37,7 @@ async function main() {
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
   const originSteps = tempData.steps[0];
-  const originStargateData = tempStepData.includedSteps.find((element) => element.type == "cross")
+  const originStargateData = tempStepData.includedSteps.find((element: any) => element.type == "cross")
     .estimate.data.stargateData;
 
   const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
@@ -56,7 +56,7 @@ async function main() {
   };
 
   const originSwapData = tempStepData.includedSteps[0].estimate;
-  const mockSwapData1 = enableSwap && [
+  const mockSwapData1: any = enableSwap && [
     {
       sendingAssetId:
         (enableSwap && originSwapData.data.fromToken.address == ETH_ADDRESS) || isNativeFrom
@@ -97,7 +97,7 @@ async function main() {
   mockCallDatas.push(mockCallData1);
 
   if (mode == "multi") {
-    mockBridgeDatas.push(mockBridgeData2);
+    mockBridgeDatas.push(mockBridgeData1);
     mockStargateDatas.push(mockStargateData1);
     enableSwap && mockSwapDatas.push(mockSwapData1);
     mockCallDatas.push(mockCallData1);

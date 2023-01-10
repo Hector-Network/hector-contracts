@@ -1,8 +1,5 @@
+import { BigNumber } from 'ethers';
 const { ethers, upgrades } = require("hardhat");
-const { helpers } = require("../helper");
-const { waitSeconds } = require("../helper/helpers");
-const exec = require("child_process").exec;
-
 require("dotenv").config();
 
 const UPGRADEABLE_PROXY = process.env.SPLITTER_ADDRESS;

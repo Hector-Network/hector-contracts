@@ -1,15 +1,16 @@
+require('dotenv').config();
 /**
  * Verifying script in all networks
  * If you want to verify in single network, please use this: yarn test ftm
  */
-const exec = require("child_process").exec;
-require('dotenv').config();
+import exec from 'child_process';
 
 async function main() {
-  console.log('Verifying on the FTM network...');
+	const cmd = exec.exec;
+  	console.log('Verifying on the FTM network...');
 	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" ${process.env.SPLITTER_ADDRESS} --network ftm`;
 	console.log(cmdForVerify);
-	exec(cmdForVerify, (error) => {
+	cmd(cmdForVerify, (error) => {
 		if (error !== null) {
 			console.log(`exec error: ${error}`);
 		}
