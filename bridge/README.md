@@ -1,4 +1,4 @@
-# Hector-Voting V2 Contract
+# Hector-Bridge Splitter Contract
 
 ### Development
 
