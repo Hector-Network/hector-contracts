@@ -11,4 +11,9 @@ library LibSwap {
         bytes callData;
         bool requiresDeposit;
     }
+
+    struct CommonSwapData {
+        address sendingAssetId;
+        uint256 fromAmount;
+    }
 }

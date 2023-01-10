@@ -17,6 +17,11 @@ interface ILiFi {
         bool hasDestinationCall;
     }
 
+    struct CommonBridgeData {
+        address sendingAssetId;
+        uint256 minAmount;
+    }
+
     /// Events ///
 
     event LiFiTransferStarted(BridgeData bridgeData);

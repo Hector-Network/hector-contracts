@@ -24,7 +24,6 @@ contract HecBridgeSplitter is
 
     IHecBridgeSplitterInterface public Bridge;
     uint256 public CountDest; // Count of the destination wallets
-    mapping(string => bytes4) public selectors; // Selector for each bridge
 
     /**
      * @dev sets initials
@@ -44,113 +43,20 @@ contract HecBridgeSplitter is
     //               USER CALLED FUNCTIONS               //
     ///////////////////////////////////////////////////////
 
-    /// @notice Bridges tokens via Multichain
-    /// @param _bridgeDatas the core information needed for bridging
-    /// @param _multichainDatas data specific to Multichain
-    function startBridgeTokensViaMultichain(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.MultichainData[] calldata _multichainDatas
-    ) public payable {
-        require(
-            _bridgeDatas.length > 0 &&
-                _bridgeDatas.length <= CountDest &&
-                _bridgeDatas.length == _multichainDatas.length,
-            "Splitter: bridge or multichain call data is invalid"
-        );
-        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-            IERC20Upgradeable srcToken = IERC20Upgradeable(
-                _bridgeDatas[i].sendingAssetId
-            );
-
-            require(
-                srcToken.allowance(msg.sender, address(this)) > 0,
-                "ERC20: transfer amount exceeds allowance"
-            );
-
-            srcToken.safeTransferFrom(
-                msg.sender,
-                address(this),
-                _bridgeDatas[i].minAmount
-            );
-
-            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
-
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["startBridgeTokensViaMultichain"],
-                _bridgeDatas[i],
-                _multichainDatas[i]
-            );
-
-            (bool success, ) = payable(address(Bridge)).call(callData);
-            require(success, "Splitter: bridge swap transaction was failed");
-
-            emit CallData(success, callData);
-        }
-
-        emit Split(msg.sender, _bridgeDatas);
-    }
-
-    /// @notice Performs a swap before bridging via Multichain
-    /// @param _bridgeDatas the core information needed for bridging
-    /// @param _swapDatas an array of swap related data for performing swaps before bridging
-    /// @param _multichainDatas data specific to Multichain
-    function swapAndStartBridgeTokensViaMultichain(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        LibSwap.SwapData[] calldata _swapDatas,
-        IHecBridgeSplitterInterface.MultichainData[] calldata _multichainDatas
-    ) public payable {
-        require(
-            _bridgeDatas.length > 0 &&
-                _bridgeDatas.length <= CountDest &&
-                _bridgeDatas.length == _multichainDatas.length &&
-                _bridgeDatas.length == _swapDatas.length,
-            "Splitter: bridge or swap call data is invalid"
-        );
-        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-            IERC20Upgradeable srcToken = IERC20Upgradeable(
-                _bridgeDatas[i].sendingAssetId
-            );
-
-            require(
-                srcToken.allowance(msg.sender, address(this)) > 0,
-                "ERC20: transfer amount exceeds allowance"
-            );
-
-            srcToken.safeTransferFrom(
-                msg.sender,
-                address(this),
-                _bridgeDatas[i].minAmount
-            );
-
-            srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
-
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["swapAndStartBridgeTokensViaMultichain"],
-                _bridgeDatas[i],
-                _swapDatas[i],
-                _multichainDatas[i]
-            );
-
-            (bool success, ) = payable(address(Bridge)).call(callData);
-            require(success, "Splitter: bridge swap transaction was failed");
-
-            emit CallData(success, callData);
-        }
-
-        emit Split(msg.sender, _bridgeDatas);
-    }
-
     /// @notice Bridges tokens via Stargate Bridge
     /// @param _bridgeDatas Array Data used purely for tracking and analytics
     /// @param _stargateDatas Array Data specific to Stargate Bridge
+    /// @param callDatas callDatas from lifi sdk
     function startBridgeTokensViaStargate(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.StargateData[] memory _stargateDatas
+        ILiFi.CommonBridgeData[] memory _bridgeDatas,
+        IHecBridgeSplitterInterface.CustomStargateData[] memory _stargateDatas,
+        bytes[] memory callDatas
     ) public payable {
         require(
             _bridgeDatas.length > 0 &&
                 _bridgeDatas.length <= CountDest &&
-                _bridgeDatas.length == _stargateDatas.length,
+                _bridgeDatas.length == _stargateDatas.length &&
+                _bridgeDatas.length == callDatas.length,
             "Splitter: bridge or stargate data is invalid"
         );
         for (uint256 i = 0; i < _bridgeDatas.length; i++) {
@@ -173,37 +79,141 @@ contract HecBridgeSplitter is
                 srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
             }
 
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["startBridgeTokensViaStargate"],
-                _bridgeDatas[i],
-                _stargateDatas[i]
-            );
-
             (bool success, ) = payable(address(Bridge)).call{
                 value: _stargateDatas[i].lzFee
-            }(callData);
+            }(callDatas[i]);
             require(success, "Splitter: bridge swap transaction was failed");
 
-            emit CallData(success, callData);
+            emit CallData(success, callDatas[i]);
         }
 
-        emit Split(msg.sender, _bridgeDatas);
+        emit HectorBridge(msg.sender, _bridgeDatas);
     }
 
     /// @notice Performs a swap before bridging via Stargate Bridge
     /// @param _bridgeDatas Array Data used purely for tracking and analytics
     /// @param _swapDatas An array of array swap related data for performing swaps before bridging
     /// @param _stargateDatas Array Data specific to Stargate Bridge
+    /// @param callDatas callData from lifi sdk
     function swapAndStartBridgeTokensViaStargate(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        LibSwap.SwapData[][] calldata _swapDatas,
-        IHecBridgeSplitterInterface.StargateData[] calldata _stargateDatas,
-        uint256[] memory fees
+        ILiFi.CommonBridgeData[] memory _bridgeDatas,
+        LibSwap.CommonSwapData[][] calldata _swapDatas,
+        IHecBridgeSplitterInterface.CustomStargateData[]
+            calldata _stargateDatas,
+        uint256[] memory fees,
+        bytes[] memory callDatas
     ) external payable {
         require(
             _bridgeDatas.length > 0 &&
                 _bridgeDatas.length <= CountDest &&
                 _bridgeDatas.length == _stargateDatas.length &&
+                _bridgeDatas.length == _swapDatas.length &&
+                _bridgeDatas.length == callDatas.length &&
+                _bridgeDatas.length == fees.length,
+            "Splitter: bridge or swap call data is invalid"
+        );
+        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
+            if (_swapDatas[i][0].sendingAssetId != address(0)) {
+                IERC20Upgradeable srcToken = IERC20Upgradeable(
+                    _swapDatas[i][0].sendingAssetId
+                );
+
+                require(
+                    srcToken.allowance(msg.sender, address(this)) > 0,
+                    "ERC20: transfer amount exceeds allowance"
+                );
+
+                srcToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _swapDatas[i][0].fromAmount
+                );
+
+                srcToken.approve(address(Bridge), _swapDatas[i][0].fromAmount);
+            }
+
+            (bool success, ) = payable(address(Bridge)).call{value: fees[i]}(
+                callDatas[i]
+            );
+            require(success, "Splitter: bridge swap transaction was failed");
+
+            emit CallData(success, callDatas[i]);
+        }
+
+        emit HectorBridge(msg.sender, _bridgeDatas);
+    }
+
+    /// @notice This function starts a cross-chain transaction using the NXTP protocol
+    /// @param _bridgeDatas the core information needed for bridging
+    /// @param callDatas callDatas from lifi sdk
+    function startBridgeTokensViaNXTP(
+        ILiFi.CommonBridgeData[] memory _bridgeDatas,
+        uint256[] memory fees,
+        bytes[] memory callDatas
+    ) external payable {
+        require(
+            _bridgeDatas.length > 0 &&
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == callDatas.length,
+            "Splitter: bridge or connext data is invalid"
+        );
+        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
+            if (_bridgeDatas[i].sendingAssetId != address(0)) {
+                IERC20Upgradeable srcToken = IERC20Upgradeable(
+                    _bridgeDatas[i].sendingAssetId
+                );
+
+                require(
+                    srcToken.allowance(msg.sender, address(this)) > 0,
+                    "ERC20: transfer amount exceeds allowance"
+                );
+
+                srcToken.safeTransferFrom(
+                    msg.sender,
+                    address(this),
+                    _bridgeDatas[i].minAmount
+                );
+
+                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
+            }
+
+            if (msg.value > 0 && fees[i] > 0) {
+                (bool success, ) = payable(address(Bridge)).call{
+                    value: fees[i]
+                }(callDatas[i]);
+                require(
+                    success,
+                    "Splitter: bridge swap transaction was failed"
+                );
+                emit CallData(success, callDatas[i]);
+            } else {
+                (bool success, ) = payable(address(Bridge)).call(callDatas[i]);
+                require(
+                    success,
+                    "Splitter: bridge swap transaction was failed"
+                );
+                emit CallData(success, callDatas[i]);
+            }
+        }
+
+        emit HectorBridge(msg.sender, _bridgeDatas);
+    }
+
+    /// @notice This function performs a swap or multiple swaps and then starts a cross-chain transaction
+    ///         using the NXTP protocol.
+    /// @param _bridgeDatas the core information needed for bridging
+    /// @param _swapDatas array of data needed for swaps
+    /// @param callDatas callDatas from lifi sdk
+    function swapAndStartBridgeTokensViaNXTP(
+        ILiFi.CommonBridgeData[] memory _bridgeDatas,
+        LibSwap.CommonSwapData[][] calldata _swapDatas,
+        uint256[] memory fees,
+        bytes[] memory callDatas
+    ) external payable {
+        require(
+            _bridgeDatas.length > 0 &&
+                _bridgeDatas.length <= CountDest &&
+                _bridgeDatas.length == callDatas.length &&
                 _bridgeDatas.length == _swapDatas.length,
             "Splitter: bridge or swap call data is invalid"
         );
@@ -227,153 +237,28 @@ contract HecBridgeSplitter is
                 srcToken.approve(address(Bridge), _swapDatas[i][0].fromAmount);
             }
 
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["swapAndStartBridgeTokensViaStargate"],
-                _bridgeDatas[i],
-                _swapDatas[i],
-                _stargateDatas[i]
-            );
-
             (bool success, ) = payable(address(Bridge)).call{value: fees[i]}(
-                callData
+                callDatas[i]
             );
             require(success, "Splitter: bridge swap transaction was failed");
 
-            emit CallData(success, callData);
+            emit CallData(success, callDatas[i]);
         }
 
-        emit Split(msg.sender, _bridgeDatas);
-    }
-
-    /// @notice Bridges tokens via CBridge
-    /// @param _bridgeDatas the core arrays information needed for bridging
-    /// @param _cBridgeDatas Array data specific to CBridge
-    function startBridgeTokensViaCBridge(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        IHecBridgeSplitterInterface.CBridgeData[] calldata _cBridgeDatas,
-        uint256[] memory fees
-    ) external payable {
-        require(
-            _bridgeDatas.length > 0 &&
-                _bridgeDatas.length <= CountDest &&
-                _bridgeDatas.length == _cBridgeDatas.length,
-            "Splitter: bridge or cbridge data is invalid"
-        );
-        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-            if (_bridgeDatas[i].sendingAssetId != address(0)) {
-                IERC20Upgradeable srcToken = IERC20Upgradeable(
-                    _bridgeDatas[i].sendingAssetId
-                );
-
-                require(
-                    srcToken.allowance(msg.sender, address(this)) > 0,
-                    "ERC20: transfer amount exceeds allowance"
-                );
-
-                srcToken.safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    _bridgeDatas[i].minAmount
-                );
-
-                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
-            }
-
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["startBridgeTokensViaCBridge"],
-                _bridgeDatas[i],
-                _cBridgeDatas[i]
-            );
-
-            (bool success, ) = payable(address(Bridge)).call{value: fees[i]}(
-                callData
-            );
-            require(success, "Splitter: bridge swap transaction was failed");
-
-            emit CallData(success, callData);
-        }
-
-        emit Split(msg.sender, _bridgeDatas);
-    }
-
-    /// @notice Performs a swap before bridging via CBridge
-    /// @param _bridgeDatas the core array information needed for bridging
-    /// @param _swapDatas an array of array swap related data for performing swaps before bridging
-    /// @param _cBridgeDatas an array data specific to CBridge
-    function swapAndStartBridgeTokensViaCBridge(
-        ILiFi.BridgeData[] memory _bridgeDatas,
-        LibSwap.SwapData[][] calldata _swapDatas,
-        IHecBridgeSplitterInterface.CBridgeData[] calldata _cBridgeDatas,
-        uint256[] memory fees
-    ) external payable {
-        require(
-            _bridgeDatas.length > 0 &&
-                _bridgeDatas.length <= CountDest &&
-                _bridgeDatas.length == _cBridgeDatas.length &&
-                _bridgeDatas.length == _swapDatas.length,
-            "Splitter: bridge or swap call data is invalid"
-        );
-        for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-            if (_swapDatas[i][0].sendingAssetId != address(0)) {
-                IERC20Upgradeable srcToken = IERC20Upgradeable(
-                    _bridgeDatas[i].sendingAssetId
-                );
-
-                require(
-                    srcToken.allowance(msg.sender, address(this)) > 0,
-                    "ERC20: transfer amount exceeds allowance"
-                );
-
-                srcToken.safeTransferFrom(
-                    msg.sender,
-                    address(this),
-                    _bridgeDatas[i].minAmount
-                );
-
-                srcToken.approve(address(Bridge), _bridgeDatas[i].minAmount);
-            }
-
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["swapAndStartBridgeTokensViaCBridge"],
-                _bridgeDatas[i],
-                _swapDatas[i],
-                _cBridgeDatas[i]
-            );
-
-            (bool success, ) = payable(address(Bridge)).call{value: fees[i]}(
-                callData
-            );
-            require(success, "Splitter: bridge swap transaction was failed");
-
-            emit CallData(success, callData);
-        }
-
-        emit Split(msg.sender, _bridgeDatas);
+        emit HectorBridge(msg.sender, _bridgeDatas);
     }
 
     /// @notice Performs multiple swaps in one transaction
-    /// @param _transactionIds the transaction id associated with the operation
-    /// @param _integrators the name of the integrator
-    /// @param _referrers the address of the referrer
-    /// @param _receivers the address to receive the swapped tokens into (also excess tokens)
-    /// @param _minAmounts the minimum amount of the final asset to receive
     /// @param _swapDatas an object containing swap related data to perform swaps before bridging
+    /// @param callDatas callDatas from lifi sdk
     function swapTokensGeneric(
-        bytes32[] memory _transactionIds,
-        string[] calldata _integrators,
-        string[] calldata _referrers,
-        address[] memory _receivers,
-        uint256[] memory _minAmounts,
-        LibSwap.SwapData[][] calldata _swapDatas
+        LibSwap.CommonSwapData[][] calldata _swapDatas,
+        bytes[] memory callDatas
     ) external payable {
         require(
             _swapDatas.length > 0 &&
                 _swapDatas.length <= CountDest &&
-                _swapDatas.length == _transactionIds.length &&
-                _swapDatas.length == _integrators.length &&
-                _swapDatas.length == _referrers.length &&
-                _swapDatas.length == _receivers.length &&
-                _swapDatas.length == _minAmounts.length,
+                _swapDatas.length == callDatas.length,
             "Splitter: passed parameter data is invalid"
         );
 
@@ -396,39 +281,15 @@ contract HecBridgeSplitter is
 
                 srcToken.approve(address(Bridge), _swapDatas[i][0].fromAmount);
             }
-            bytes memory callData = abi.encodeWithSelector(
-                selectors["swapTokensGeneric"],
-                _transactionIds[i],
-                _integrators[i],
-                _referrers[i],
-                _receivers[i],
-                _minAmounts[i],
-                _swapDatas[i]
-            );
 
             (bool success, ) = _swapDatas[i][0].sendingAssetId == address(0)
                 ? payable(address(Bridge)).call{
                     value: _swapDatas[i][0].fromAmount
-                }(callData)
-                : address(Bridge).call(callData);
+                }(callDatas[i])
+                : address(Bridge).call(callDatas[i]);
 
             require(success, "Splitter: bridge swap transaction was failed");
-
-            emit CallData(success, callData);
-        }
-    }
-
-    // Set selector
-    function setSelectors(string[] memory _names, bytes4[] memory _selectors)
-        external
-        onlyOwner
-    {
-        require(
-            _names.length == _selectors.length,
-            "Splitter: not matched names and selectors length"
-        );
-        for (uint256 i = 0; i < _names.length; i++) {
-            selectors[_names[i]] = _selectors[i];
+            emit CallData(success, callDatas[i]);
         }
     }
 
@@ -442,9 +303,17 @@ contract HecBridgeSplitter is
         }
     }
 
+    // Custom counts of detinations
+    function setCountDest(uint256 _countDest) external onlyOwner {
+        CountDest = _countDest;
+        emit SetCountDest(_countDest);
+    }
+
     receive() external payable {}
 
     // All events
+    event SetCountDest(uint256 countDest);
     event Split(address user, ILiFi.BridgeData[] bridgeData);
     event CallData(bool success, bytes callData);
+    event HectorBridge(address user, ILiFi.CommonBridgeData[] bridgeData);
 }

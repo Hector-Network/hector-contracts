@@ -2,6 +2,7 @@
 pragma solidity ^0.8.7;
 import {ILiFi} from "./Libraries/ILiFi.sol";
 import {LibSwap} from "./Libraries/LibSwap.sol";
+import {ITransactionManager} from "./Libraries/ITransactionManager.sol";
 
 interface IHecBridgeSplitterInterface {
     struct MultichainData {
@@ -25,6 +26,10 @@ interface IHecBridgeSplitterInterface {
         bytes callData;
     }
 
+     struct CustomStargateData {
+        uint256 lzFee;
+    }
+
     /// @param maxSlippage The max slippage accepted, given as percentage in point (pip).
     /// @param nonce A number input to guarantee uniqueness of transferId. Can be timestamp in practice.
     struct CBridgeData {
@@ -39,6 +44,16 @@ interface IHecBridgeSplitterInterface {
         uint256 maxSubmissionCost;
         uint256 maxGas;
         uint256 maxGasPrice;
+    }
+
+    /// Connext
+    struct NXTPData {
+        ITransactionManager.InvariantTransactionData invariantData;
+        uint256 expiry;
+        bytes encryptedCallData;
+        bytes encodedBid;
+        bytes bidSignature;
+        bytes encodedMeta;
     }
 
     /// @notice Register router
@@ -142,6 +157,25 @@ interface IHecBridgeSplitterInterface {
         ILiFi.BridgeData memory _bridgeData,
         LibSwap.SwapData[] calldata _swapData,
         ArbitrumData calldata _arbitrumData
+    ) external payable;
+
+    /// @notice This function starts a cross-chain transaction using the NXTP protocol
+    /// @param _bridgeData the core information needed for bridging
+    /// @param _nxtpData data needed to complete an NXTP cross-chain transaction
+    function startBridgeTokensViaNXTP(
+        ILiFi.BridgeData memory _bridgeData,
+        NXTPData calldata _nxtpData
+    ) external payable;
+
+    /// @notice This function performs a swap or multiple swaps and then starts a cross-chain transaction
+    ///         using the NXTP protocol.
+    /// @param _bridgeData the core information needed for bridging
+    /// @param _swapData array of data needed for swaps
+    /// @param _nxtpData data needed to complete an NXTP cross-chain transaction
+    function swapAndStartBridgeTokensViaNXTP(
+        ILiFi.BridgeData memory _bridgeData,
+        LibSwap.SwapData[] calldata _swapData,
+        NXTPData calldata _nxtpData
     ) external payable;
 
     /// @notice Performs multiple swaps in one transaction

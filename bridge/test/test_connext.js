@@ -31,37 +31,34 @@ async function main() {
 
   const mockBridgeDatas = [];
   const mockSwapDatas = [];
-  const mockStargateDatas = [];
   const mockCallDatas = [];
 
   console.log("HecBridgeSplitter:", HecBridgeSplitterAddress);
 
   const originSteps = tempData.steps[0];
-  const originStargateData = tempStepData.includedSteps.find((element) => element.type == "cross")
-    .estimate.data.stargateData;
 
   const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
   const enableSwap = originSteps.includedSteps[0].type == "swap" ? true : false;
 
+  const originIncludedStepSwapData = enableSwap && tempStepData.includedSteps.find((element) => element.type == "swap")
+
   console.log("Mode:", mode);
   console.log("SwapEnable:", enableSwap);
+  console.log("isNativeFrom:", isNativeFrom);
 
   const mockBridgeData1 = {
-    sendingAssetId: tempData.fromToken.address,
-    minAmount: enableSwap ? originSteps.estimate.data.toTokenAmount : tempData.fromAmount,
+    sendingAssetId: enableSwap
+      ? originIncludedStepSwapData.action.toToken.address
+      : tempData.fromToken.address,
+    minAmount: enableSwap ? originIncludedStepSwapData.estimate.toAmountMin : tempData.fromAmount,
   };
 
-  const mockStargateData1 = {
-    lzFee: originStargateData.lzFee,
-  };
-
-  const originSwapData = tempStepData.includedSteps[0].estimate;
   const mockSwapData1 = enableSwap && [
     {
       sendingAssetId:
-        (enableSwap && originSwapData.data.fromToken.address == ETH_ADDRESS) || isNativeFrom
+        (enableSwap && originIncludedStepSwapData.action.fromToken.address == ETH_ADDRESS) || isNativeFrom
           ? ZERO_ADDRESS
-          : originSwapData.data.fromToken.address,
+          : originIncludedStepSwapData.action.fromToken.address,
       fromAmount: tempStepData.includedSteps[0].action.fromAmount,
     },
   ];
@@ -72,16 +69,13 @@ async function main() {
 
   if (isNativeFrom) {
     fees.push(
-      BigNumber.from(mockStargateData1.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount))
+      BigNumber.from(mockSwapData1[0].fromAmount)
     );
     mode == "multi" &&
       fees.push(
-        BigNumber.from(mockStargateData1.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount))
+        BigNumber.from(mockSwapData1[0].fromAmount)
       );
-  } else {
-    fees.push(BigNumber.from(mockStargateData1.lzFee));
-    mode == "multi" && fees.push(BigNumber.from(mockStargateData1.lzFee));
-  }
+  } 
 
   let fee = BigNumber.from(0);
 
@@ -89,23 +83,20 @@ async function main() {
     fee = fee.add(item);
   });
 
-
-
   mockBridgeDatas.push(mockBridgeData1);
-  mockStargateDatas.push(mockStargateData1);
   enableSwap && mockSwapDatas.push(mockSwapData1);
   mockCallDatas.push(mockCallData1);
 
   if (mode == "multi") {
-    mockBridgeDatas.push(mockBridgeData2);
-    mockStargateDatas.push(mockStargateData1);
+    mockBridgeDatas.push(mockBridgeData1);
     enableSwap && mockSwapDatas.push(mockSwapData1);
     mockCallDatas.push(mockCallData1);
   }
 
   console.log("mockBridgeData1:", mockBridgeData1);
-  console.log("mockStargateData1:", mockStargateData1);
   console.log("mockSwapData1:", mockSwapData1);
+  
+  console.log({ fee, fees });
 
   if (!isNativeFrom) {
     console.log("Approve the ERC20 token to HecBridgeSplitter...");
@@ -140,27 +131,24 @@ async function main() {
     console.log("Done token allowance setting");
   }
 
-  console.log({ fee, fees });
-
   enableSwap
-    ? console.log("Executing swapAndStartBridgeTokensViaStargate...")
-    : console.log("Executing startBridgeTokensViaStargate...")
+    ? console.log("Executing swapAndStartBridgeTokensViaNXTP...")
+    : console.log("Executing startBridgeTokensViaNXTP...")
 
   try {
     const result = enableSwap
-      ? await testHecBridgeSplitterContract.swapAndStartBridgeTokensViaStargate(
+      ? await testHecBridgeSplitterContract.swapAndStartBridgeTokensViaNXTP(
         mockBridgeDatas,
         mockSwapDatas,
-        mockStargateDatas,
         fees,
         mockCallDatas,
         {
           value: fee,
         }
       )
-      : await testHecBridgeSplitterContract.startBridgeTokensViaStargate(
+      : await testHecBridgeSplitterContract.startBridgeTokensViaNXTP(
         mockBridgeDatas,
-        mockStargateDatas,
+        fees,
         mockCallDatas,
         {
           value: fee,
