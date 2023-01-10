@@ -1,0 +1,407 @@
+[
+	{
+		"inputs": [
+			{ "internalType": "address", "name": "provider", "type": "address" },
+			{ "internalType": "string", "name": "_name", "type": "string" },
+			{ "internalType": "address", "name": "_stakingToken", "type": "address" },
+			{ "internalType": "address", "name": "_rewardToken", "type": "address" }
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": true, "internalType": "address", "name": "account", "type": "address" },
+			{ "indexed": true, "internalType": "uint256", "name": "fnftId", "type": "uint256" },
+			{ "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+		],
+		"name": "Claim",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "lockedStakeMaxMultiplier",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "lockedStakeTimeForMaxMultiplier",
+				"type": "uint256"
+			}
+		],
+		"name": "MultipliersUpdated",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": true, "internalType": "address", "name": "previousOwner", "type": "address" },
+			{ "indexed": true, "internalType": "address", "name": "newOwner", "type": "address" }
+		],
+		"name": "OwnershipTransferred",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": false, "internalType": "address", "name": "account", "type": "address" }
+		],
+		"name": "Paused",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": true, "internalType": "address", "name": "account", "type": "address" },
+			{ "indexed": true, "internalType": "uint256", "name": "fnftId", "type": "uint256" },
+			{ "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" },
+			{ "indexed": false, "internalType": "uint256", "name": "secs", "type": "uint256" }
+		],
+		"name": "Stake",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": false, "internalType": "address", "name": "account", "type": "address" }
+		],
+		"name": "Unpaused",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{ "indexed": true, "internalType": "address", "name": "account", "type": "address" },
+			{ "indexed": true, "internalType": "uint256", "name": "fnftId", "type": "uint256" },
+			{ "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+		],
+		"name": "Withdraw",
+		"type": "event"
+	},
+	{
+		"inputs": [],
+		"name": "accTokenPerShare",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "fnftId", "type": "uint256" }],
+		"name": "claim",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "claim",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
+		"name": "claimAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "claimAll",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"name": "fnfts",
+		"outputs": [
+			{ "internalType": "uint256", "name": "id", "type": "uint256" },
+			{ "internalType": "uint256", "name": "amount", "type": "uint256" },
+			{ "internalType": "uint256", "name": "startTime", "type": "uint256" },
+			{ "internalType": "uint256", "name": "secs", "type": "uint256" },
+			{ "internalType": "uint256", "name": "multiplier", "type": "uint256" },
+			{ "internalType": "uint256", "name": "rewardDebt", "type": "uint256" },
+			{ "internalType": "uint256", "name": "pendingReward", "type": "uint256" }
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getAPR",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{ "internalType": "uint256", "name": "offset", "type": "uint256" },
+			{ "internalType": "uint256", "name": "size", "type": "uint256" }
+		],
+		"name": "getAllFnfts",
+		"outputs": [
+			{
+				"components": [
+					{ "internalType": "uint256", "name": "id", "type": "uint256" },
+					{ "internalType": "uint256", "name": "amount", "type": "uint256" },
+					{ "internalType": "uint256", "name": "startTime", "type": "uint256" },
+					{ "internalType": "uint256", "name": "secs", "type": "uint256" },
+					{ "internalType": "uint256", "name": "multiplier", "type": "uint256" },
+					{ "internalType": "uint256", "name": "rewardDebt", "type": "uint256" },
+					{ "internalType": "uint256", "name": "pendingReward", "type": "uint256" }
+				],
+				"internalType": "struct ILockFarm.FNFTInfo[]",
+				"name": "infos",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "owner", "type": "address" }],
+		"name": "getFnfts",
+		"outputs": [
+			{
+				"components": [
+					{ "internalType": "uint256", "name": "id", "type": "uint256" },
+					{ "internalType": "uint256", "name": "amount", "type": "uint256" },
+					{ "internalType": "uint256", "name": "startTime", "type": "uint256" },
+					{ "internalType": "uint256", "name": "secs", "type": "uint256" },
+					{ "internalType": "uint256", "name": "multiplier", "type": "uint256" },
+					{ "internalType": "uint256", "name": "rewardDebt", "type": "uint256" },
+					{ "internalType": "uint256", "name": "pendingReward", "type": "uint256" }
+				],
+				"internalType": "struct ILockFarm.FNFTInfo[]",
+				"name": "infos",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lastTimeRewardApplicable",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lastUpdateTime",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lockedStakeMaxMultiplier",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lockedStakeMinTime",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "lockedStakeTimeForMaxMultiplier",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "name",
+		"outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "owner",
+		"outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "pause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "paused",
+		"outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "fnftId", "type": "uint256" }],
+		"name": "pendingReward",
+		"outputs": [{ "internalType": "uint256", "name": "reward", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "periodFinish",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "amount", "type": "uint256" }],
+		"name": "receiveReward",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "renounceOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "rewardPerToken",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "rewardRate",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "rewardToken",
+		"outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "provider", "type": "address" }],
+		"name": "setAddressProvider",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{ "internalType": "uint256", "name": "_lockedStakeMaxMultiplier", "type": "uint256" },
+			{ "internalType": "uint256", "name": "_lockedStakeTimeForMaxMultiplier", "type": "uint256" }
+		],
+		"name": "setMultipliers",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "string", "name": "_name", "type": "string" }],
+		"name": "setName",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "_rewardToken", "type": "address" }],
+		"name": "setRewardToken",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{ "internalType": "uint256", "name": "amount", "type": "uint256" },
+			{ "internalType": "uint256", "name": "secs", "type": "uint256" }
+		],
+		"name": "stake",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "secs", "type": "uint256" }],
+		"name": "stakingMultiplier",
+		"outputs": [{ "internalType": "uint256", "name": "multiplier", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "stakingToken",
+		"outputs": [{ "internalType": "contract IERC20", "name": "", "type": "address" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalReward",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalTokenBoostedSupply",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "totalTokenSupply",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "newOwner", "type": "address" }],
+		"name": "transferOwnership",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "unpause",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+		"name": "userRemainingRewards",
+		"outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [{ "internalType": "uint256", "name": "fnftId", "type": "uint256" }],
+		"name": "withdraw",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	}
+]
