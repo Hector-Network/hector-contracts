@@ -28,7 +28,11 @@ voting/v2/coverage.json
 voting/v2/typechain
 voting/v2/cache
 voting/v2/artifacts
+<<<<<<< HEAD
 voting/v2/types
+=======
+voting/v2/typechain-types
+>>>>>>> main
 
 
 #### bridge ####
