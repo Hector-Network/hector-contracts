@@ -1,64 +1,48 @@
 {
-    "id": "470ad342-6ce7-4a19-8d50-0a61ee34d7f0",
+    "id": "1d80e37f-5e7b-44df-831e-d20c79ac137d",
     "type": "lifi",
     "action": {
         "fromChainId": 250,
         "fromAmount": "100000000000000000",
         "fromToken": {
+            "address": "0x0000000000000000000000000000000000000000",
+            "chainId": 250,
+            "symbol": "FTM",
+            "decimals": 18,
+            "name": "FTM",
+            "priceUSD": "0.2387",
+            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+            "coinKey": "FTM"
+        },
+        "toChainId": 250,
+        "toToken": {
             "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
             "chainId": 250,
             "symbol": "wFTM",
             "decimals": 18,
             "name": "wFTM",
-            "priceUSD": "0.2391",
+            "priceUSD": "0.2389",
             "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83/2b7d91858f9c62aafc8d7778b9c22f57.png",
             "coinKey": "wFTM"
         },
-        "toChainId": 250,
-        "toToken": {
-            "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
-            "chainId": 250,
-            "symbol": "USDC",
-            "decimals": 6,
-            "name": "USDC",
-            "priceUSD": "1",
-            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-            "coinKey": "USDC"
-        },
         "slippage": 0.005,
         "fromAddress": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc",
-        "toAddress": "0xda66b6206bbaea5213A5065530858a3fD6ee1ec4"
+        "toAddress": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc"
     },
     "estimate": {
         "fromAmount": "100000000000000000",
-        "toAmount": "23766",
-        "toAmountMin": "23647",
+        "toAmount": "100000000000000000",
+        "toAmountMin": "99500000000000000",
         "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
         "executionDuration": 30,
-        "feeCosts": [
-            {
-                "name": "LP Fee",
-                "percentage": "0.003",
-                "token": {
-                    "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-                    "chainId": 250,
-                    "symbol": "wFTM",
-                    "decimals": 18,
-                    "name": "wFTM",
-                    "priceUSD": "0.2391",
-                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83/2b7d91858f9c62aafc8d7778b9c22f57.png",
-                    "coinKey": "wFTM"
-                },
-                "amount": "300000000000000"
-            }
-        ],
+        "feeCosts": [],
         "gasCosts": [
             {
                 "type": "SEND",
-                "price": "32000000000",
-                "estimate": "210311",
-                "limit": "280415",
-                "amount": "8973280000000000",
+                "price": "35200000000",
+                "estimate": "185733",
+                "limit": "247644",
+                "amount": "8717060000000000",
                 "amountUSD": "0.00",
                 "token": {
                     "address": "0x0000000000000000000000000000000000000000",
@@ -66,55 +50,86 @@
                     "symbol": "FTM",
                     "decimals": 18,
                     "name": "FTM",
-                    "priceUSD": "0.239",
+                    "priceUSD": "0.2387",
                     "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
                     "coinKey": "FTM"
                 }
             }
         ],
         "data": {
-            "path": [
-                "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-                "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+            "fromToken": {
+                "symbol": "FTM",
+                "name": "Fantom Token",
+                "decimals": 18,
+                "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                "logoURI": "https://tokens.1inch.io/0x4e15361fd6b4bb609fa63c81a2be19d873717870.png",
+                "tags": [
+                    "native"
+                ]
+            },
+            "toToken": {
+                "symbol": "WFTM",
+                "name": "Wrapped Fantom",
+                "decimals": 18,
+                "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
+                "logoURI": "https://tokens.1inch.io/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83.png",
+                "tags": [
+                    "tokens",
+                    "PEG:FTM"
+                ]
+            },
+            "toTokenAmount": "100000000000000000",
+            "fromTokenAmount": "100000000000000000",
+            "protocols": [
+                [
+                    [
+                        {
+                            "name": "FANTOM_WFTM",
+                            "part": 100,
+                            "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                            "toTokenAddress": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83"
+                        }
+                    ]
+                ]
             ],
-            "routerAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29"
+            "estimatedGas": 137762
         },
         "fromAmountUSD": "0.02",
         "toAmountUSD": "0.02"
     },
-    "tool": "spookyswap-ftm",
+    "tool": "1inch",
     "toolDetails": {
-        "key": "spookyswap-ftm",
-        "name": "SpookySwap",
-        "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/spooky.png"
+        "key": "1inch",
+        "name": "1inch",
+        "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/oneinch.png"
     },
     "includedSteps": [
         {
-            "id": "470ad342-6ce7-4a19-8d50-0a61ee34d7f0",
+            "id": "1d80e37f-5e7b-44df-831e-d20c79ac137d",
             "type": "swap",
             "action": {
                 "fromChainId": 250,
                 "fromAmount": "100000000000000000",
                 "fromToken": {
+                    "address": "0x0000000000000000000000000000000000000000",
+                    "chainId": 250,
+                    "symbol": "FTM",
+                    "decimals": 18,
+                    "name": "FTM",
+                    "priceUSD": "0.2387",
+                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
+                    "coinKey": "FTM"
+                },
+                "toChainId": 250,
+                "toToken": {
                     "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
                     "chainId": 250,
                     "symbol": "wFTM",
                     "decimals": 18,
                     "name": "wFTM",
-                    "priceUSD": "0.2391",
+                    "priceUSD": "0.2389",
                     "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83/2b7d91858f9c62aafc8d7778b9c22f57.png",
                     "coinKey": "wFTM"
-                },
-                "toChainId": 250,
-                "toToken": {
-                    "address": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
-                    "chainId": 250,
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "name": "USDC",
-                    "priceUSD": "1",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "coinKey": "USDC"
                 },
                 "slippage": 0.005,
                 "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
@@ -122,34 +137,18 @@
             },
             "estimate": {
                 "fromAmount": "100000000000000000",
-                "toAmount": "23766",
-                "toAmountMin": "23647",
-                "approvalAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+                "toAmount": "100000000000000000",
+                "toAmountMin": "99500000000000000",
+                "approvalAddress": "0x1111111254eeb25477b68fb85ed929f73a960582",
                 "executionDuration": 30,
-                "feeCosts": [
-                    {
-                        "name": "LP Fee",
-                        "percentage": "0.003",
-                        "token": {
-                            "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-                            "chainId": 250,
-                            "symbol": "wFTM",
-                            "decimals": 18,
-                            "name": "wFTM",
-                            "priceUSD": "0.2391",
-                            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83/2b7d91858f9c62aafc8d7778b9c22f57.png",
-                            "coinKey": "wFTM"
-                        },
-                        "amount": "300000000000000"
-                    }
-                ],
+                "feeCosts": [],
                 "gasCosts": [
                     {
                         "type": "SEND",
-                        "price": "32000000000",
-                        "estimate": "328125",
-                        "limit": "437500",
-                        "amount": "14000000000000000",
+                        "price": "45316200000",
+                        "estimate": "103322",
+                        "limit": "137762",
+                        "amount": "6242850344400000",
                         "amountUSD": "0.00",
                         "token": {
                             "address": "0x0000000000000000000000000000000000000000",
@@ -157,34 +156,67 @@
                             "symbol": "FTM",
                             "decimals": 18,
                             "name": "FTM",
-                            "priceUSD": "0.239",
+                            "priceUSD": "0.2387",
                             "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
                             "coinKey": "FTM"
                         }
                     }
                 ],
                 "data": {
-                    "path": [
-                        "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-                        "0x04068da6c83afcfa0e13ba15a6696662335d5b75"
+                    "fromToken": {
+                        "symbol": "FTM",
+                        "name": "Fantom Token",
+                        "decimals": 18,
+                        "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "logoURI": "https://tokens.1inch.io/0x4e15361fd6b4bb609fa63c81a2be19d873717870.png",
+                        "tags": [
+                            "native"
+                        ]
+                    },
+                    "toToken": {
+                        "symbol": "WFTM",
+                        "name": "Wrapped Fantom",
+                        "decimals": 18,
+                        "address": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
+                        "logoURI": "https://tokens.1inch.io/0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83.png",
+                        "tags": [
+                            "tokens",
+                            "PEG:FTM"
+                        ]
+                    },
+                    "toTokenAmount": "100000000000000000",
+                    "fromTokenAmount": "100000000000000000",
+                    "protocols": [
+                        [
+                            [
+                                {
+                                    "name": "FANTOM_WFTM",
+                                    "part": 100,
+                                    "fromTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                                    "toTokenAddress": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83"
+                                }
+                            ]
+                        ]
                     ],
-                    "routerAddress": "0xF491e7B69E4244ad4002BC14e878a34207E38c29"
+                    "estimatedGas": 137762
                 },
                 "fromAmountUSD": "0.02",
                 "toAmountUSD": "0.02"
             },
-            "tool": "spookyswap-ftm",
+            "tool": "1inch",
             "toolDetails": {
-                "key": "spookyswap-ftm",
-                "name": "SpookySwap",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/spooky.png"
+                "key": "1inch",
+                "name": "1inch",
+                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/oneinch.png"
             },
             "transactionRequest": {
                 "from": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-                "to": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+                "to": "0x1111111254eeb25477b68fb85ed929f73a960582",
                 "chainId": 250,
-                "data": "0x38ed1739000000000000000000000000000000000000000000000000016345785d8a00000000000000000000000000000000000000000000000000000000000000005c5f00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000063bd91d0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75",
-                "value": "0x00"
+                "data": "0x12aa3caf00000000000000000000000093131efee501d5721737c32576238f619548edda000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000093131efee501d5721737c32576238f619548edda0000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000001617eb90b26c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008600000000000000000000000000000000000000000000000000006800001a406121be370d5312f44cb42ce377bc9b8a0cef1a4c83d0e30db080206c4eca2721be370d5312f44cb42ce377bc9b8a0cef1a4c831111111254eeb25477b68fb85ed929f73a960582000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000002e9b3012",
+                "value": "0x016345785d8a0000",
+                "gasPrice": "0x0affab1130",
+                "gasLimit": "0x021a22"
             }
         }
     ],
@@ -194,27 +226,20 @@
         "status": "PENDING",
         "process": [
             {
-                "type": "TOKEN_ALLOWANCE",
-                "startedAt": 1673364354785,
-                "message": "Token allowance set.",
-                "status": "DONE",
-                "doneAt": 1673364367877
-            },
-            {
                 "type": "SWAP",
-                "startedAt": 1673364367897,
+                "startedAt": 1673450943503,
                 "message": "Preparing swap transaction.",
                 "status": "STARTED"
             }
         ]
     },
     "transactionRequest": {
-        "data": "0x4630a0d855873ff27bd3b232224544e24e73be666d3de8863320548633ae1557dbc9ec6600000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000100000000000000000000000000da66b6206bbaea5213a5065530858a3fd6ee1ec40000000000000000000000000000000000000000000000000000000000005c5f0000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000e7472616e73666572746f2e78797a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a3078303030303030303030303030303030303030303030303030303030303030303030303030303030300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c29000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c2900000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000010438ed1739000000000000000000000000000000000000000000000000016345785d8a00000000000000000000000000000000000000000000000000000000000000005c5f00000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000063bd91d0000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b7500000000000000000000000000000000000000000000000000000000",
+        "data": "0x4630a0d8a4611424bb37c650cc8ca6aa8f3e51452dcb6bf3657f62a4333c8320a87e9d6500000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000100000000000000000000000000da13e5d0d3e300b0af9e5994fb411a5d231de4dc00000000000000000000000000000000000000000000000001617eb90b26c0000000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000e7472616e73666572746f2e78797a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002a30783030303030303030303030303030303030303030303030303030303030303030303030303030303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000001111111254eeb25477b68fb85ed929f73a9605820000000000000000000000001111111254eeb25477b68fb85ed929f73a960582000000000000000000000000000000000000000000000000000000000000000000000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000022812aa3caf00000000000000000000000093131efee501d5721737c32576238f619548edda000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000093131efee501d5721737c32576238f619548edda0000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000001617eb90b26c0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000008600000000000000000000000000000000000000000000000000006800001a406121be370d5312f44cb42ce377bc9b8a0cef1a4c83d0e30db080206c4eca2721be370d5312f44cb42ce377bc9b8a0cef1a4c831111111254eeb25477b68fb85ed929f73a960582000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000002e9b3012000000000000000000000000000000000000000000000000",
         "to": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "value": "0",
+        "value": "100000000000000000",
         "from": "0xDa13E5D0d3E300B0Af9E5994fB411a5d231De4Dc",
         "chainId": 250,
-        "gasPrice": "32000000000",
-        "gasLimit": "280415"
+        "gasPrice": "35200000000",
+        "gasLimit": "247644"
     }
 }
