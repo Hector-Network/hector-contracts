@@ -7,11 +7,6 @@ const tempData = require('./tempData.json');
 const tempStepData = require('./tempStepData.json');
 require('dotenv').config();
 
-/**
- * When native => native trasactionrequest.data is needed
- * When native => erc20 trasactionrequest.data is needed
- */
-
 async function main() {
 	let mode = 'single'; // mode: single, multi
 	const [deployer] = await hre.ethers.getSigners();
@@ -35,43 +30,66 @@ async function main() {
 
 	console.log('HecBridgeSplitter:', HecBridgeSplitterAddress);
 
+	// Router Data
 	const originSteps = tempData.steps[0];
-
 	const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
 	const enableSwap = originSteps.includedSteps[0].type == 'swap' ? true : false;
-
-	const originIncludedStepSwapData =
+	// Step Data
+	const originSwapData =
 		enableSwap && tempStepData.includedSteps.find((element: any) => element.type == 'swap');
 
 	console.log('Mode:', mode);
+	console.log('isNativeFrom:', isNativeFrom)
 	console.log('SwapEnable:', enableSwap);
-	console.log('isNativeFrom:', isNativeFrom);
 
+	// BridgeData
 	const mockBridgeData1 = {
-		sendingAssetId: enableSwap
-			? originIncludedStepSwapData.action.toToken.address
-			: tempData.fromToken.address,
-		minAmount: enableSwap ? originIncludedStepSwapData.estimate.toAmountMin : tempData.fromAmount,
+		sendingAssetId: enableSwap ? originSwapData.action.toToken.address : tempData.fromToken.address,
+		minAmount: enableSwap ? originSteps.estimate.toAmountMin : tempData.fromAmount,
 	};
-
+	// SwapData
 	const mockSwapData1: any = enableSwap && [
 		{
 			sendingAssetId:
-				(enableSwap && originIncludedStepSwapData.action.fromToken.address == ETH_ADDRESS) ||
-				isNativeFrom
+				(enableSwap && originSwapData.action.fromToken.address == ETH_ADDRESS) || isNativeFrom
 					? ZERO_ADDRESS
-					: originIncludedStepSwapData.action.fromToken.address,
-			fromAmount: BigNumber.from(tempStepData.includedSteps[0].action.fromAmount),
+					: originSwapData.action.fromToken.address,
+			fromAmount: tempStepData.includedSteps[0].action.fromAmount,
 		},
 	];
-
+	// CallData
 	const mockCallData1 = tempStepData.transactionRequest.data;
 
-	const fees: BigNumber[] = [];
+	// Special Data
+	let bridgeTool = originSteps.tool;
+	let specialData: any;
+
+	console.log('Bridge:', bridgeTool);
+
+	if (bridgeTool == 'stargate') {
+		specialData = tempStepData.includedSteps.find((element: any) => element.type == 'cross')
+			.estimate.data.stargateData;
+	}
+
+	// Set Fees
+	const fees: Array<BigNumber> = [];
 
 	if (isNativeFrom) {
-		fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
-		mode == 'multi' && fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
+		if (bridgeTool == 'stargate') {
+			fees.push(BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount)));
+			mode == 'multi' &&
+				fees.push(
+					BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount))
+				);
+		} else if (bridgeTool == 'connext') {
+			fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
+			mode == 'multi' && fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
+		}
+	} else {
+		if (bridgeTool == 'stargate') {
+			fees.push(BigNumber.from(specialData.lzFee));
+			mode == 'multi' && fees.push(BigNumber.from(specialData.lzFee));
+		}
 	}
 
 	let fee = BigNumber.from(0);
@@ -92,8 +110,6 @@ async function main() {
 
 	console.log('mockBridgeData1:', mockBridgeData1);
 	console.log('mockSwapData1:', mockSwapData1);
-
-	console.log({ fee, fees });
 
 	if (!isNativeFrom) {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
@@ -132,13 +148,15 @@ async function main() {
 		console.log('Done token allowance setting');
 	}
 
+	console.log({ fee, fees });
+
 	enableSwap
-		? console.log('Executing swapAndStartBridgeTokensViaNXTP...')
-		: console.log('Executing startBridgeTokensViaNXTP...');
+		? console.log('Executing swapAndStartBridgeTokens...')
+		: console.log('Executing startBridgeTokens...');
 
 	try {
 		const result = enableSwap
-			? await testHecBridgeSplitterContract.swapAndStartBridgeTokensViaNXTP(
+			? await testHecBridgeSplitterContract.swapAndStartBridgeTokens(
 					mockBridgeDatas,
 					mockSwapDatas,
 					fees,
@@ -147,7 +165,7 @@ async function main() {
 						value: fee,
 					}
 			  )
-			: await testHecBridgeSplitterContract.startBridgeTokensViaNXTP(
+			: await testHecBridgeSplitterContract.startBridgeTokens(
 					mockBridgeDatas,
 					fees,
 					mockCallDatas,

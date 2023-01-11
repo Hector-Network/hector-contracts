@@ -12,7 +12,4 @@ interface ICommon {
 		uint256 fromAmount;
 	}
 
-	struct CustomStargateData {
-		uint256 lzFee;
-	}
 }

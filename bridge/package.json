@@ -10,12 +10,8 @@
     "deploy": "hardhat run ./scripts/deployHecBridgeSplitter.ts --network",
     "update": "hardhat run ./scripts/upgradeHecBridgeSplitter.ts --network",
     "verify": "hardhat run  ./scripts/verify.ts",
-    "test:stargate": "hardhat run  ./test/test_stargate.ts --network",
-    "test:multichain": "hardhat run  ./test/test_multichain.ts --network",
-    "test:cbridge": "hardhat run  ./test/test_cbridge.ts --network",
-    "test:generic": "hardhat run  ./test/test_generic.ts --network",
-    "test:connext": "hardhat run  ./test/test_connext.ts --network",
-    "withdraw": "hardhat run  ./test/test_withdraw.ts --network"
+    "test": "hardhat run  ./test/test.ts --network",
+    "test:generic": "hardhat run  ./test/test_generic.ts --network"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.12",
