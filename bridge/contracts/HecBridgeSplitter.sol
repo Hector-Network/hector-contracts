@@ -80,14 +80,21 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	address public Bridge;
 	uint256 public CountDest; // Count of the destination wallets
 
+	/* ======== INITIALIZATION ======== */
+
+	/// @custom:oz-upgrades-unsafe-allow constructor
+	constructor() {
+		_disableInitializers();
+	}
+
 	/**
 	 * @dev sets initials
 	 */
-	function initialize(uint256 _CountDest, address _bridge) public onlyInitializing {
+	function initialize(uint256 _CountDest, address _bridge) external initializer {
 		Bridge = _bridge;
 		CountDest = _CountDest;
-		__Context_init_unchained();
-		__Ownable_init_unchained();
+		 __Ownable_init();
+        __Pausable_init();
 	}
 
 	///////////////////////////////////////////////////////
