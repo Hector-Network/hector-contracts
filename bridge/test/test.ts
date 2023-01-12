@@ -23,8 +23,7 @@ async function main() {
 	const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 	const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
-	const mockBridgeDatas = [];
-	const mockSwapDatas = [];
+	const mockSendingAssetInfos = [];
 	const mockCallDatas = [];
 
 	console.log('HecBridgeSplitter:', HecBridgeSplitterAddress);
@@ -40,23 +39,15 @@ async function main() {
 	console.log('isNativeFrom:', isNativeFrom);
 	console.log('SwapEnable:', enableSwap);
 
-	// BridgeData
-	const mockBridgeData1 = {
+	// Sending Asset Data
+	const mockSendingAssetInfo1 = {
 		sendingAssetId: enableSwap
-			? originSwapData.action.toToken.address
+			? originSwapData.action.fromToken.address == ETH_ADDRESS || isNativeFrom
+				? ZERO_ADDRESS
+				: originSwapData.action.fromToken.address
 			: tempStepData.action.fromToken.address,
-		minAmount: enableSwap ? originSwapData.estimate.toAmountMin : tempStepData.action.fromAmount,
+		sendingAmount: enableSwap ? originSwapData.action.fromAmount : tempStepData.action.fromAmount,
 	};
-	// SwapData
-	const mockSwapData1: any = enableSwap && [
-		{
-			sendingAssetId:
-				originSwapData.action.fromToken.address == ETH_ADDRESS || isNativeFrom
-					? ZERO_ADDRESS
-					: originSwapData.action.fromToken.address,
-			fromAmount: originSwapData.action.fromAmount,
-		},
-	];
 	// CallData
 	const mockCallData1 = tempStepData.transactionRequest.data;
 
@@ -76,14 +67,16 @@ async function main() {
 
 	if (isNativeFrom) {
 		if (bridgeTool == 'stargate') {
-			fees.push(BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount)));
+			fees.push(
+				BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
+			);
 			mode == 'multi' &&
 				fees.push(
-					BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSwapData1[0].fromAmount))
+					BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
 				);
-		} else if (bridgeTool == 'connext') {
-			fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
-			mode == 'multi' && fees.push(BigNumber.from(mockSwapData1[0].fromAmount));
+		} else {
+			fees.push(BigNumber.from(mockSendingAssetInfo1.sendingAmount));
+			mode == 'multi' && fees.push(BigNumber.from(mockSendingAssetInfo1.sendingAmount));
 		}
 	} else {
 		if (bridgeTool == 'stargate') {
@@ -98,44 +91,41 @@ async function main() {
 		fee = fee.add(item);
 	});
 
-	mockBridgeDatas.push(mockBridgeData1);
-	enableSwap && mockSwapDatas.push(mockSwapData1);
+	mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	mockCallDatas.push(mockCallData1);
 
 	if (mode == 'multi') {
-		mockBridgeDatas.push(mockBridgeData1);
-		enableSwap && mockSwapDatas.push(mockSwapData1);
+		mockSendingAssetInfos.push(mockSendingAssetInfo1);
 		mockCallDatas.push(mockCallData1);
 	}
 
-	console.log('mockBridgeData1:', mockBridgeData1);
-	console.log('mockSwapData1:', mockSwapData1);
+	console.log('mockSendingAssetInfo1:', mockSendingAssetInfo1);
 
 	if (!isNativeFrom) {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
 		let approveAmount;
 		if (mode == 'multi' && enableSwap) {
-			approveAmount = BigNumber.from(mockSwapData1[0].fromAmount).add(
-				BigNumber.from(mockSwapData1[0].fromAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
 			);
 		}
 
 		if (mode == 'single' && enableSwap) {
-			approveAmount = BigNumber.from(mockSwapData1[0].fromAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
 		}
 
 		if (mode == 'multi' && !enableSwap) {
-			approveAmount = BigNumber.from(mockBridgeData1.minAmount).add(
-				BigNumber.from(mockBridgeData1.minAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
 			);
 		}
 
 		if (mode == 'single' && !enableSwap) {
-			approveAmount = BigNumber.from(mockBridgeData1.minAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
 		}
 
 		const ERC20Contract = new ethers.Contract(
-			enableSwap ? mockSwapData1[0].sendingAssetId : mockBridgeData1.sendingAssetId,
+			mockSendingAssetInfo1.sendingAssetId,
 			erc20Abi.abi,
 			deployer
 		);
@@ -149,30 +139,17 @@ async function main() {
 	}
 
 	console.log({ fee, fees });
-
-	enableSwap
-		? console.log('Executing swapAndStartBridgeTokens...')
-		: console.log('Executing startBridgeTokens...');
+	console.log('Start bridge...');
 
 	try {
-		const result = enableSwap
-			? await testHecBridgeSplitterContract.swapAndStartBridgeTokens(
-					mockBridgeDatas,
-					mockSwapDatas,
-					fees,
-					mockCallDatas,
-					{
-						value: fee,
-					}
-			  )
-			: await testHecBridgeSplitterContract.startBridgeTokens(
-					mockBridgeDatas,
-					fees,
-					mockCallDatas,
-					{
-						value: fee,
-					}
-			  );
+		const result = await testHecBridgeSplitterContract.Bridge(
+			mockSendingAssetInfos,
+			fees,
+			mockCallDatas,
+			{
+				value: fee,
+			}
+		);
 		const resultWait = await result.wait();
 		console.log('Done bridge Tx:', resultWait.transactionHash);
 	} catch (e) {

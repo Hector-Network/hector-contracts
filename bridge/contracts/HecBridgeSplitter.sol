@@ -5,7 +5,6 @@ import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol';
-import {ICommon} from './interface/ICommon.sol';
 
 interface IOwnableUpgradeable {
 	function owner() external view returns (address);
@@ -77,8 +76,14 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
-	address public Bridge;
+	address public LiFiBridge;
 	uint256 public CountDest; // Count of the destination wallets
+
+	// Struct Asset Info
+	struct SendingAssetInfo {
+		address sendingAssetId;
+		uint256 sendingAmount;
+	}
 
 	/* ======== INITIALIZATION ======== */
 
@@ -91,137 +96,56 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	 * @dev sets initials
 	 */
 	function initialize(uint256 _CountDest, address _bridge) external initializer {
-		Bridge = _bridge;
+		LiFiBridge = _bridge;
 		CountDest = _CountDest;
-		 __Ownable_init();
-        __Pausable_init();
+		__Ownable_init();
+		__Pausable_init();
 	}
 
 	///////////////////////////////////////////////////////
 	//               USER CALLED FUNCTIONS               //
 	///////////////////////////////////////////////////////
 
-	/// @notice Performs multiple swaps in one transaction
-	/// @param _swapDatas an object containing swap related data to perform swaps before bridging
-	/// @param callDatas callDatas from lifi sdk
-	function swapTokensGeneric(
-		ICommon.CommonSwapData[][] calldata _swapDatas,
-		bytes[] memory callDatas
-	) external payable {
-		require(
-			_swapDatas.length > 0 &&
-				_swapDatas.length <= CountDest &&
-				_swapDatas.length == callDatas.length,
-			'Splitter: passed parameter data is invalid'
-		);
-
-		for (uint256 i = 0; i < _swapDatas.length; i++) {
-			if (_swapDatas[i][0].sendingAssetId != address(0)) {
-				IERC20Upgradeable srcToken = IERC20Upgradeable(_swapDatas[i][0].sendingAssetId);
-
-				require(
-					srcToken.allowance(msg.sender, address(this)) > 0,
-					'ERC20: transfer amount exceeds allowance'
-				);
-
-				srcToken.safeTransferFrom(msg.sender, address(this), _swapDatas[i][0].fromAmount);
-				srcToken.approve(Bridge, _swapDatas[i][0].fromAmount);
-			}
-
-			(bool success, ) = _swapDatas[i][0].sendingAssetId == address(0)
-				? payable(Bridge).call{value: _swapDatas[i][0].fromAmount}(callDatas[i])
-				: Bridge.call(callDatas[i]);
-
-			require(success, 'Splitter: bridge swap transaction was failed');
-			emit CallData(success, callDatas[i]);
-		}
-	}
-
-	/// @notice Bridges tokens via HECTOR Bridge Splitter
-	/// @param _bridgeDatas Array Data used purely for tracking and analytics
-	/// @param fees Amounts of native coin amounts for bridge
-	/// @param callDatas CallDatas from lifi sdk
-	function startBridgeTokens(
-		ICommon.CommonBridgeData[] memory _bridgeDatas,
-		uint256[] memory fees,
-		bytes[] memory callDatas
-	) external payable {
-		require(
-			_bridgeDatas.length > 0 &&
-				_bridgeDatas.length <= CountDest &&
-				_bridgeDatas.length == callDatas.length,
-			'Splitter: bridge or callDatas is invalid'
-		);
-		for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-			if (_bridgeDatas[i].sendingAssetId != address(0)) {
-				IERC20Upgradeable srcToken = IERC20Upgradeable(_bridgeDatas[i].sendingAssetId);
-
-				require(
-					srcToken.allowance(msg.sender, address(this)) > 0,
-					'ERC20: transfer amount exceeds allowance'
-				);
-
-				srcToken.safeTransferFrom(msg.sender, address(this), _bridgeDatas[i].minAmount);
-				srcToken.approve(Bridge, _bridgeDatas[i].minAmount);
-			}
-
-			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
-				(bool success, ) = payable(Bridge).call{value: fees[i]}(callDatas[i]);
-				require(success, 'Splitter: bridge swap transaction was failed');
-				emit CallData(success, callDatas[i]);
-			} else {
-				(bool success, ) = payable(Bridge).call(callDatas[i]);
-				require(success, 'Splitter: bridge swap transaction was failed');
-				emit CallData(success, callDatas[i]);
-			}
-		}
-
-		emit HectorBridge(msg.sender, _bridgeDatas);
-	}
-
 	/// @notice Performs a swap before bridging via HECTOR Bridge Splitter
-	/// @param _bridgeDatas Array Data used purely for tracking and analytics
-	/// @param _swapDatas An array of swap related data for performing swaps before bridging
+	/// @param sendingAssetInfos Array Data used purely for sending assets
 	/// @param fees Amounts of native coin amounts for bridge
 	/// @param callDatas CallDatas from lifi sdk
-	function swapAndStartBridgeTokens(
-		ICommon.CommonBridgeData[] memory _bridgeDatas,
-		ICommon.CommonSwapData[][] calldata _swapDatas,
+	function Bridge(
+		SendingAssetInfo[] memory sendingAssetInfos,
 		uint256[] memory fees,
 		bytes[] memory callDatas
 	) external payable {
 		require(
-			_bridgeDatas.length > 0 &&
-				_bridgeDatas.length <= CountDest &&
-				_bridgeDatas.length == callDatas.length &&
-				_bridgeDatas.length == _swapDatas.length,
+			sendingAssetInfos.length > 0 &&
+				sendingAssetInfos.length <= CountDest &&
+				sendingAssetInfos.length == callDatas.length,
 			'Splitter: bridge or swap call data is invalid'
 		);
-		for (uint256 i = 0; i < _bridgeDatas.length; i++) {
-			if (_swapDatas[i][0].sendingAssetId != address(0)) {
-				IERC20Upgradeable srcToken = IERC20Upgradeable(_swapDatas[i][0].sendingAssetId);
+		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
+			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
+				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
 
 				require(
 					srcToken.allowance(msg.sender, address(this)) > 0,
 					'ERC20: transfer amount exceeds allowance'
 				);
 
-				srcToken.safeTransferFrom(msg.sender, address(this), _swapDatas[i][0].fromAmount);
-				srcToken.approve(Bridge, _swapDatas[i][0].fromAmount);
+				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].sendingAmount);
+				srcToken.approve(LiFiBridge, sendingAssetInfos[i].sendingAmount);
 			}
 
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
-				(bool success, ) = payable(Bridge).call{value: fees[i]}(callDatas[i]);
+				(bool success, ) = payable(LiFiBridge).call{value: fees[i]}(callDatas[i]);
 				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			} else {
-				(bool success, ) = payable(Bridge).call(callDatas[i]);
+				(bool success, ) = payable(LiFiBridge).call(callDatas[i]);
 				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			}
 		}
 
-		emit HectorBridge(msg.sender, _bridgeDatas);
+		emit HectorBridge(msg.sender, sendingAssetInfos);
 	}
 
 	// Custom counts of detinations
@@ -232,7 +156,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Set LiFiDiamond Address
 	function setBridge(address _bridge) external onlyOwner {
-		Bridge = _bridge;
+		LiFiBridge = _bridge;
 		emit SetBridge(_bridge);
 	}
 
@@ -240,5 +164,5 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	event SetCountDest(uint256 countDest);
 	event SetBridge(address bridge);
 	event CallData(bool success, bytes callData);
-	event HectorBridge(address user, ICommon.CommonBridgeData[] bridgeData);
+	event HectorBridge(address user, SendingAssetInfo[] sendingAssetInfos);
 }
