@@ -1,18 +1,79 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.7;
 
+import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol';
 import {ICommon} from './interface/ICommon.sol';
+
+interface IOwnableUpgradeable {
+	function owner() external view returns (address);
+
+	function renounceManagement() external;
+
+	function pushManagement(address newOwner_) external;
+
+	function pullManagement() external;
+}
+
+abstract contract OwnableUpgradeable is IOwnableUpgradeable, Initializable, ContextUpgradeable {
+	address internal _owner;
+	address internal _newOwner;
+
+	event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+	event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+	/**
+	 * @dev Initializes the contract setting the deployer as the initial owner.
+	 */
+	function __Ownable_init() internal onlyInitializing {
+		__Ownable_init_unchained();
+	}
+
+	function __Ownable_init_unchained() internal onlyInitializing {
+		_owner = msg.sender;
+		emit OwnershipPushed(address(0), _owner);
+	}
+
+	function owner() public view override returns (address) {
+		return _owner;
+	}
+
+	modifier onlyOwner() {
+		require(_owner == msg.sender, 'Ownable: caller is not the owner');
+		_;
+	}
+
+	function renounceManagement() public virtual override onlyOwner {
+		emit OwnershipPushed(_owner, address(0));
+		_owner = address(0);
+	}
+
+	function pushManagement(address newOwner_) public virtual override {
+		require(newOwner_ != address(0), 'Ownable: new owner is the zero address');
+		emit OwnershipPushed(_owner, newOwner_);
+		_newOwner = newOwner_;
+	}
+
+	function pullManagement() public virtual override {
+		require(msg.sender == _newOwner, 'Ownable: must be new owner to pull');
+		emit OwnershipPulled(_owner, _newOwner);
+		_owner = _newOwner;
+	}
+
+	/**
+	 * @dev This empty reserved space is put in place to allow future versions to add new
+	 * variables without shifting down storage in the inheritance chain.
+	 * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+	 */
+	uint256[49] private __gap;
+}
 
 /**
  * @title HecBridgeSplitter
  */
-contract HecBridgeSplitter is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
@@ -22,12 +83,11 @@ contract HecBridgeSplitter is Initializable, OwnableUpgradeable, ReentrancyGuard
 	/**
 	 * @dev sets initials
 	 */
-	function initialize(uint256 _CountDest, address _bridge) public initializer {
+	function initialize(uint256 _CountDest, address _bridge) public onlyInitializing {
 		Bridge = _bridge;
 		CountDest = _CountDest;
 		__Context_init_unchained();
 		__Ownable_init_unchained();
-		__ReentrancyGuard_init_unchained();
 	}
 
 	///////////////////////////////////////////////////////
