@@ -3,7 +3,6 @@ const hre = require('hardhat');
 const { ethers } = require('hardhat');
 const abi = require('../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json');
 const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
-const tempData = require('./tempData.json');
 const tempStepData = require('./tempStepData.json');
 require('dotenv').config();
 
@@ -30,38 +29,39 @@ async function main() {
 
 	console.log('HecBridgeSplitter:', HecBridgeSplitterAddress);
 
-	// Router Data
-	const originSteps = tempData.steps[0];
-	const isNativeFrom = tempData.fromToken.address == ZERO_ADDRESS;
-	const enableSwap = originSteps.includedSteps[0].type == 'swap' ? true : false;
+	const isNativeFrom = tempStepData.action.fromToken.address == ZERO_ADDRESS;
+	const enableSwap = tempStepData.includedSteps[0].type == 'swap' ? true : false;
+
 	// Step Data
 	const originSwapData =
 		enableSwap && tempStepData.includedSteps.find((element: any) => element.type == 'swap');
 
 	console.log('Mode:', mode);
-	console.log('isNativeFrom:', isNativeFrom)
+	console.log('isNativeFrom:', isNativeFrom);
 	console.log('SwapEnable:', enableSwap);
 
 	// BridgeData
 	const mockBridgeData1 = {
-		sendingAssetId: enableSwap ? originSwapData.action.toToken.address : tempData.fromToken.address,
-		minAmount: enableSwap ? originSteps.estimate.toAmountMin : tempData.fromAmount,
+		sendingAssetId: enableSwap
+			? originSwapData.action.toToken.address
+			: tempStepData.action.fromToken.address,
+		minAmount: enableSwap ? originSwapData.estimate.toAmountMin : tempStepData.action.fromAmount,
 	};
 	// SwapData
 	const mockSwapData1: any = enableSwap && [
 		{
 			sendingAssetId:
-				(enableSwap && originSwapData.action.fromToken.address == ETH_ADDRESS) || isNativeFrom
+				originSwapData.action.fromToken.address == ETH_ADDRESS || isNativeFrom
 					? ZERO_ADDRESS
 					: originSwapData.action.fromToken.address,
-			fromAmount: tempStepData.includedSteps[0].action.fromAmount,
+			fromAmount: originSwapData.action.fromAmount,
 		},
 	];
 	// CallData
 	const mockCallData1 = tempStepData.transactionRequest.data;
 
 	// Special Data
-	let bridgeTool = originSteps.tool;
+	let bridgeTool = tempStepData.tool;
 	let specialData: any;
 
 	console.log('Bridge:', bridgeTool);
