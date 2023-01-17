@@ -6,12 +6,22 @@ import 'solidity-coverage';
 import 'hardhat-deploy';
 import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-gas-reporter';
+import '@openzeppelin/hardhat-upgrades';
 
 require('dotenv').config();
 
 export default {
   solidity: {
     compilers: [
+      {
+        version: '0.8.17',
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
       {
         version: '0.8.9',
         settings: {
@@ -48,9 +58,6 @@ export default {
   },
   networks: {
     hardhat: {
-      forking: {
-        url: process.env.MAIN_NET_API_URL,
-      },
       hardfork: 'london',
       gasPrice: 'auto',
     },
@@ -69,7 +76,7 @@ export default {
     },
     ftm: {
       url: process.env.FTM_NET_API_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.MAIN_PRIVATE_KEY],
       chainId: 250,
       saveDeployments: true,
     },
