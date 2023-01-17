@@ -1,16 +1,44 @@
-// SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.7;
+// SPDX-License-Identifier: AGPL-3.0
+
+pragma solidity ^0.8.17;
+
+import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
 import {HectorPay} from './HectorPay.sol';
 
-contract HectorPayFactory {
-    bytes32 constant INIT_CODEHASH = keccak256(type(HectorPay).creationCode);
+error INVALID_ADDRESS();
+
+contract HectorPayFactory is Ownable {
+    bytes32 constant INIT_CODEHASH =
+        keccak256(type(TransparentUpgradeableProxy).creationCode);
+
+    address public hectorPayLogic;
+    address public upgradeableAdmin;
 
     address public parameter;
     uint256 public getHectorPayContractCount;
     address[1000000000] public getHectorPayContractByIndex; // 1 billion indices
 
     event HectorPayCreated(address token, address hectorPay);
+
+    constructor(address _hectorPayLogic, address _upgradeableAdmin) {
+        if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
+            revert INVALID_ADDRESS();
+
+        hectorPayLogic = _hectorPayLogic;
+        upgradeableAdmin = _upgradeableAdmin;
+    }
+
+    function setHectorPayLogic(address _hectorPayLogic) external onlyOwner {
+        if (_hectorPayLogic == address(0)) revert INVALID_ADDRESS();
+        hectorPayLogic = _hectorPayLogic;
+    }
+
+    function setUpgradeableAdmin(address _upgradeableAdmin) external onlyOwner {
+        if (_upgradeableAdmin == address(0)) revert INVALID_ADDRESS();
+        upgradeableAdmin = _upgradeableAdmin;
+    }
 
     /**
         @notice Create a new Hector Pay Streaming instance for `_token`
@@ -27,7 +55,9 @@ contract HectorPayFactory {
         parameter = _token;
         // use CREATE2 so we can get a deterministic address based on the token
         hectorPayContract = address(
-            new HectorPay{salt: bytes32(uint256(uint160(_token)))}()
+            new TransparentUpgradeableProxy{
+                salt: bytes32(uint256(uint160(_token)))
+            }(hectorPayLogic, upgradeableAdmin, '')
         );
         // CREATE2 can return address(0), add a check to verify this isn't the case
         // See: https://eips.ethereum.org/EIPS/eip-1014
