@@ -139,8 +139,7 @@ contract HectorPay is ERC721EnumerableUpgradeable, BoringBatchable {
     }
 
     /// @notice same as above but all available tokens
-    /// @param _token token
-    function withdrawPayerAll(address _token) external {
+    function withdrawPayerAll() external {
         Payer storage payer = _updatePayer(msg.sender);
         uint256 toSend = payer.balance / DECIMALS_DIVISOR;
         payer.balance = 0;
@@ -319,7 +318,7 @@ contract HectorPay is ERC721EnumerableUpgradeable, BoringBatchable {
         onlyPayerOrOwner(_id)
     {
         /// Update stream to update balances
-        Stream storage stream = _updateStream(_id);
+        _updateStream(_id);
         Payer storage payer = payers[msg.sender];
         uint256 toRepay;
         unchecked {
@@ -338,7 +337,7 @@ contract HectorPay is ERC721EnumerableUpgradeable, BoringBatchable {
     /// @param _id token id
     function repayAllDebt(uint256 _id) external onlyPayerOrOwner(_id) {
         /// Update stream to update balances
-        Stream storage stream = _updateStream(_id);
+        _updateStream(_id);
         Payer storage payer = payers[msg.sender];
         uint256 totalDebt = debts[_id];
         uint256 balance = payer.balance;
