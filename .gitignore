@@ -8,6 +8,7 @@ typechain
 cache
 artifacts
 types
+<<<<<<< HEAD
 
 #### Voting ####
 voting/v1/.openzeppelin/
@@ -30,3 +31,6 @@ voting/v2/cache
 voting/v2/artifacts
 voting/v2/typechain-types
 
+=======
+.openzeppelin
+>>>>>>> dda7bc2 (upd: update gitignore file)
