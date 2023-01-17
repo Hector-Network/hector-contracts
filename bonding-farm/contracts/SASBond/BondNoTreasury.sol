@@ -63,7 +63,7 @@ abstract contract OwnableUpgradeable is
         _owner = address(0);
     }
 
-    function pushManagement(address newOwner_) public virtual override {
+    function pushManagement(address newOwner_) public virtual override onlyPolicy {
         require(
             newOwner_ != address(0),
             'Ownable: new owner is the zero address'
