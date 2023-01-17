@@ -50,10 +50,6 @@ contract HectorPay is ERC721EnumerableUpgradeable, BoringBatchable {
 
     mapping(address => Payer) public payers;
     mapping(uint256 => Stream) public streams;
-    mapping(address => uint256) public payerWhitelists; /// Allows other addresses to interact on owner behalf
-    mapping(address => mapping(uint256 => address)) public redirects; /// Allows stream funds to be sent to another address
-    mapping(address => mapping(uint256 => mapping(address => uint256)))
-        public streamWhitelists; /// Whitelist for addresses authorized to withdraw from stream
     mapping(uint256 => uint256) public debts; /// Tracks debt for streams
     mapping(uint256 => uint256) public redeemables; /// Tracks redeemable amount for streams
 
