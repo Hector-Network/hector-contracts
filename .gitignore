@@ -8,16 +8,4 @@ typechain
 cache
 artifacts
 types
-
-#### Voting ####
-voting/node_modules/
-voting/.env
-voting/coverage
-voting/coverage.json
-voting/typechain
-
-#Hardhat files
-voting/cache
-voting/artifacts
-voting/types
-
+.openzeppelin
