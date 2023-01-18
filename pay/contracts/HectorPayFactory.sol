@@ -57,7 +57,11 @@ contract HectorPayFactory is Ownable {
         hectorPayContract = address(
             new TransparentUpgradeableProxy{
                 salt: bytes32(uint256(uint160(_token)))
-            }(hectorPayLogic, upgradeableAdmin, '')
+            }(
+                hectorPayLogic,
+                upgradeableAdmin,
+                abi.encodeWithSignature('initialize()')
+            )
         );
         // CREATE2 can return address(0), add a check to verify this isn't the case
         // See: https://eips.ethereum.org/EIPS/eip-1014
