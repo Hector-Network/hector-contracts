@@ -20,6 +20,7 @@ error PAYER_IN_DEBT();
 error INACTIVE_STREAM();
 error ACTIVE_STREAM();
 error INVALID_AMOUNT();
+error INVALID_PARAM();
 
 contract HectorPay is ContextUpgradeable, BoringBatchable {
     using SafeERC20 for IERC20;
@@ -578,5 +579,122 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
     function min(uint256 a, uint256 b) internal pure returns (uint256) {
         return a < b ? a : b;
+    }
+
+    function isSufficientFund(
+        address from,
+        address[] memory to,
+        uint256[] memory amountPerSec,
+        uint48[] memory starts,
+        uint48[] memory ends,
+        uint256 timestamp
+    ) external view returns (bool isSufficient, uint256 chargeAmount) {
+        uint256 length = to.length;
+        if (from == address(0)) revert INVALID_ADDRESS();
+        if (length == 0) revert INVALID_PARAM();
+        if (length != amountPerSec.length) revert INVALID_PARAM();
+        if (length != starts.length) revert INVALID_PARAM();
+        if (length != ends.length) revert INVALID_PARAM();
+        if (timestamp < block.timestamp) revert INVALID_TIME();
+
+        // Update Payer
+        Payer memory payer = payers[from];
+        unchecked {
+            uint256 streamed = (timestamp - uint256(payer.lastUpdate)) *
+                payer.totalPaidPerSec;
+            if (payer.balance >= streamed) {
+                /// If enough to pay owed then deduct from balance and update to specified timestamp
+                return (true, 0);
+            } else {
+                /// If not enough then get remainder paying as much as possible then calculating and adding time paid
+                payer.lastUpdate += uint48(
+                    payer.balance / payer.totalPaidPerSec
+                );
+                payer.balance = payer.balance % payer.totalPaidPerSec;
+            }
+        }
+
+        // Update Stream
+        for (uint256 i = 0; i < length; i++) {
+            bytes32 streamId = getStreamId(
+                from,
+                to[i],
+                amountPerSec[i],
+                starts[i],
+                ends[i]
+            );
+            Stream memory stream = streams[streamId];
+
+            unchecked {
+                uint256 lastUpdate = uint256(payer.lastUpdate);
+                uint256 lastPaid = uint256(stream.lastPaid);
+
+                /// If stream is inactive/cancelled
+                if (lastPaid == 0) {
+                    /// Can only withdraw redeemable so do nothing
+                }
+                /// Stream not updated after start and has ended
+                else if (
+                    /// Stream not updated after start
+                    starts[i] > lastPaid &&
+                    /// Stream ended
+                    lastUpdate >= ends[i]
+                ) {
+                    /// Refund payer for:
+                    /// Stream last updated to stream start
+                    /// Stream ended to token last updated
+                    payer.balance +=
+                        ((starts[i] - lastPaid) + (lastUpdate - ends[i])) *
+                        amountPerSec[i];
+                    /// Stream is now inactive
+                    payer.totalPaidPerSec -= amountPerSec[i];
+                }
+                /// Stream started but has not been updated from after start
+                else if (
+                    /// Stream started
+                    lastUpdate >= starts[i] &&
+                    /// Stream not updated after start
+                    starts[i] > lastPaid
+                ) {
+                    /// Refund payer for:
+                    /// Stream last updated to stream start
+                    payer.balance += (starts[i] - lastPaid) * amountPerSec[i];
+                }
+                /// Stream has ended
+                else if (
+                    /// Stream ended
+                    lastUpdate >= ends[i]
+                ) {
+                    /// Refund payer for:
+                    /// Stream end to last token update
+                    payer.balance += (lastUpdate - ends[i]) * amountPerSec[i];
+                    /// Stream is now inactive
+                    payer.totalPaidPerSec -= amountPerSec[i];
+                }
+                /// Stream is updated before stream starts
+                else if (
+                    /// Stream not started
+                    starts[i] > lastUpdate
+                ) {
+                    /// Refund payer:
+                    /// Last stream update to last token update
+                    payer.balance += (lastUpdate - lastPaid) * amountPerSec[i];
+                }
+            }
+        }
+
+        // Check if it's sufficient
+        unchecked {
+            uint256 streamed = (timestamp - uint256(payer.lastUpdate)) *
+                payer.totalPaidPerSec;
+            if (payer.balance >= streamed) {
+                /// If enough to pay owed then deduct from balance and update to specified timestamp
+                return (true, 0);
+            } else {
+                /// If not enough then get remainder paying as much as possible then calculating and adding time paid
+                isSufficient = false;
+                chargeAmount = streamed - payer.balance;
+            }
+        }
     }
 }
