@@ -19,6 +19,7 @@ error INVALID_TIME();
 error PAYER_IN_DEBT();
 error INACTIVE_STREAM();
 error ACTIVE_STREAM();
+error STREAM_ENDED();
 error INVALID_AMOUNT();
 error INVALID_PARAM();
 
@@ -74,6 +75,14 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         bytes32 streamId
     );
     event StreamPaused(
+        address indexed from,
+        address indexed to,
+        uint256 amountPerSec,
+        uint48 starts,
+        uint48 ends,
+        bytes32 streamId
+    );
+    event StreamResumed(
         address indexed from,
         address indexed to,
         uint256 amountPerSec,
@@ -260,6 +269,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         if (block.timestamp > payer.lastUpdate) revert PAYER_IN_DEBT();
 
         streamId = getStreamId(msg.sender, to, amountPerSec, starts, ends);
+        if (streams[streamId].lastPaid > 0) revert ACTIVE_STREAM();
 
         /// calculate owed if stream already ended on creation
         uint256 owed;
@@ -494,6 +504,40 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
     ) external {
         bytes32 streamId = _cancelStream(to, amountPerSec, starts, ends);
         emit StreamPaused(msg.sender, to, amountPerSec, starts, ends, streamId);
+    }
+
+    function resumeStream(
+        address to,
+        uint256 amountPerSec,
+        uint48 starts,
+        uint48 ends
+    ) external {
+        bytes32 streamId = getStreamId(
+            msg.sender,
+            to,
+            amountPerSec,
+            starts,
+            ends
+        );
+        Stream storage stream = _updateStream(streamId);
+        Payer storage payer = payers[msg.sender];
+
+        if (stream.from == address(0)) revert INVALID_PARAM();
+        if (stream.lastPaid > 0) revert ACTIVE_STREAM();
+        if (block.timestamp >= stream.ends) revert STREAM_ENDED();
+        if (block.timestamp > payer.lastUpdate) revert PAYER_IN_DEBT();
+
+        payer.totalPaidPerSec += stream.amountPerSec;
+        stream.lastPaid = uint48(block.timestamp);
+
+        emit StreamResumed(
+            msg.sender,
+            to,
+            amountPerSec,
+            starts,
+            ends,
+            streamId
+        );
     }
 
     function modifyStream(
