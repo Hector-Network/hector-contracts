@@ -18,7 +18,8 @@ contract HectorPayFactory is Ownable {
 
     address public parameter;
     uint256 public getHectorPayContractCount;
-    address[1000000000] public getHectorPayContractByIndex; // 1 billion indices
+    address[1000000000] public getHectorPayContractByIndex;
+    mapping(address => address) public getHectorPayContractByToken;
 
     event HectorPayCreated(address token, address hectorPay);
 
@@ -74,34 +75,22 @@ contract HectorPayFactory is Ownable {
             getHectorPayContractCount = index + 1;
         }
 
+        // Append the new contract address to the mapping of deployed contracts
+        getHectorPayContractByToken[_token] = hectorPayContract;
+
         emit HectorPayCreated(_token, hectorPayContract);
     }
 
     /**
       @notice Query the address of the Hector Pay contract for `_token` and whether it is deployed
       @param _token An ERC20 token address
-      @return predictedAddress The deterministic address where the hector pay contract will be deployed for `_token`
       @return isDeployed Boolean denoting whether the contract is currently deployed
       */
-    function getHectorPayContractByToken(address _token)
+    function isDeployedHectorPayContractByToken(address _token)
         external
         view
-        returns (address predictedAddress, bool isDeployed)
+        returns (bool isDeployed)
     {
-        predictedAddress = address(
-            uint160(
-                uint256(
-                    keccak256(
-                        abi.encodePacked(
-                            bytes1(0xff),
-                            address(this),
-                            bytes32(uint256(uint160(_token))),
-                            INIT_CODEHASH
-                        )
-                    )
-                )
-            )
-        );
-        isDeployed = predictedAddress.code.length != 0;
+        isDeployed = getHectorPayContractByToken[_token] != address(0);
     }
 }

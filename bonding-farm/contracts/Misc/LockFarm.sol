@@ -37,7 +37,7 @@ contract LockFarm is
 
     uint256 public lockedStakeMaxMultiplier = 3e6; // 6 decimals of precision. 1x = 1000000
     uint256 public lockedStakeTimeForMaxMultiplier = 3 * 365 * 86400; // 3 years
-    uint256 public constant lockedStakeMinTime = 7 days;
+    uint256 public constant lockedStakeMinTime = 5 minutes;
 
     mapping(uint256 => FNFTInfo) public fnfts;
     mapping(address => uint256) public userRemainingRewards;
