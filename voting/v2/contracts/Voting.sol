@@ -381,12 +381,15 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	function getWeightByTime(LockFarm _lockFarm, uint256 _startTime) public view returns (uint256) {
 		uint256 weightByTime = 0;
 		// Calculate user's voting weights in customized time
-		for (uint256 i = totalFarmVoteCount; i < 0; i--) {
+		uint256 i = totalFarmVoteCount - 1;
+		do {
 			if (_startTime >= farmInfos[i].time) break;
 			if (_lockFarm == farmInfos[i]._lockFarm) {
 				weightByTime += farmInfos[i]._farmWeight;
 			}
-		}
+			if (i > 0) i--;
+			else break;
+		} while (i >= 0);
 		return weightByTime;
 	}
 
@@ -402,7 +405,7 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	}
 
 	// Get total HEC amount to participate in voting system by lockFarm, time
-	function getTotalHecAmountForVoting() public view returns (uint256) {
+	function getTotalHecForVoting() public view returns (uint256) {
 		uint256 totalHecAmount = 0;
 		LockFarm[] memory _validFarms = getFarms();
 		for (uint256 i = 0; i < _validFarms.length; i++) {
@@ -417,8 +420,8 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 	}
 
 	// Get available total HEC amount to participate in voting system by lockFarm, time
-	function getAvlTotalHecAmountForVoting(uint256 _startTime) public view returns (uint256) {
-		uint256 amount = getTotalHecAmountForVoting() - getTotalWeightsByTime(_startTime);
+	function getAvlTotalHecForVoting(uint256 _startTime) public view returns (uint256) {
+		uint256 amount = getTotalHecForVoting() - getTotalWeightsByTime(_startTime);
 		return amount;
 	}
 
