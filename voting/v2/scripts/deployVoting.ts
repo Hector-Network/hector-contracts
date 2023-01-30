@@ -89,11 +89,6 @@ async function main() {
 	const txAddLPHECTOR = await votingContract.addLPTokens(_hecTor, true);
 	await txAddLPHECTOR.wait();
 
-	// For Testing Deploy in testmode
-	if (!prod_mode) {
-		const vote = await votingContract.vote(lockFarm, [10, 10, 10, 10, 10, 10, 10, 10, 20], "0x7b88137d10394537f1eea6ced3ec4f778eefaac3", [230]);
-		await vote.wait();
-	}
 }
 
 main().catch((error) => {

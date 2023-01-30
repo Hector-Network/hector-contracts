@@ -12,7 +12,7 @@
     "update": "hardhat run ./scripts/upgradeVoting.ts --network",
     "verify": "hardhat run ./scripts/verifyVoting.ts",
     "migrate": "hardhat run ./scripts/migrationVoting.ts --network",
-    "upd": "hardhat run scripts/propose-upgrade.ts --network",
+    "propose": "hardhat run scripts/propose-upgrade.ts --network",
     "test": "hardhat test --network ftmtest"
   },
   "devDependencies": {
