@@ -8,6 +8,7 @@ import '@nomiclabs/hardhat-etherscan';
 import 'hardhat-gas-reporter';
 
 require('@openzeppelin/hardhat-upgrades');
+require('@openzeppelin/hardhat-defender');
 require('dotenv').config();
 
 export default {
@@ -87,5 +88,9 @@ export default {
 	},
 	mocha: {
 		timeout: 100000000,
+	},
+	defender: {
+		apiKey: process.env.DEFENDER_TEAM_API_KEY,
+		apiSecret: process.env.DEFENDER_TEAM_API_SECRET_KEY,
 	},
 };
