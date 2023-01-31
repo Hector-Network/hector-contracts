@@ -186,7 +186,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
             ) {
                 /// Refund payer for:
                 /// Stream last updated to stream start
-                /// Stream ended to token last updated
+                /// Stream ended to payer last updated
                 payer.balance +=
                     ((starts - lastPaid) + (lastUpdate - ends)) *
                     amountPerSec;
@@ -208,7 +208,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 /// Stream last updated to stream start
                 payer.balance += (starts - lastPaid) * amountPerSec;
                 /// Payer can redeem:
-                /// Stream start to last token update
+                /// Stream start to last payer update
                 redeemables[streamId] = (lastUpdate - starts) * amountPerSec;
                 stream.lastPaid = uint48(lastUpdate);
             }
@@ -218,7 +218,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 lastUpdate >= ends
             ) {
                 /// Refund payer for:
-                /// Stream end to last token update
+                /// Stream end to last payer update
                 payer.balance += (lastUpdate - ends) * amountPerSec;
                 /// Add redeemable for:
                 /// Stream last updated to stream end
@@ -233,9 +233,9 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 starts > lastUpdate
             ) {
                 /// Refund payer:
-                /// Last stream update to last token update
+                /// Last stream update to last payer update
                 payer.balance += (lastUpdate - lastPaid) * amountPerSec;
-                /// update lastpaid to last token update
+                /// update lastpaid to last payer update
                 stream.lastPaid = uint48(lastUpdate);
             }
             /// Updated after start, and has not ended
@@ -246,7 +246,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 ends > lastUpdate
             ) {
                 /// Add redeemable for:
-                /// stream last update to last token update
+                /// stream last update to last payer update
                 redeemables[streamId] += (lastUpdate - lastPaid) * amountPerSec;
                 stream.lastPaid = uint48(lastUpdate);
             }
@@ -364,6 +364,24 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
     {
         streamId = getStreamId(from, to, amountPerSec, starts, ends);
         stream = _updateStream(streamId);
+
+        uint256 debt = debts[streamId];
+        if (debt > 0) {
+            Payer storage payer = payers[from];
+            uint256 balance = payer.balance;
+
+            unchecked {
+                if (balance >= debt) {
+                    payer.balance -= debt;
+                    debts[streamId] = 0;
+                    redeemables[streamId] += debt;
+                } else {
+                    debts[streamId] -= balance;
+                    payer.balance = 0;
+                    redeemables[streamId] += balance;
+                }
+            }
+        }
 
         amountToTransfer = redeemables[streamId] / DECIMALS_DIVISOR;
         redeemables[streamId] = 0;
@@ -641,20 +659,28 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         if (length != ends.length) revert INVALID_PARAM();
         if (timestamp < block.timestamp) revert INVALID_TIME();
 
+        // Debt
+        uint256 debt;
+        for (uint256 i = 0; i < length; i++) {
+            bytes32 streamId = getStreamId(
+                from,
+                to[i],
+                amountPerSec[i],
+                starts[i],
+                ends[i]
+            );
+            debt += debts[streamId];
+        }
+
         // Update Payer
         Payer memory payer = payers[from];
         unchecked {
-            uint256 streamed = (timestamp - uint256(payer.lastUpdate)) *
+            uint256 streamed = debt +
+                (timestamp - uint256(payer.lastUpdate)) *
                 payer.totalPaidPerSec;
             if (payer.balance >= streamed) {
                 /// If enough to pay owed then deduct from balance and update to specified timestamp
                 return (true, 0);
-            } else {
-                /// If not enough then get remainder paying as much as possible then calculating and adding time paid
-                payer.lastUpdate += uint48(
-                    payer.balance / payer.totalPaidPerSec
-                );
-                payer.balance = payer.balance % payer.totalPaidPerSec;
             }
         }
 
@@ -670,7 +696,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
             Stream memory stream = streams[streamId];
 
             unchecked {
-                uint256 lastUpdate = uint256(payer.lastUpdate);
+                uint256 lastUpdate = timestamp;
                 uint256 lastPaid = uint256(stream.lastPaid);
 
                 /// If stream is inactive/cancelled
@@ -686,12 +712,10 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 ) {
                     /// Refund payer for:
                     /// Stream last updated to stream start
-                    /// Stream ended to token last updated
+                    /// Stream ended to payer last updated
                     payer.balance +=
                         ((starts[i] - lastPaid) + (lastUpdate - ends[i])) *
                         amountPerSec[i];
-                    /// Stream is now inactive
-                    payer.totalPaidPerSec -= amountPerSec[i];
                 }
                 /// Stream started but has not been updated from after start
                 else if (
@@ -710,10 +734,8 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                     lastUpdate >= ends[i]
                 ) {
                     /// Refund payer for:
-                    /// Stream end to last token update
+                    /// Stream end to last payer update
                     payer.balance += (lastUpdate - ends[i]) * amountPerSec[i];
-                    /// Stream is now inactive
-                    payer.totalPaidPerSec -= amountPerSec[i];
                 }
                 /// Stream is updated before stream starts
                 else if (
@@ -721,7 +743,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                     starts[i] > lastUpdate
                 ) {
                     /// Refund payer:
-                    /// Last stream update to last token update
+                    /// Last stream update to last payer update
                     payer.balance += (lastUpdate - lastPaid) * amountPerSec[i];
                 }
             }
@@ -729,8 +751,10 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
         // Check if it's sufficient
         unchecked {
-            uint256 streamed = (timestamp - uint256(payer.lastUpdate)) *
+            uint256 streamed = debt +
+                (timestamp - uint256(payer.lastUpdate)) *
                 payer.totalPaidPerSec;
+
             if (payer.balance >= streamed) {
                 /// If enough to pay owed then deduct from balance and update to specified timestamp
                 return (true, 0);

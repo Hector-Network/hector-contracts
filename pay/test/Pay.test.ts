@@ -569,6 +569,34 @@ describe('HectoryPay', function () {
           )
       ).to.be.revertedWith('INACTIVE_STREAM()');
     });
+
+    it('cancel paused stream', async function () {
+      increaseTime(100);
+
+      await hectorPay
+        .connect(owner)
+        .pauseStream(alice.address, aliceAmountPerSec, aliceStarts, aliceEnds);
+
+      await hectorPay
+        .connect(owner)
+        .batch(
+          [
+            hectorPay.interface.encodeFunctionData('resumeStream', [
+              alice.address,
+              aliceAmountPerSec,
+              aliceStarts,
+              aliceEnds,
+            ]),
+            hectorPay.interface.encodeFunctionData('cancelStream', [
+              alice.address,
+              aliceAmountPerSec,
+              aliceStarts,
+              aliceEnds,
+            ]),
+          ],
+          true
+        );
+    });
   });
 
   describe('#pay - modify stream', () => {
@@ -864,6 +892,153 @@ describe('HectoryPay', function () {
       const period = 100;
       expect(result.withdrawableAmount).gte(
         bobAmountPerSec.mul(period).div(100)
+      );
+    });
+  });
+
+  describe('#pay - is sufficient fund', () => {
+    const aliceAmountPerSec = ethers.utils.parseEther('0.001'); // 20 decimals
+    let aliceStarts = 0;
+    let aliceEnds = 0;
+    const bobAmountPerSec = ethers.utils.parseEther('0.01'); // 20 decimals
+    let bobStarts = 0;
+    let bobEnds = 0;
+
+    beforeEach(async function () {
+      aliceStarts = (await getTimeStamp()) - 10;
+      aliceEnds = aliceStarts + 1000;
+      bobStarts = (await getTimeStamp()) + 10;
+      bobEnds = bobStarts + 1000;
+
+      await hectorPay
+        .connect(owner)
+        .batch(
+          [
+            hectorPay.interface.encodeFunctionData('createStream', [
+              alice.address,
+              aliceAmountPerSec,
+              aliceStarts,
+              aliceEnds,
+            ]),
+            hectorPay.interface.encodeFunctionData('createStream', [
+              bob.address,
+              bobAmountPerSec,
+              bobStarts,
+              bobEnds,
+            ]),
+          ],
+          true
+        );
+    });
+
+    it('invalid time', async function () {
+      await expect(
+        hectorPay
+          .connect(owner)
+          .isSufficientFund(
+            owner.address,
+            [alice.address, bob.address],
+            [aliceAmountPerSec, bobAmountPerSec],
+            [aliceStarts, bobStarts],
+            [aliceEnds, bobEnds],
+            aliceStarts
+          )
+      ).to.be.revertedWith('INVALID_TIME()');
+    });
+
+    it('before bob starts', async function () {
+      await increaseTime(5);
+
+      const timestamp0 = (await getTimeStamp()) + 1;
+      const result0 = await hectorPay
+        .connect(owner)
+        .isSufficientFund(
+          owner.address,
+          [alice.address, bob.address],
+          [aliceAmountPerSec, bobAmountPerSec],
+          [aliceStarts, bobStarts],
+          [aliceEnds, bobEnds],
+          timestamp0
+        );
+
+      expect(result0.isSufficient).equal(false);
+
+      const alicePeriod = timestamp0 - aliceStarts;
+      const bobPeriod = 0;
+      expect(result0.chargeAmount).equal(
+        aliceAmountPerSec.mul(alicePeriod).add(bobAmountPerSec.mul(bobPeriod))
+      );
+    });
+
+    it('after bob starts', async function () {
+      await increaseTime(100);
+
+      const timestamp0 = (await getTimeStamp()) + 1;
+      const result0 = await hectorPay
+        .connect(owner)
+        .isSufficientFund(
+          owner.address,
+          [alice.address, bob.address],
+          [aliceAmountPerSec, bobAmountPerSec],
+          [aliceStarts, bobStarts],
+          [aliceEnds, bobEnds],
+          timestamp0
+        );
+
+      expect(result0.isSufficient).equal(false);
+
+      const alicePeriod = timestamp0 - aliceStarts;
+      const bobPeriod = timestamp0 - bobStarts;
+      expect(result0.chargeAmount).equal(
+        aliceAmountPerSec.mul(alicePeriod).add(bobAmountPerSec.mul(bobPeriod))
+      );
+    });
+
+    it('after alice ends', async function () {
+      await increaseTime(1000);
+
+      const timestamp0 = (await getTimeStamp()) + 1;
+      const result0 = await hectorPay
+        .connect(owner)
+        .isSufficientFund(
+          owner.address,
+          [alice.address, bob.address],
+          [aliceAmountPerSec, bobAmountPerSec],
+          [aliceStarts, bobStarts],
+          [aliceEnds, bobEnds],
+          timestamp0
+        );
+
+      expect(result0.isSufficient).equal(false);
+
+      const alicePeriod = 1000;
+      const bobPeriod = timestamp0 - bobStarts;
+      expect(result0.chargeAmount).equal(
+        aliceAmountPerSec.mul(alicePeriod).add(bobAmountPerSec.mul(bobPeriod))
+      );
+    });
+
+    it('after bob ends', async function () {
+      await increaseTime(1010);
+
+      const timestamp0 = (await getTimeStamp()) + 1;
+      const result0 = await hectorPay
+        .connect(owner)
+        .isSufficientFund(
+          owner.address,
+          [alice.address, bob.address],
+          [aliceAmountPerSec, bobAmountPerSec],
+          [aliceStarts, bobStarts],
+          [aliceEnds, bobEnds],
+          timestamp0
+        );
+
+      expect(result0.isSufficient).equal(false);
+
+      const alicePeriod = 1000;
+      const bobPeriod = 1000;
+      expect(result0.chargeAmount).equal(
+        aliceAmountPerSec.mul(alicePeriod).add(bobAmountPerSec.mul(bobPeriod))
       );
     });
   });
