@@ -40,7 +40,10 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   });
   await waitSeconds(5);
 
-  const params = [payLogic.address, deployer.address];
+  const params = [
+    payLogic.address,
+    '0x2ba5F2ce103A45e278D7Bc99153190eD6E9c4A96',
+  ];
   const payFactory = await deploy('HectorPayFactory', {
     from: deployer.address,
     args: params,
