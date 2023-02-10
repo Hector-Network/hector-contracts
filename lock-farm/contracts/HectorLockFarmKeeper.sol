@@ -116,6 +116,7 @@ error NOT_OWNER();
 error ALREADY_ENABLED();
 error ALREADY_DISABLED();
 error NOT_ALLOWED_TOKEN();
+error NOT_APPROVED_FOR_ALL();
 
 contract HectorLockFarmKeeper is
     PausableUpgradeable,
@@ -307,6 +308,8 @@ contract HectorLockFarmKeeper is
         external
         whenNotPaused
     {
+        if (!fnft.isApprovedForAll(msg.sender, address(this)))
+            revert NOT_APPROVED_FOR_ALL();
         if (interval < MIN_INTERVAL) revert INVALID_INTERVAL();
 
         for (uint256 i = 0; i < fnftIds.length; i++) {
