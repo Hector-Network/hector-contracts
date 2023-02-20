@@ -621,7 +621,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         createStreamWithReason(to, amountPerSec, starts, ends, reason);
     }
 
-    function withdrawPayer(uint256 amount) public {
+    function withdrawPayer(uint256 amount) external {
         Payer storage payer = _updatePayer(msg.sender);
         uint256 toDeduct = amount * DECIMALS_DIVISOR;
         /// Will revert if not enough after updating Token
@@ -630,9 +630,9 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         emit PayerWithdraw(msg.sender, amount);
     }
 
-    function withdrawPayerAll() external {
+    function withdrawPayerAll() external returns (uint256 toSend) {
         Payer storage payer = _updatePayer(msg.sender);
-        uint256 toSend = payer.balance / DECIMALS_DIVISOR;
+        toSend = payer.balance / DECIMALS_DIVISOR;
         payer.balance = 0;
         token.safeTransfer(msg.sender, toSend);
         emit PayerWithdraw(msg.sender, toSend);
