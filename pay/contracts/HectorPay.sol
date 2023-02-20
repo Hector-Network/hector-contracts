@@ -262,6 +262,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         uint48 ends
     ) internal returns (bytes32 streamId) {
         if (starts >= ends) revert INVALID_TIME();
+        if (ends <= block.timestamp) revert INVALID_TIME();
         if (to == address(0)) revert INVALID_ADDRESS();
         if (amountPerSec == 0) revert INVALID_AMOUNT();
 
