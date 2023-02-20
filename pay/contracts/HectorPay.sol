@@ -421,7 +421,9 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
         uint256 streamed;
         unchecked {
-            streamed = (block.timestamp - lastUpdate) * payer.totalPaidPerSec;
+            streamed =
+                (block.timestamp - payer.lastUpdate) *
+                payer.totalPaidPerSec;
         }
 
         if (payer.balance >= streamed) {
