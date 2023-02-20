@@ -694,7 +694,9 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
             return (false, 0);
         } else {
             isSufficient = true;
-            amount = payer.totalDeposited - payer.totalCommitted;
+            amount =
+                (payer.totalDeposited - payer.totalCommitted) /
+                DECIMALS_DIVISOR;
         }
     }
 
