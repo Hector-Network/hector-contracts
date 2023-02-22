@@ -28,6 +28,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
     struct Payer {
         uint256 totalDeposited;
         uint256 totalCommitted;
+        uint256 totalWithdrawn;
     }
 
     struct Stream {
@@ -258,6 +259,11 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 DECIMALS_DIVISOR;
             stream.lastPaid = uint48(stop);
 
+            Payer storage payer = payers[from];
+            payer.totalWithdrawn +=
+                (stop - stream.lastPaid) *
+                stream.amountPerSec;
+
             emit Withdraw(
                 from,
                 to,
@@ -400,6 +406,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
             payer.totalCommitted -= amountPerSec * (stop - start);
         }
 
+        stream.lastPaid = uint48(stop);
         stream.lastPaused = 0;
 
         emit StreamResumed(
