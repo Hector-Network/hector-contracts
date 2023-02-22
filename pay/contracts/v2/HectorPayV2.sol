@@ -23,7 +23,7 @@ error STREAM_ENDED();
 error INVALID_AMOUNT();
 error INVALID_PARAM();
 
-contract HectorPay is ContextUpgradeable, BoringBatchable {
+contract HectorPayV2 is ContextUpgradeable, BoringBatchable {
     using SafeERC20 for IERC20;
 
     struct Payer {
