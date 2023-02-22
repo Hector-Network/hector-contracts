@@ -19,6 +19,7 @@ error INVALID_TIME();
 error PAYER_IN_DEBT();
 error INACTIVE_STREAM();
 error ACTIVE_STREAM();
+error STREAM_PAUSED();
 error STREAM_ENDED();
 error INVALID_AMOUNT();
 
@@ -140,7 +141,8 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         address to,
         uint256 amountPerSec,
         uint48 starts,
-        uint48 ends
+        uint48 ends,
+        uint48 lastPaid
     ) internal returns (bytes32 streamId) {
         if (starts >= ends) revert INVALID_TIME();
         if (ends <= block.timestamp) revert INVALID_TIME();
@@ -149,10 +151,11 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
         streamId = getStreamId(msg.sender, to, amountPerSec, starts, ends);
         if (streams[streamId].lastPaid > 0) revert ACTIVE_STREAM();
+        if (streams[streamId].lastPaused > 0) revert STREAM_PAUSED();
 
         /// calculate total committed amount of a stream
         Payer storage payer = payers[msg.sender];
-        payer.totalCommitted += (ends - starts) * amountPerSec;
+        payer.totalCommitted += (ends - lastPaid) * amountPerSec;
         if (payer.totalDeposited < payer.totalCommitted) revert PAYER_IN_DEBT();
 
         streams[streamId] = Stream({
@@ -161,7 +164,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
             amountPerSec: amountPerSec,
             starts: starts,
             ends: ends,
-            lastPaid: starts,
+            lastPaid: lastPaid,
             lastPaused: 0
         });
     }
@@ -172,7 +175,13 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         uint48 starts,
         uint48 ends
     ) public {
-        bytes32 streamId = _createStream(to, amountPerSec, starts, ends);
+        bytes32 streamId = _createStream(
+            to,
+            amountPerSec,
+            starts,
+            ends,
+            starts
+        );
         emit StreamCreated(
             msg.sender,
             to,
@@ -190,7 +199,13 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         uint48 ends,
         string calldata reason
     ) public {
-        bytes32 streamId = _createStream(to, amountPerSec, starts, ends);
+        bytes32 streamId = _createStream(
+            to,
+            amountPerSec,
+            starts,
+            ends,
+            starts
+        );
         emit StreamCreatedWithReason(
             msg.sender,
             to,
@@ -203,11 +218,13 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
     }
 
     function deposit(uint256 amount) public {
-        payers[msg.sender].totalDeposited += amount * DECIMALS_DIVISOR;
+        uint256 decimalAmount = amount * DECIMALS_DIVISOR;
+
+        payers[msg.sender].totalDeposited += decimalAmount;
 
         token.safeTransferFrom(msg.sender, address(this), amount);
 
-        emit PayerDeposit(msg.sender, amount * DECIMALS_DIVISOR);
+        emit PayerDeposit(msg.sender, decimalAmount);
     }
 
     function depositAndCreate(
@@ -254,15 +271,14 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
         uint256 stop = min(ends, block.timestamp);
         if (stop > stream.lastPaid) {
-            amountToTransfer =
-                ((stop - stream.lastPaid) * stream.amountPerSec) /
-                DECIMALS_DIVISOR;
-            stream.lastPaid = uint48(stop);
+            uint256 decimalAmount = (stop - stream.lastPaid) *
+                stream.amountPerSec;
+            amountToTransfer = decimalAmount / DECIMALS_DIVISOR;
 
             Payer storage payer = payers[from];
-            payer.totalWithdrawn +=
-                (stop - stream.lastPaid) *
-                stream.amountPerSec;
+            payer.totalWithdrawn += decimalAmount;
+
+            stream.lastPaid = uint48(stop);
 
             emit Withdraw(
                 from,
@@ -272,7 +288,7 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
                 ends,
                 stream.lastPaid,
                 streamId,
-                amountToTransfer
+                decimalAmount
             );
         }
     }
@@ -428,14 +444,29 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
         uint256 amountPerSec,
         uint48 ends
     ) external {
-        // Can be optimized but I don't think extra complexity is worth it
+        /// cancel old stream
         bytes32 oldStreamId = _cancelStream(
             oldTo,
             oldAmountPerSec,
             starts,
             oldEnds
         );
-        bytes32 newStreamId = _createStream(to, amountPerSec, starts, ends);
+        uint256 lastPaid = min(oldEnds, block.timestamp);
+
+        /// calculate total committed amount of an old stream
+        payers[msg.sender].totalCommitted -=
+            oldAmountPerSec *
+            (oldEnds - lastPaid);
+
+        /// create new stream
+        bytes32 newStreamId = _createStream(
+            to,
+            amountPerSec,
+            starts,
+            ends,
+            uint48(lastPaid)
+        );
+
         emit StreamModified(
             msg.sender,
             oldTo,
@@ -469,18 +500,19 @@ contract HectorPay is ContextUpgradeable, BoringBatchable {
 
     function withdrawPayer() external {
         Payer storage payer = payers[msg.sender];
-        uint256 toSend;
 
-        if (payer.totalDeposited > payer.totalCommitted) {
-            toSend =
-                (payer.totalDeposited - payer.totalCommitted) /
-                DECIMALS_DIVISOR;
-            payer.totalDeposited = payer.totalCommitted;
+        if (payer.totalDeposited <= payer.totalCommitted) {
+            return;
         }
+
+        uint256 decimalAmount = payer.totalDeposited - payer.totalCommitted;
+        uint256 toSend = decimalAmount / DECIMALS_DIVISOR;
+
+        payer.totalDeposited = payer.totalCommitted;
 
         if (toSend > 0) token.safeTransfer(msg.sender, toSend);
 
-        emit PayerWithdraw(msg.sender, toSend);
+        emit PayerWithdraw(msg.sender, decimalAmount);
     }
 
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
