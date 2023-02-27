@@ -7,29 +7,70 @@ import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transpa
 
 import {HectorPay} from './HectorPay.sol';
 
+interface Pay {
+    function pauseStreamBySubscription(
+        address from,
+        address to,
+        uint256 amountPerSec,
+        uint48 starts,
+        uint48 ends
+    ) external;
+
+    function resumeStreamBySubscription(
+        address from,
+        address to,
+        uint256 amountPerSec,
+        uint48 starts,
+        uint48 ends
+    ) external;
+}
+
 error INVALID_ADDRESS();
 
 contract HectorPayFactory is Ownable {
-    bytes32 constant INIT_CODEHASH =
-        keccak256(type(TransparentUpgradeableProxy).creationCode);
+    /* ======== STORAGE ======== */
+
+    struct Stream {
+        address payContract;
+        address from;
+        address to;
+        uint256 amountPerSec;
+        uint48 starts;
+        uint48 ends;
+    }
 
     address public hectorPayLogic;
     address public upgradeableAdmin;
+    address public subscription;
 
     address public parameter;
     uint256 public getHectorPayContractCount;
     address[1000000000] public getHectorPayContractByIndex;
     mapping(address => address) public getHectorPayContractByToken;
 
+    /* ======== EVENTS ======== */
+
     event HectorPayCreated(address token, address hectorPay);
 
-    constructor(address _hectorPayLogic, address _upgradeableAdmin) {
-        if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
-            revert INVALID_ADDRESS();
+    /* ======== INITIALIZATION ======== */
+
+    constructor(
+        address _hectorPayLogic,
+        address _upgradeableAdmin,
+        address _subscription
+    ) {
+        if (
+            _hectorPayLogic == address(0) ||
+            _upgradeableAdmin == address(0) ||
+            _subscription == address(0)
+        ) revert INVALID_ADDRESS();
 
         hectorPayLogic = _hectorPayLogic;
         upgradeableAdmin = _upgradeableAdmin;
+        subscription = _subscription;
     }
+
+    /* ======== POLICY FUNCTIONS ======== */
 
     function setHectorPayLogic(address _hectorPayLogic) external onlyOwner {
         if (_hectorPayLogic == address(0)) revert INVALID_ADDRESS();
@@ -40,6 +81,13 @@ contract HectorPayFactory is Ownable {
         if (_upgradeableAdmin == address(0)) revert INVALID_ADDRESS();
         upgradeableAdmin = _upgradeableAdmin;
     }
+
+    function setSubscription(address _subscription) external onlyOwner {
+        if (_subscription == address(0)) revert INVALID_ADDRESS();
+        subscription = _subscription;
+    }
+
+    /* ======== USER FUNCTIONS ======== */
 
     /**
         @notice Create a new Hector Pay Streaming instance for `_token`
@@ -81,6 +129,8 @@ contract HectorPayFactory is Ownable {
         emit HectorPayCreated(_token, hectorPayContract);
     }
 
+    /* ======== VIEW FUNCTIONS ======== */
+
     /**
       @notice Query the address of the Hector Pay contract for `_token` and whether it is deployed
       @param _token An ERC20 token address
@@ -92,5 +142,35 @@ contract HectorPayFactory is Ownable {
         returns (bool isDeployed)
     {
         isDeployed = getHectorPayContractByToken[_token] != address(0);
+    }
+
+    /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
+
+    function pauseStreams(Stream[] calldata streams) external {
+        uint256 length = streams.length;
+        for (uint256 i = 0; i < length; i++) {
+            Stream memory stream = streams[i];
+            Pay(stream.payContract).pauseStreamBySubscription(
+                stream.from,
+                stream.to,
+                stream.amountPerSec,
+                stream.starts,
+                stream.ends
+            );
+        }
+    }
+
+    function resumeStreams(Stream[] calldata streams) external {
+        uint256 length = streams.length;
+        for (uint256 i = 0; i < length; i++) {
+            Stream memory stream = streams[i];
+            Pay(stream.payContract).resumeStreamBySubscription(
+                stream.from,
+                stream.to,
+                stream.amountPerSec,
+                stream.starts,
+                stream.ends
+            );
+        }
     }
 }

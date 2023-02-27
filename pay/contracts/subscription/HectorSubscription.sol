@@ -1,9 +1,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.17;
 
-import '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
-import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
-import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+
+import {BoringBatchable} from './libraries/BoringBatchable.sol';
+
+interface Factory {
+    function parameter() external view returns (bytes memory);
+
+    function owner() external view returns (address);
+}
 
 error INVALID_ADDRESS();
 error INVALID_AMOUNT();
@@ -13,7 +22,11 @@ error PAYER_IN_DEBT();
 error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
 
-contract HectorSubscription is OwnableUpgradeable {
+contract HectorSubscription is
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable,
+    BoringBatchable
+{
     using SafeERC20 for IERC20;
 
     /* ======== STORAGE ======== */
@@ -28,6 +41,9 @@ contract HectorSubscription is OwnableUpgradeable {
         uint256 planId;
         uint48 expiredAt;
     }
+
+    /// @notice product
+    string public product;
 
     /// @notice treasury wallet
     address public treasury;
@@ -71,18 +87,22 @@ contract HectorSubscription is OwnableUpgradeable {
         _disableInitializers();
     }
 
-    function initialize(address _treasury) external initializer {
-        if (_treasury == address(0)) revert INVALID_ADDRESS();
-        treasury = _treasury;
+    function initialize() external initializer {
+        Factory factory = Factory(msg.sender);
 
-        if (plans.length == 0) {
-            plans.push(Plan({token: address(0), period: 0, amount: 0}));
-        }
+        (product, treasury) = abi.decode(
+            factory.parameter(),
+            (string, address)
+        );
 
-        __Ownable_init();
+        plans.push(Plan({token: address(0), period: 0, amount: 0}));
+
+        _transferOwnership(factory.owner());
+        __ReentrancyGuard_init();
     }
 
     /* ======== MODIFIER ======== */
+
     modifier onlyValidPlan(uint256 _planId) {
         if (_planId == 0 || _planId >= plans.length) revert INVALID_PLAN();
         _;
@@ -179,7 +199,7 @@ contract HectorSubscription is OwnableUpgradeable {
 
     /* ======== USER FUNCTIONS ======== */
 
-    function deposit(address _token, uint256 _amount) public {
+    function deposit(address _token, uint256 _amount) public nonReentrant {
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         emit PayerDeposit(msg.sender, _token, _amount);
