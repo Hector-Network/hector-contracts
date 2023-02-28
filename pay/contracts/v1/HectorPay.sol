@@ -181,12 +181,6 @@ contract HectorPay is
         _;
     }
 
-    modifier onlyInactiveSubscription(address from) {
-        if (isActiveSubscriptionForNow(from)) revert INACTIVE_SUBSCRIPTION();
-
-        _;
-    }
-
     /* ======== VIEW FUNCTIONS ======== */
 
     function getStreamId(
@@ -381,13 +375,22 @@ contract HectorPay is
         uint256 amountPerSec,
         uint48 starts,
         uint48 ends
-    ) external onlyInactiveSubscription(from) {
-        bytes32 streamId = _cancelStream(from, to, amountPerSec, starts, ends);
+    ) external {
+        // Only inactive subscription
+        if (!isActiveSubscriptionForNow(from)) {
+            bytes32 streamId = _cancelStream(
+                from,
+                to,
+                amountPerSec,
+                starts,
+                ends
+            );
 
-        streams[streamId].lastPaused = uint48(block.timestamp);
-        isPausedBySubscription[streamId] = true;
+            streams[streamId].lastPaused = uint48(block.timestamp);
+            isPausedBySubscription[streamId] = true;
 
-        emit StreamPaused(from, to, amountPerSec, starts, ends, streamId);
+            emit StreamPaused(from, to, amountPerSec, starts, ends, streamId);
+        }
     }
 
     function resumeStreamBySubscription(
@@ -396,14 +399,23 @@ contract HectorPay is
         uint256 amountPerSec,
         uint48 starts,
         uint48 ends
-    ) external onlyActiveSubscription(from) {
-        bytes32 streamId = getStreamId(from, to, amountPerSec, starts, ends);
+    ) external {
+        // Only active subscription
+        if (isActiveSubscriptionForNow(from)) {
+            bytes32 streamId = getStreamId(
+                from,
+                to,
+                amountPerSec,
+                starts,
+                ends
+            );
 
-        if (!isPausedBySubscription[streamId]) revert STREAM_PAUSED();
+            if (!isPausedBySubscription[streamId]) revert STREAM_PAUSED();
 
-        _resumeStream(from, to, amountPerSec, starts, ends);
+            _resumeStream(from, to, amountPerSec, starts, ends);
 
-        emit StreamResumed(from, to, amountPerSec, starts, ends, streamId);
+            emit StreamResumed(from, to, amountPerSec, starts, ends, streamId);
+        }
     }
 
     /* ======== USER FUNCTIONS ======== */

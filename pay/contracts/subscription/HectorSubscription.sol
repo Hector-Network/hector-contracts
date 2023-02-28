@@ -47,6 +47,9 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     /// @notice subscription plans configurable by admin
     Plan[] public plans;
 
+    /// @notice expire deadline to cancel subscription
+    uint48 public expireDeadline = 30 days;
+
     /// @notice users token balance data
     mapping(address => mapping(address => uint256)) public balanceOf;
 
@@ -55,6 +58,9 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     /// @notice moderators data
     mapping(address => bool) public moderators;
+
+    /// @notice users refund token balance data
+    mapping(address => mapping(address => uint256)) public refundOf;
 
     /* ======== EVENTS ======== */
 
@@ -79,7 +85,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     event SubscriptionModified(
         address indexed from,
         uint256 indexed oldPlanId,
-        uint256 indexed newPlanId
+        uint256 refundForOldPlan,
+        uint256 indexed newPlanId,
+        uint256 payForNewPlan,
+        uint48 expiredAt
     );
     event PayerDeposit(
         address indexed from,
@@ -362,14 +371,19 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 subscription.expiredAt += uint48(plan.period * count);
 
                 IERC20(plan.token).transfer(treasury, amount);
-
-                emit SubscriptionSynced(
-                    from,
-                    planId,
-                    subscription.expiredAt,
-                    amount
-                );
             }
+
+            // expired for a long time (deadline), then cancel it
+            if (subscription.expiredAt + expireDeadline <= block.timestamp) {
+                subscription.planId = 0;
+            }
+
+            emit SubscriptionSynced(
+                from,
+                subscription.planId,
+                subscription.expiredAt,
+                amount
+            );
         }
     }
 
@@ -387,13 +401,66 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         external
         onlyValidPlan(_newPlanId)
     {
+        // Sync the subscription and check if it's active
         syncSubscription(msg.sender);
 
-        uint256 oldPlanId = subscriptions[msg.sender].planId;
+        Subscription storage subscription = subscriptions[msg.sender];
 
-        subscriptions[msg.sender].planId = _newPlanId;
+        if (subscription.expiredAt <= block.timestamp) revert PAYER_IN_DEBT();
 
-        emit SubscriptionModified(msg.sender, oldPlanId, _newPlanId);
+        uint256 oldPlanId = subscription.planId;
+        Plan memory oldPlan = plans[oldPlanId];
+        Plan memory newPlan = plans[_newPlanId];
+        uint256 paidForOldPlan = (oldPlan.amount *
+            (subscription.expiredAt - block.timestamp)) / oldPlan.period;
+        uint256 payForNewPlan;
+        uint256 refundForOldPlan;
+
+        // Two plan's token is the same
+        if (oldPlan.token == newPlan.token) {
+            // Need to pay more (newPlan.amount - paidForOldPlan)
+            if (newPlan.amount > paidForOldPlan) {
+                payForNewPlan = newPlan.amount - paidForOldPlan;
+            }
+            // Need to refund (paidForOldPlan - newPlan.amount)
+            else if (newPlan.amount < paidForOldPlan) {
+                refundForOldPlan = paidForOldPlan - newPlan.amount;
+            }
+        }
+        // Two plan's token is the different
+        else {
+            // Pay new plan
+            payForNewPlan = newPlan.amount;
+
+            // Refund old plan
+            refundForOldPlan = paidForOldPlan;
+        }
+
+        // Pay for new plan
+        if (payForNewPlan > 0) {
+            if (balanceOf[msg.sender][newPlan.token] < payForNewPlan)
+                revert PAYER_IN_DEBT();
+
+            balanceOf[msg.sender][newPlan.token] -= payForNewPlan;
+            IERC20(newPlan.token).safeTransfer(treasury, payForNewPlan);
+        }
+        // Refund for old plan
+        if (refundForOldPlan > 0) {
+            refundOf[msg.sender][oldPlan.token] += refundForOldPlan;
+        }
+
+        // Set subscription
+        subscription.planId = _newPlanId;
+        subscription.expiredAt = uint48(block.timestamp + newPlan.period);
+
+        emit SubscriptionModified(
+            msg.sender,
+            oldPlanId,
+            refundForOldPlan,
+            _newPlanId,
+            payForNewPlan,
+            subscription.expiredAt
+        );
     }
 
     function withdraw(address _token, uint256 _amount) external {
