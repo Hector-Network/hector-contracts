@@ -20,33 +20,43 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // const torTokenAddress = '0x205F190776C8d466727bD0Cac6D1B564DC3C8Ea9';
   // const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
-  {
-    try {
-      await hre.run('verify:verify', {
-        address: '0x17678aEe38d9108a7653a8F913DeB081B314bFc1',
-        contract:
-          'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
-        constructorArguments: [],
-      });
-    } catch (_) {}
+  // {
+  //   try {
+  //     await hre.run('verify:verify', {
+  //       address: '0xa8261FDe59063025931808ac0BeDb75416733f29',
+  //       contract: 'contracts/HectorPay/v1/HectorPay.sol:HectorPay',
+  //       constructorArguments: [],
+  //     });
+  //   } catch (_) {}
 
-    await waitSeconds(10);
-    try {
-      await hre.run('verify:verify', {
-        address: '0x8Bf476fb3589BD04d7F08627a2eCf5d621d659F6',
-        contract:
-          'contracts/HectorPay/v1/HectorPayFactory.sol:HectorPayFactory',
-        constructorArguments: [
-          '0x8C888Bd8C7ba703FF7774d694774A730C41cEb86',
-          deployer.address,
-          '0x7ae683cC863e31F71f5dB121fc3AF0C8c6E11E39',
-        ],
-      });
-    } catch (_) {}
-    return;
-  }
+  //   await waitSeconds(10);
+  //   try {
+  //     await hre.run('verify:verify', {
+  //       address: '0x712061c1D066B34F98381FBE057B81d29a1757F8',
+  //       contract:
+  //         'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
+  //       constructorArguments: [],
+  //     });
+  //   } catch (_) {}
+
+  //   await waitSeconds(10);
+  //   try {
+  //     await hre.run('verify:verify', {
+  //       address: '0x7E61920c0F49eA2C5A042435b80755b7afd6771a',
+  //       contract:
+  //         'contracts/HectorPay/v1/HectorPayFactory.sol:HectorPayFactory',
+  //       constructorArguments: [
+  //         '0xa8261FDe59063025931808ac0BeDb75416733f29',
+  //         deployer.address,
+  //         '0x4745e4E101D8A8B687A15c138Ab4dFdf9262dFd1',
+  //       ],
+  //     });
+  //   } catch (_) {}
+  //   return;
+  // }
 
   const hectorMultiPayProduct = 'Hector Multi Pay';
+  const upgradeableAdmin = '0x906B738Dce4E20F672C1752e48f3627CF20b883a';
 
   /// SUBSCRIPTION ///
   const subscriptionLogic = await deploy('HectorSubscription', {
@@ -55,7 +65,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     log: true,
   });
 
-  const subscriptionParams = [subscriptionLogic.address, deployer.address];
+  const subscriptionParams = [subscriptionLogic.address, upgradeableAdmin];
   const subscriptionFactory = await deploy('HectorSubscriptionFactory', {
     from: deployer.address,
     args: subscriptionParams,
@@ -76,11 +86,34 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     ).wait();
   } catch (_) {}
 
-  await waitSeconds(2);
+  await waitSeconds(10);
   const paySubscription =
     await subscriptionFactoryContract.getHectorSubscriptionContractByName(
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
     );
+  const paySubscriptionContract = await ethers.getContractAt(
+    'HectorSubscription',
+    paySubscription,
+    deployer
+  );
+
+  await waitSeconds(10);
+  try {
+    (
+      await paySubscriptionContract.appendPlan([
+        {
+          token: hectorTokenAddress,
+          period: 3600 * 24,
+          amount: ethers.utils.parseUnits('10', 9),
+        },
+        {
+          token: torTokenAddress,
+          period: 3600 * 48,
+          amount: ethers.utils.parseEther('200'),
+        },
+      ])
+    ).wait();
+  } catch (_) {}
 
   /// MULTI PAY ///
   const payLogic = await deploy('HectorPay', {

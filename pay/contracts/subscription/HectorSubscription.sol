@@ -6,14 +6,13 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
-import {BoringBatchable} from './libraries/BoringBatchable.sol';
-
 interface Factory {
     function parameter() external view returns (bytes memory);
 
     function owner() external view returns (address);
 }
 
+error INVALID_PARAM();
 error INVALID_ADDRESS();
 error INVALID_AMOUNT();
 error INVALID_TIME();
@@ -21,12 +20,9 @@ error INVALID_PLAN();
 error PAYER_IN_DEBT();
 error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
+error INVALID_MODERATOR();
 
-contract HectorSubscription is
-    OwnableUpgradeable,
-    ReentrancyGuardUpgradeable,
-    BoringBatchable
-{
+contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 
     /* ======== STORAGE ======== */
@@ -57,6 +53,9 @@ contract HectorSubscription is
     /// @notice users subscription data
     mapping(address => Subscription) public subscriptions;
 
+    /// @notice moderators data
+    mapping(address => bool) public moderators;
+
     /* ======== EVENTS ======== */
 
     event PlanUpdated(
@@ -65,10 +64,23 @@ contract HectorSubscription is
         uint48 period,
         uint256 amount
     );
-    event SubscriptionCreated(address indexed from, uint256 indexed planId);
-    event SubscriptionSynced(address indexed from, uint48 expiredAt);
-    event SubscriptionCancelled(address indexed from);
-    event SubscriptionModified(address indexed from, uint256 indexed newPlanId);
+    event SubscriptionCreated(
+        address indexed from,
+        uint256 indexed planId,
+        uint48 expiredAt
+    );
+    event SubscriptionSynced(
+        address indexed from,
+        uint256 indexed planId,
+        uint48 expiredAt,
+        uint256 amount
+    );
+    event SubscriptionCancelled(address indexed from, uint256 indexed planId);
+    event SubscriptionModified(
+        address indexed from,
+        uint256 indexed oldPlanId,
+        uint256 indexed newPlanId
+    );
     event PayerDeposit(
         address indexed from,
         address indexed token,
@@ -79,6 +91,7 @@ contract HectorSubscription is
         address indexed token,
         uint256 amount
     );
+    event Refunded(address indexed to, address indexed token, uint256 amount);
 
     /* ======== INITIALIZATION ======== */
 
@@ -97,15 +110,32 @@ contract HectorSubscription is
 
         plans.push(Plan({token: address(0), period: 0, amount: 0}));
 
+        moderators[factory.owner()] = true;
+
         _transferOwnership(factory.owner());
         __ReentrancyGuard_init();
     }
 
     /* ======== MODIFIER ======== */
 
+    modifier onlyMod() {
+        if (!moderators[msg.sender]) revert INVALID_MODERATOR();
+        _;
+    }
+
     modifier onlyValidPlan(uint256 _planId) {
         if (_planId == 0 || _planId >= plans.length) revert INVALID_PLAN();
         _;
+    }
+
+    /* ======== INTERNAL FUNCTIONS ======== */
+
+    function max(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a >= b ? a : b;
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -149,6 +179,63 @@ contract HectorSubscription is
         emit PlanUpdated(_planId, _plan.token, _plan.period, _plan.amount);
     }
 
+    function setModerator(address _moderator, bool _approved)
+        external
+        onlyOwner
+    {
+        if (_moderator == address(0)) revert INVALID_ADDRESS();
+        moderators[_moderator] = _approved;
+    }
+
+    function refundToTreasury(
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external onlyMod {
+        uint256 length = _tokens.length;
+        if (length != _amounts.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            address token = _tokens[i];
+            uint256 amount = _amounts[i];
+
+            if (token == address(0)) revert INVALID_ADDRESS();
+            if (amount == 0) revert INVALID_AMOUNT();
+
+            IERC20(token).safeTransfer(treasury, amount);
+
+            emit Refunded(treasury, token, amount);
+        }
+    }
+
+    function refund(
+        address[] memory _tos,
+        address[] memory _tokens,
+        uint256[] memory _amounts
+    ) external onlyMod {
+        uint256 length = _tos.length;
+        if (length != _tokens.length) revert INVALID_PARAM();
+        if (length != _amounts.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            address to = _tos[i];
+
+            /// only active subscription
+            if (subscriptions[to].planId == 0) {
+                continue;
+            }
+
+            address token = _tokens[i];
+            uint256 amount = _amounts[i];
+
+            if (token == address(0)) revert INVALID_ADDRESS();
+            if (amount == 0) revert INVALID_AMOUNT();
+
+            IERC20(token).safeTransfer(to, amount);
+
+            emit Refunded(to, token, amount);
+        }
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function allPlans() external view returns (Plan[] memory) {
@@ -161,26 +248,25 @@ contract HectorSubscription is
         returns (
             uint256 planId,
             uint48 expiredAt,
+            bool isCancelled,
             bool isActiveForNow,
             uint256 chargeAmount
         )
     {
         Subscription memory subscription = subscriptions[from];
         planId = subscription.planId;
-
-        // No subscription
-        if (planId == 0) {
-            return (0, 0, false, 0);
-        }
-
         expiredAt = subscription.expiredAt;
+
+        // cancelled subscription
+        if (planId == 0) {
+            return (0, expiredAt, true, block.timestamp < expiredAt, 0);
+        }
 
         // before expiration
         if (block.timestamp < expiredAt) {
             isActiveForNow = true;
-        }
-        // after expiration
-        else {
+        } else {
+            // after expiration
             Plan memory plan = plans[planId];
             uint256 count = (block.timestamp - expiredAt + plan.period) /
                 plan.period;
@@ -200,6 +286,8 @@ contract HectorSubscription is
     /* ======== USER FUNCTIONS ======== */
 
     function deposit(address _token, uint256 _amount) public nonReentrant {
+        balanceOf[msg.sender][_token] += _amount;
+
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
         emit PayerDeposit(msg.sender, _token, _amount);
@@ -210,18 +298,23 @@ contract HectorSubscription is
 
         Plan memory plan = plans[_planId];
 
+        // Pay first plan
         if (balanceOf[msg.sender][plan.token] < plan.amount)
             revert PAYER_IN_DEBT();
 
         balanceOf[msg.sender][plan.token] -= plan.amount;
         IERC20(plan.token).safeTransfer(treasury, plan.amount);
 
-        subscriptions[msg.sender] = Subscription({
-            planId: _planId,
-            expiredAt: uint48(block.timestamp + plan.period)
-        });
+        // Set subscription
+        Subscription storage subscription = subscriptions[msg.sender];
+        uint48 expiredAt = uint48(
+            max(block.timestamp, subscription.expiredAt)
+        ) + plan.period;
 
-        emit SubscriptionCreated(msg.sender, _planId);
+        subscription.planId = _planId;
+        subscription.expiredAt = expiredAt;
+
+        emit SubscriptionCreated(msg.sender, _planId, expiredAt);
     }
 
     function depositAndCreateSubscription(uint256 _planId, uint256 _amount)
@@ -229,6 +322,16 @@ contract HectorSubscription is
     {
         deposit(plans[_planId].token, _amount);
         createSubscription(_planId);
+    }
+
+    function syncSubscriptions(address[] memory froms) external {
+        uint256 length = froms.length;
+        for (uint256 i = 0; i < length; i++) {
+            address from = froms[i];
+            if (subscriptions[from].planId > 0) {
+                syncSubscription(from);
+            }
+        }
     }
 
     function syncSubscription(address from) public {
@@ -260,7 +363,12 @@ contract HectorSubscription is
 
                 IERC20(plan.token).transfer(treasury, amount);
 
-                emit SubscriptionSynced(from, subscription.expiredAt);
+                emit SubscriptionSynced(
+                    from,
+                    planId,
+                    subscription.expiredAt,
+                    amount
+                );
             }
         }
     }
@@ -268,9 +376,11 @@ contract HectorSubscription is
     function cancelSubscription() external {
         syncSubscription(msg.sender);
 
+        uint256 planId = subscriptions[msg.sender].planId;
+
         subscriptions[msg.sender].planId = 0;
 
-        emit SubscriptionCancelled(msg.sender);
+        emit SubscriptionCancelled(msg.sender, planId);
     }
 
     function modifySubscription(uint256 _newPlanId)
@@ -279,9 +389,11 @@ contract HectorSubscription is
     {
         syncSubscription(msg.sender);
 
+        uint256 oldPlanId = subscriptions[msg.sender].planId;
+
         subscriptions[msg.sender].planId = _newPlanId;
 
-        emit SubscriptionModified(msg.sender, _newPlanId);
+        emit SubscriptionModified(msg.sender, oldPlanId, _newPlanId);
     }
 
     function withdraw(address _token, uint256 _amount) external {

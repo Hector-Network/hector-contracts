@@ -23,6 +23,7 @@ interface Subscription {
         returns (
             uint256 planId,
             uint48 expiredAt,
+            bool isCancelled,
             bool isActiveForNow,
             uint256 chargeAmount
         );
@@ -234,7 +235,7 @@ contract HectorPay is
         view
         returns (bool isActiveForNow)
     {
-        (, , isActiveForNow, ) = Subscription(factory.subscription())
+        (, , , isActiveForNow, ) = Subscription(factory.subscription())
             .getSubscription(from);
     }
 
@@ -352,8 +353,8 @@ contract HectorPay is
         uint256 amountPerSec,
         uint48 starts,
         uint48 ends
-    ) internal {
-        bytes32 streamId = getStreamId(from, to, amountPerSec, starts, ends);
+    ) internal returns (bytes32 streamId) {
+        streamId = getStreamId(from, to, amountPerSec, starts, ends);
         Stream storage stream = streams[streamId];
         Payer storage payer = payers[from];
 
@@ -370,8 +371,6 @@ contract HectorPay is
         stream.lastPaid = uint48(stop);
         stream.lastPaused = 0;
         isPausedBySubscription[streamId] = false;
-
-        emit StreamResumed(from, to, amountPerSec, starts, ends, streamId);
     }
 
     /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
@@ -403,6 +402,8 @@ contract HectorPay is
         if (!isPausedBySubscription[streamId]) revert STREAM_PAUSED();
 
         _resumeStream(from, to, amountPerSec, starts, ends);
+
+        emit StreamResumed(from, to, amountPerSec, starts, ends, streamId);
     }
 
     /* ======== USER FUNCTIONS ======== */
@@ -559,6 +560,7 @@ contract HectorPay is
             ends
         );
         streams[streamId].lastPaused = uint48(block.timestamp);
+
         emit StreamPaused(msg.sender, to, amountPerSec, starts, ends, streamId);
     }
 
@@ -568,7 +570,22 @@ contract HectorPay is
         uint48 starts,
         uint48 ends
     ) public onlyActiveSubscription(msg.sender) {
-        _resumeStream(msg.sender, to, amountPerSec, starts, ends);
+        bytes32 streamId = _resumeStream(
+            msg.sender,
+            to,
+            amountPerSec,
+            starts,
+            ends
+        );
+
+        emit StreamResumed(
+            msg.sender,
+            to,
+            amountPerSec,
+            starts,
+            ends,
+            streamId
+        );
     }
 
     function modifyStream(
