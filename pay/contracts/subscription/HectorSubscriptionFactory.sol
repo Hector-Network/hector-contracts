@@ -5,7 +5,9 @@ pragma solidity ^0.8.17;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
-import {HectorSubscription} from './HectorSubscription.sol';
+interface HectorSubscription {
+    function syncSubscriptions(address[] memory froms) external;
+}
 
 error INVALID_PRODUCT();
 error INVALID_ADDRESS();
@@ -102,5 +104,22 @@ contract HectorSubscriptionFactory is Ownable {
         isDeployed =
             getHectorSubscriptionContractByName[keccak256(bytes(_product))] !=
             address(0);
+    }
+
+    /* ======== PUBLIC FUNCTIONS ======== */
+
+    function syncSubscriptions(
+        address[] memory subscriptionContracts,
+        address[][] memory froms
+    ) external {
+        uint256 length = subscriptionContracts.length;
+
+        if (length != froms.length) revert INVALID_ADDRESS();
+
+        for (uint256 i = 0; i < length; i++) {
+            HectorSubscription(subscriptionContracts[i]).syncSubscriptions(
+                froms[i]
+            );
+        }
     }
 }
