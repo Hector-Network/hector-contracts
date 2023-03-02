@@ -330,11 +330,11 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             balanceOf[msg.sender][plan.token] -= plan.amount;
         }
 
-        IERC20(plan.token).safeTransfer(treasury, plan.amount);
-
         // Set subscription
         subscription.planId = _planId;
         subscription.expiredAt = uint48(block.timestamp) + plan.period;
+
+        IERC20(plan.token).safeTransfer(treasury, plan.amount);
 
         emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
     }
@@ -383,7 +383,7 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 subscription.expiredAt += uint48(plan.period * count);
             }
 
-            IERC20(plan.token).transfer(treasury, amount);
+            IERC20(plan.token).safeTransfer(treasury, amount);
         }
 
         // expired for a long time (deadline), then cancel it

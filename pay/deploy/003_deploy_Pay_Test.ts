@@ -24,7 +24,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   //   try {
   //     await hre.run('verify:verify', {
   //       address: '0xa8261FDe59063025931808ac0BeDb75416733f29',
-  //       contract: 'contracts/HectorPay/v1/HectorPay.sol:HectorPay',
+  //       contract: 'contracts/HectorPay/v1_upfront_pay/HectorPay.sol:HectorPay',
   //       constructorArguments: [],
   //     });
   //   } catch (_) {}
@@ -44,7 +44,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   //     await hre.run('verify:verify', {
   //       address: '0x7E61920c0F49eA2C5A042435b80755b7afd6771a',
   //       contract:
-  //         'contracts/HectorPay/v1/HectorPayFactory.sol:HectorPayFactory',
+  //         'contracts/HectorPay/v1_upfront_pay/HectorPayFactory.sol:HectorPayFactory',
   //       constructorArguments: [
   //         '0xa8261FDe59063025931808ac0BeDb75416733f29',
   //         deployer.address,
@@ -56,7 +56,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // }
 
   const hectorMultiPayProduct = 'Hector Multi Pay';
-  const upgradeableAdmin = '0x906B738Dce4E20F672C1752e48f3627CF20b883a';
+  const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
   /// SUBSCRIPTION ///
   const subscriptionLogic = await deploy('HectorSubscription', {
@@ -171,7 +171,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       await hre.run('verify:verify', {
         address: payFactory.address,
         contract:
-          'contracts/HectorPay/v1/HectorPayFactory.sol:HectorPayFactory',
+          'contracts/HectorPay/v1_upfront_pay/HectorPayFactory.sol:HectorPayFactory',
         constructorArguments: payParams,
       });
     } catch (_) {}
@@ -180,7 +180,7 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     try {
       await hre.run('verify:verify', {
         address: payLogic.address,
-        contract: 'contracts/HectorPay/v1/HectorPay.sol:HectorPay',
+        contract: 'contracts/HectorPay/v1_upfront_pay/HectorPay.sol:HectorPay',
         constructorArguments: [],
       });
     } catch (_) {}

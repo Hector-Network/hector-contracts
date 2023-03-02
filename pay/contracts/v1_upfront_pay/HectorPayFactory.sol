@@ -7,7 +7,7 @@ import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transpa
 
 import {HectorPay} from './HectorPay.sol';
 
-interface Pay {
+interface IPay {
     function pauseStreamBySubscription(
         address from,
         address to,
@@ -150,7 +150,7 @@ contract HectorPayFactory is Ownable {
         uint256 length = streams.length;
         for (uint256 i = 0; i < length; i++) {
             Stream memory stream = streams[i];
-            Pay(stream.payContract).pauseStreamBySubscription(
+            IPay(stream.payContract).pauseStreamBySubscription(
                 stream.from,
                 stream.to,
                 stream.amountPerSec,
@@ -164,7 +164,7 @@ contract HectorPayFactory is Ownable {
         uint256 length = streams.length;
         for (uint256 i = 0; i < length; i++) {
             Stream memory stream = streams[i];
-            Pay(stream.payContract).resumeStreamBySubscription(
+            IPay(stream.payContract).resumeStreamBySubscription(
                 stream.from,
                 stream.to,
                 stream.amountPerSec,

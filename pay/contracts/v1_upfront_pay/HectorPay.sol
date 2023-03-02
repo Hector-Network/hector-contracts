@@ -539,14 +539,14 @@ contract HectorPay is
             _resumeStream(msg.sender, to, amountPerSec, starts, ends);
         }
 
-        /// cancel stream
-        _cancelStream(msg.sender, to, amountPerSec, starts, ends);
-
         /// calculate total committed amount of a stream
         uint256 start = max(starts, block.timestamp);
         if (ends > start) {
             payers[msg.sender].totalCommitted -= amountPerSec * (ends - start);
         }
+
+        /// cancel stream
+        _cancelStream(msg.sender, to, amountPerSec, starts, ends);
 
         emit StreamCancelled(
             msg.sender,
