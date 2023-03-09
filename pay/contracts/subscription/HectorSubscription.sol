@@ -48,7 +48,7 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     Plan[] public plans;
 
     /// @notice expire deadline to cancel subscription
-    uint48 public expireDeadline = 30 days;
+    uint48 public expireDeadline;
 
     /// @notice users token balance data
     mapping(address => mapping(address => uint256)) public balanceOf;
@@ -120,6 +120,8 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         plans.push(Plan({token: address(0), period: 0, amount: 0}));
 
         moderators[factory.owner()] = true;
+
+        expireDeadline = 30 days;
 
         _transferOwnership(factory.owner());
         __ReentrancyGuard_init();
@@ -267,7 +269,7 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             uint48 expiredAt,
             bool isCancelled,
             bool isActiveForNow,
-            uint256 chargeAmount
+            uint48 dueDate
         )
     {
         Subscription memory subscription = subscriptions[from];
@@ -276,27 +278,54 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // cancelled subscription
         if (planId == 0) {
-            return (0, expiredAt, true, block.timestamp < expiredAt, 0);
+            return (0, expiredAt, true, block.timestamp < expiredAt, expiredAt);
         }
 
-        // before expiration
-        if (block.timestamp < expiredAt) {
-            isActiveForNow = true;
-        } else {
-            // after expiration
-            Plan memory plan = plans[planId];
-            uint256 count = (block.timestamp - expiredAt + plan.period) /
-                plan.period;
-            uint256 amount = plan.amount * count;
-            uint256 balance = balanceOf[from][plan.token];
+        Plan memory plan = plans[planId];
+        dueDate =
+            expiredAt +
+            uint48((balanceOf[from][plan.token] / plan.amount) * plan.period);
+        isActiveForNow = block.timestamp < dueDate;
+    }
 
-            if (balance >= amount) {
-                isActiveForNow = true;
-                chargeAmount = 0;
-            } else {
-                isActiveForNow = false;
-                chargeAmount = amount - balance;
+    function toModifySubscription(
+        uint256 _newPlanId
+    ) public onlyValidPlan(_newPlanId) returns (uint256 amountToDeposit) {
+        // Sync the subscription
+        syncSubscription(msg.sender);
+
+        Subscription storage subscription = subscriptions[msg.sender];
+        uint256 oldPlanId = subscription.planId;
+
+        // If it's cancelled or expired, then create a new subscription rather than modify
+        if (oldPlanId == 0) return 0;
+        if (subscription.expiredAt <= block.timestamp) return 0;
+
+        Plan memory oldPlan = plans[oldPlanId];
+        Plan memory newPlan = plans[_newPlanId];
+        uint256 paidForOldPlan = (oldPlan.amount *
+            (subscription.expiredAt - block.timestamp)) / oldPlan.period;
+        uint256 payForNewPlan;
+
+        // Two plan's token is the same
+        if (oldPlan.token == newPlan.token) {
+            // Need to pay more (newPlan.amount - paidForOldPlan)
+            if (newPlan.amount > paidForOldPlan) {
+                unchecked {
+                    payForNewPlan = newPlan.amount - paidForOldPlan;
+                }
             }
+        }
+        // Two plan's token is the different
+        else {
+            payForNewPlan = newPlan.amount;
+        }
+
+        // Deposit more to pay for new plan
+        if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
+            amountToDeposit =
+                payForNewPlan -
+                balanceOf[msg.sender][newPlan.token];
         }
     }
 
@@ -417,7 +446,7 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     function modifySubscription(
         uint256 _newPlanId
     )
-        public
+        external
         onlyValidPlan(_newPlanId)
         returns (
             uint256 oldPlanId,
@@ -467,8 +496,12 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
         // Pay for new plan
         if (payForNewPlan > 0) {
-            if (balanceOf[msg.sender][newPlan.token] < payForNewPlan)
-                revert INSUFFICIENT_FUND();
+            if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
+                deposit(
+                    newPlan.token,
+                    payForNewPlan - balanceOf[msg.sender][newPlan.token]
+                );
+            }
 
             unchecked {
                 balanceOf[msg.sender][newPlan.token] -= payForNewPlan;
@@ -495,14 +528,6 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             payForNewPlan,
             subscription.expiredAt
         );
-    }
-
-    function depositAndModifySubscription(
-        uint256 _newPlanId,
-        uint256 _amount
-    ) external {
-        deposit(plans[_newPlanId].token, _amount);
-        modifySubscription(_newPlanId);
     }
 
     function withdraw(address _token, uint256 _amount) external {
