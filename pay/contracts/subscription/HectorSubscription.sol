@@ -144,10 +144,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         treasury = _treasury;
     }
 
-    function setModerator(address _moderator, bool _approved)
-        external
-        onlyOwner
-    {
+    function setModerator(
+        address _moderator,
+        bool _approved
+    ) external onlyOwner {
         if (_moderator == address(0)) revert INVALID_ADDRESS();
         moderators[_moderator] = _approved;
     }
@@ -174,11 +174,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         }
     }
 
-    function updatePlan(uint256 _planId, Plan calldata _plan)
-        external
-        onlyMod
-        onlyValidPlan(_planId)
-    {
+    function updatePlan(
+        uint256 _planId,
+        Plan calldata _plan
+    ) external onlyMod onlyValidPlan(_planId) {
         if (_plan.token == address(0)) revert INVALID_ADDRESS();
         if (_plan.period == 0) revert INVALID_TIME();
         if (_plan.amount == 0) revert INVALID_AMOUNT();
@@ -258,7 +257,9 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         return plans;
     }
 
-    function getSubscription(address from)
+    function getSubscription(
+        address from
+    )
         external
         view
         returns (
@@ -339,9 +340,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
     }
 
-    function depositAndCreateSubscription(uint256 _planId, uint256 _amount)
-        external
-    {
+    function depositAndCreateSubscription(
+        uint256 _planId,
+        uint256 _amount
+    ) external {
         deposit(plans[_planId].token, _amount);
         createSubscription(_planId);
     }
@@ -412,8 +414,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         emit SubscriptionCancelled(msg.sender, planId);
     }
 
-    function modifySubscription(uint256 _newPlanId)
-        external
+    function modifySubscription(
+        uint256 _newPlanId
+    )
+        public
         onlyValidPlan(_newPlanId)
         returns (
             uint256 oldPlanId,
@@ -491,6 +495,14 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             payForNewPlan,
             subscription.expiredAt
         );
+    }
+
+    function depositAndModifySubscription(
+        uint256 _newPlanId,
+        uint256 _amount
+    ) external {
+        deposit(plans[_newPlanId].token, _amount);
+        modifySubscription(_newPlanId);
     }
 
     function withdraw(address _token, uint256 _amount) external {
