@@ -95,7 +95,7 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 	const contract = await ethers.getContract('BondNoTreasury', deployer);
 
 	/// Initial Params
-	const fundRecipient = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba'; //Waiting to get real wallet from spooky
+	const fundRecipient = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba'; //Waiting to get real wallet from spooky: 0x1A11f5DF739bEca4974aCE4d8E5CE5ef5D854889
 	const feeBps = 220; //2.2%
 	const feeRecipients = ['0x08d2C94F47b5Ca3C3193e599276AAbF24aADc9a1']; //change to LIVE address: 0x677d6EC74fA352D4Ef9B1886F6155384aCD70D90
 	const weightBps = [10000];
@@ -170,5 +170,5 @@ const deployBond: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 };
 
 export default deployBond;
-deployBond.tags = ['BondV31'];
+deployBond.tags = ['SpookyBondV31'];
 deployBond.dependencies = [];
