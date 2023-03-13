@@ -17,7 +17,9 @@ interface Factory {
 }
 
 interface Subscription {
-    function getSubscription(address from)
+    function getSubscription(
+        address from
+    )
         external
         view
         returns (
@@ -34,7 +36,7 @@ error INVALID_TIME();
 error INVALID_AMOUNT();
 error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
-error PAYER_IN_DEBT();
+error INSUFFICIENT_FUND();
 error INACTIVE_STREAM();
 error ACTIVE_STREAM();
 error STREAM_PAUSED();
@@ -167,7 +169,7 @@ contract HectorPay is
         token = IERC20(factory.parameter());
 
         uint8 tokenDecimals = IERC20Metadata(address(token)).decimals();
-        DECIMALS_DIVISOR = 10**(20 - tokenDecimals);
+        DECIMALS_DIVISOR = 10 ** (20 - tokenDecimals);
 
         __Context_init();
         __ReentrancyGuard_init();
@@ -203,11 +205,7 @@ contract HectorPay is
     )
         external
         view
-        returns (
-            bytes32 streamId,
-            uint48 lastPaid,
-            uint256 withdrawableAmount
-        )
+        returns (bytes32 streamId, uint48 lastPaid, uint256 withdrawableAmount)
     {
         streamId = getStreamId(from, to, amountPerSec, starts, ends);
         Stream storage stream = streams[streamId];
@@ -224,11 +222,9 @@ contract HectorPay is
         }
     }
 
-    function isActiveSubscriptionForNow(address from)
-        public
-        view
-        returns (bool isActiveForNow)
-    {
+    function isActiveSubscriptionForNow(
+        address from
+    ) public view returns (bool isActiveForNow) {
         (, , , isActiveForNow, ) = Subscription(factory.subscription())
             .getSubscription(from);
     }
@@ -263,7 +259,8 @@ contract HectorPay is
         /// calculate total committed amount of a stream
         Payer storage payer = payers[msg.sender];
         payer.totalCommitted += (ends - lastPaid) * amountPerSec;
-        if (payer.totalDeposited < payer.totalCommitted) revert PAYER_IN_DEBT();
+        if (payer.totalDeposited < payer.totalCommitted)
+            revert INSUFFICIENT_FUND();
 
         streams[streamId] = Stream({
             from: msg.sender,
@@ -651,11 +648,9 @@ contract HectorPay is
         );
     }
 
-    function withdrawablePayer(address from)
-        external
-        view
-        returns (uint256 amount)
-    {
+    function withdrawablePayer(
+        address from
+    ) external view returns (uint256 amount) {
         Payer memory payer = payers[from];
         amount =
             (payer.totalDeposited - payer.totalCommitted) /
