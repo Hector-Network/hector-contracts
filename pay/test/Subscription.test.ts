@@ -252,9 +252,11 @@ describe('HectorSubscription', function () {
     });
 
     it('insufficient fund', async function () {
+      await hectorToken.connect(owner).approve(hectorSubscription.address, 0);
+
       await expect(
         hectorSubscription.connect(owner).createSubscription(2)
-      ).to.be.revertedWith('INSUFFICIENT_FUND()');
+      ).to.be.revertedWith('SafeERC20: low-level call failed');
     });
 
     it('create subscription', async function () {
@@ -290,10 +292,7 @@ describe('HectorSubscription', function () {
     });
 
     it('deposit and create subscription', async function () {
-      let amount = ethers.utils.parseEther('1000');
-      let tx = await hectorSubscription
-        .connect(owner)
-        .depositAndCreateSubscription(2, amount);
+      let tx = await hectorSubscription.connect(owner).createSubscription(2);
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
       );
@@ -304,7 +303,7 @@ describe('HectorSubscription', function () {
 
       await expect(tx)
         .to.emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, amount);
+        .withArgs(owner.address, torToken.address, amount1);
       await expect(tx)
         .emit(hectorSubscription, 'SubscriptionCreated')
         .withArgs(owner.address, 2, expiredAt);
@@ -318,9 +317,12 @@ describe('HectorSubscription', function () {
     let amount = amount0.mul(3);
 
     beforeEach(async function () {
+      await hectorSubscription
+        .connect(owner)
+        .deposit(hectorToken.address, amount);
       let tx = await hectorSubscription
         .connect(owner)
-        .depositAndCreateSubscription(planId, amount);
+        .createSubscription(planId);
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
       );
@@ -441,9 +443,12 @@ describe('HectorSubscription', function () {
     let amount = amount0.mul(3);
 
     beforeEach(async function () {
+      await hectorSubscription
+        .connect(owner)
+        .deposit(hectorToken.address, amount);
       let tx = await hectorSubscription
         .connect(owner)
-        .depositAndCreateSubscription(planId, amount);
+        .createSubscription(planId);
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
       );
@@ -486,9 +491,12 @@ describe('HectorSubscription', function () {
     let amount = amount0;
 
     beforeEach(async function () {
+      await hectorSubscription
+        .connect(owner)
+        .deposit(hectorToken.address, amount);
       let tx = await hectorSubscription
         .connect(owner)
-        .depositAndCreateSubscription(planId, amount);
+        .createSubscription(planId);
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
       );
@@ -637,9 +645,7 @@ describe('HectorSubscription', function () {
       await torToken
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
-      let tx = await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, plan30Days.amount);
+      let tx = await hectorSubscription.connect(user1).createSubscription(3);
 
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
@@ -672,9 +678,7 @@ describe('HectorSubscription', function () {
       await torToken
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
-      await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, plan30Days.amount);
+      await hectorSubscription.connect(user1).createSubscription(3);
 
       // Fast forward to expire the subscription
       await increaseTime(plan30Days.period + expireDeadline);
@@ -692,9 +696,8 @@ describe('HectorSubscription', function () {
     it('Excess amount will stay in subscriptoin when less than the plan amount', async function () {
       const amount = utils.parseEther('150');
       await torToken.connect(user1).approve(hectorSubscription.address, amount);
-      await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, amount);
+      await hectorSubscription.connect(user1).deposit(plan30Days.token, amount);
+      await hectorSubscription.connect(user1).createSubscription(3);
 
       // Fast forward to expire the subscription
       await increaseTime(plan30Days.period + expireDeadline);
@@ -714,9 +717,8 @@ describe('HectorSubscription', function () {
     it('Excess amount will NOT stay in subscription when plan is expired when sending more than the plan amount', async function () {
       const amount = utils.parseEther('200');
       await torToken.connect(user1).approve(hectorSubscription.address, amount);
-      await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, amount);
+      await hectorSubscription.connect(user1).deposit(plan30Days.token, amount);
+      await hectorSubscription.connect(user1).createSubscription(3);
 
       // Fast forward to expire the subscription
       await increaseTime(plan30Days.period + expireDeadline);
@@ -741,9 +743,7 @@ describe('HectorSubscription', function () {
       await torToken
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
-      let tx = await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, plan30Days.amount);
+      let tx = await hectorSubscription.connect(user1).createSubscription(3);
 
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
@@ -766,9 +766,7 @@ describe('HectorSubscription', function () {
       await torToken
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
-      await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, plan30Days.amount);
+      await hectorSubscription.connect(user1).createSubscription(3);
 
       await hectorSubscription.syncSubscription(user1.address);
       subscription = await hectorSubscription.getSubscription(user1.address);
@@ -786,9 +784,7 @@ describe('HectorSubscription', function () {
       await torToken
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
-      let tx = await hectorSubscription
-        .connect(user1)
-        .depositAndCreateSubscription(3, plan30Days.amount);
+      let tx = await hectorSubscription.connect(user1).createSubscription(3);
 
       let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
         tx.hash
@@ -814,9 +810,7 @@ describe('HectorSubscription', function () {
         .connect(user1)
         .approve(hectorSubscription.address, plan30Days.amount);
       try {
-        await hectorSubscription
-          .connect(user1)
-          .depositAndCreateSubscription(3, plan30Days.amount);
+        await hectorSubscription.connect(user1).createSubscription(3);
       } catch (error: any) {
         console.log(
           '❌ FAILED - unable to reactivate subscription despite sufficient fund - only need 100 to renew',

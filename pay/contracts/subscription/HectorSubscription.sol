@@ -346,23 +346,19 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         if (subscription.planId > 0) {
             syncSubscription(msg.sender);
 
-            if (subscription.expiredAt > block.timestamp) {
-                // No need to create a subscription since the same one is active
-                if (subscription.planId == _planId) {
-                    return;
-                }
-                // Need to modify subscription rather than create a new one
-                else {
-                    revert ACTIVE_SUBSCRIPTION();
-                }
-            }
+            if (subscription.expiredAt > block.timestamp)
+                revert ACTIVE_SUBSCRIPTION();
         }
 
         Plan memory plan = plans[_planId];
 
         // Pay first plan
-        if (balanceOf[msg.sender][plan.token] < plan.amount)
-            revert INSUFFICIENT_FUND();
+        if (balanceOf[msg.sender][plan.token] < plan.amount) {
+            deposit(
+                plan.token,
+                plan.amount - balanceOf[msg.sender][plan.token]
+            );
+        }
 
         unchecked {
             balanceOf[msg.sender][plan.token] -= plan.amount;
@@ -375,14 +371,6 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         IERC20(plan.token).safeTransfer(treasury, plan.amount);
 
         emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
-    }
-
-    function depositAndCreateSubscription(
-        uint256 _planId,
-        uint256 _amount
-    ) external {
-        deposit(plans[_planId].token, _amount);
-        createSubscription(_planId);
     }
 
     function syncSubscriptions(address[] memory froms) external {
