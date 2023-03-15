@@ -599,4 +599,154 @@ describe('HectorSubscription', function () {
       ).equal(0);
     });
   });
+
+  	describe.only('#subscription: Cancelled subscription handling - Michael', function () {
+		let customSubscription: HectorSubscription, user1, user2, plan30Days, plan90Days;
+		const expireDeadline = 60 * 60 * 24 * 7; // 1 week in seconds
+		const threeMonths = 60 * 60 * 24 * 90; // 3 months in seconds
+
+		beforeEach(async function () {
+			// Deploy the necessary contracts
+			[user1, user2] = await ethers.getSigners();
+
+			// Set plans
+			plan30Days = { token: torToken.address, period: 2592000, amount: ethers.utils.parseEther('100') }; // 30 days
+			plan90Days = { token: hectorToken.address, period: 7776000, amount: ethers.utils.parseEther('250') }; // 90 days
+
+			await hectorSubscription.appendPlan([plan30Days, plan90Days]);
+
+			// Distribute tokens to users
+			await torToken.mint(user1.address, utils.parseEther('1000'));
+
+			await hectorToken.mint(user2.address, utils.parseEther('2000'));
+		});
+
+		it('getSubscription is NOT updated with latest when plan is expired', async function () {
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			let tx = await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+
+			let txReceipt = await hectorSubscription.provider.getTransactionReceipt(tx.hash);
+			let block = await hectorSubscription.provider.getBlock(txReceipt.blockNumber);
+			let expiredAt = block.timestamp + oneHour;
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + block.timestamp + expireDeadline);
+
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+
+			//SHOULD BE equal to 0 because the subscription is inactive > 30 days
+			//https://github.com/Hector-Network/hector-contracts/blob/55604770f3a95f103b8e265f6405a3600baf43d8/pay/contracts/subscription/HectorSubscription.sol#L421
+			try {
+				expect(subscription.planId).to.equal(0);
+			} catch (error) {
+				console.log('❌ FAILED - plan ID should be 0 if expired more than 30 days', error.message);
+			}
+		});
+
+		it('should not adjust token balance for an expired subscription', async function () {
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + expireDeadline);
+			// Sync subscription
+			await hectorSubscription.syncSubscription(user1.address);
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+
+			const userBalance = await torToken.balanceOf(user1.address);
+			expect(subscription.planId).to.not.equal(0);
+
+			expect(userBalance).to.equal(utils.parseEther('900')); // 1000 - 100
+		});
+		it('Excess amount will stay in subscriptoin when less than the plan amount', async function () {
+			const amount = utils.parseEther('150');
+			await torToken.connect(user1).approve(hectorSubscription.address, amount);
+			await hectorSubscription.connect(user1).depositAndCreateSubscription(3, amount);
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + expireDeadline);
+			// Sync subscription
+			await hectorSubscription.syncSubscription(user1.address);
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+			const userBalance = await torToken.balanceOf(user1.address);
+			const remaingSubBalance = await hectorSubscription.balanceOf(user1.address, torToken.address);
+
+			expect(remaingSubBalance).to.equal(utils.parseEther('50')); // excess 50 remains in subscription contract
+		});
+		it('Excess amount will NOT stay in subscription when plan is expired when sending more than the plan amount', async function () {
+			const amount = utils.parseEther('200');
+			await torToken.connect(user1).approve(hectorSubscription.address, amount);
+			await hectorSubscription.connect(user1).depositAndCreateSubscription(3, amount);
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + expireDeadline);
+			// Sync subscription
+			await hectorSubscription.syncSubscription(user1.address);
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+			const userBalance = await torToken.balanceOf(user1.address);
+			const treasuryBalance = await torToken.balanceOf(treasury.address);
+			const remaingSubBalance = await hectorSubscription.balanceOf(user1.address, torToken.address);
+
+			expect(remaingSubBalance).to.equal(utils.parseEther('0'));
+			expect(treasuryBalance).to.equal(utils.parseEther('200'));
+		});
+
+		it('Sub Expire more than 30 days + new Deposit = Sub active', async function () {
+			const amount = utils.parseEther('200');
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			let tx = await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+
+			let txReceipt = await hectorSubscription.provider.getTransactionReceipt(tx.hash);
+			let block = await hectorSubscription.provider.getBlock(txReceipt.blockNumber);
+			let expiredAt = block.timestamp + oneHour;
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + block.timestamp + threeMonths);
+			await hectorSubscription.syncSubscription(user1.address);
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+
+			expect(subscription.planId).to.equal(0);
+
+			//Reactivate subscription
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+
+			await hectorSubscription.syncSubscription(user1.address);
+			subscription = await hectorSubscription.getSubscription(user1.address);
+
+			expect(subscription.planId).to.equal(3);
+
+			const userBalance = await torToken.balanceOf(user1.address);
+			const treasuryBalance = await torToken.balanceOf(treasury.address);
+
+			expect(userBalance).to.equal(utils.parseEther('800'));
+			expect(treasuryBalance).to.equal(utils.parseEther('200'));
+		});
+
+		it('Sub Expire less than 30 days + new Deposit = Sub active', async function () {
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			let tx = await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+
+			let txReceipt = await hectorSubscription.provider.getTransactionReceipt(tx.hash);
+			let block = await hectorSubscription.provider.getBlock(txReceipt.blockNumber);
+			let expiredAt = block.timestamp + oneHour;
+
+			// Fast forward to expire the subscription
+			await increaseTime(plan30Days.period + block.timestamp + expireDeadline);
+
+			let subscription = await hectorSubscription.getSubscription(user1.address);
+
+			expect(subscription.planId).to.equal(3);
+
+			//Reactivate subscription
+			const userBalance = await torToken.balanceOf(user1.address);
+			expect(userBalance).to.equal(utils.parseEther('900'));
+			await torToken.connect(user1).approve(hectorSubscription.address, plan30Days.amount);
+			try {
+				await hectorSubscription.connect(user1).depositAndCreateSubscription(3, plan30Days.amount);
+			} catch (error) {
+				console.log('❌ FAILED - unable to reactivate subscription despite sufficient fund - only need 100 to renew', error.message);
+			}
+		});
+	});
 });
