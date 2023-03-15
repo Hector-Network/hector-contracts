@@ -346,8 +346,16 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         if (subscription.planId > 0) {
             syncSubscription(msg.sender);
 
-            if (subscription.expiredAt > block.timestamp)
-                revert ACTIVE_SUBSCRIPTION();
+            if (subscription.expiredAt > block.timestamp) {
+                // No need to create a subscription since the same one is active
+                if (subscription.planId == _planId) {
+                    return;
+                }
+                // Need to modify subscription rather than create a new one
+                else {
+                    revert ACTIVE_SUBSCRIPTION();
+                }
+            }
         }
 
         Plan memory plan = plans[_planId];
