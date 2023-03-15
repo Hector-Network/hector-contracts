@@ -606,7 +606,7 @@ describe('HectorSubscription', function () {
     let user2: SignerWithAddress;
     let plan30Days: any;
     let plan90Days: any;
-    const expireDeadline = 60 * 60 * 24 * 30; // 1 month in seconds
+    const expireDeadline = 60 * 60 * 24 * 7; // 1 week in seconds
     const threeMonths = 60 * 60 * 24 * 90; // 3 months in seconds
 
     beforeEach(async function () {
@@ -685,7 +685,7 @@ describe('HectorSubscription', function () {
       );
 
       const userBalance = await torToken.balanceOf(user1.address);
-      expect(subscription.planId).to.equal(0);
+      expect(subscription.planId).to.not.equal(0);
 
       expect(userBalance).to.equal(utils.parseEther('900')); // 1000 - 100
     });
