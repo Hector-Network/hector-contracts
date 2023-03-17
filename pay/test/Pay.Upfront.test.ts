@@ -268,6 +268,43 @@ describe('HectorUpfrontPay', function () {
       ).to.be.revertedWith('INACTIVE_SUBSCRIPTION()');
     });
 
+    it('inactive subscription for cross chain', async function () {
+      await hectorPayFactory.setSubscription(ethers.constants.AddressZero);
+
+      await expect(
+        hectorPay
+          .connect(payer)
+          .createStream(payee.address, amountPerSec, starts, ends)
+      ).to.be.revertedWith('INACTIVE_SUBSCRIPTION()');
+    });
+
+    it('active subscription for cross chain', async function () {
+      await hectorPayFactory.setSubscription(ethers.constants.AddressZero);
+      await hectorPayFactory.updateSubscriptionStatus([payer.address], [true]);
+
+      let tx = await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+
+      await expect(tx)
+        .to.emit(hectorPay, 'StreamCreated')
+        .withArgs(
+          payer.address,
+          payee.address,
+          amountPerSec,
+          starts,
+          ends,
+          streamId
+        );
+
+      let decimalAmount = amountPerSec.mul(ends - starts);
+      let info = await hectorPay.payers(payer.address);
+      expect(info.totalCommitted).equal(decimalAmount);
+
+      let stream = await hectorPay.streams(streamId);
+      expect(stream.lastPaid).equal(starts);
+    });
+
     it('create stream', async function () {
       let tx = await hectorPay
         .connect(payer)

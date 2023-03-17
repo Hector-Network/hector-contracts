@@ -286,6 +286,11 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             expiredAt +
             uint48((balanceOf[from][plan.token] / plan.amount) * plan.period);
         isActiveForNow = block.timestamp < dueDate;
+
+        // expired for a long time (deadline), then it's cancelled
+        if (dueDate + expireDeadline <= block.timestamp) {
+            planId = 0;
+        }
     }
 
     function toModifySubscription(
@@ -326,6 +331,26 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             amountToDeposit =
                 payForNewPlan -
                 balanceOf[msg.sender][newPlan.token];
+        }
+    }
+
+    function toCreateSubscription(
+        uint256 _planId
+    ) public onlyValidPlan(_planId) returns (uint256 amountToDeposit) {
+        Subscription storage subscription = subscriptions[msg.sender];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(msg.sender);
+
+            if (subscription.expiredAt > block.timestamp) return 0;
+        }
+
+        Plan memory plan = plans[_planId];
+
+        // Deposit more to pay for new plan
+        if (balanceOf[msg.sender][plan.token] < plan.amount) {
+            amountToDeposit = plan.amount - balanceOf[msg.sender][plan.token];
         }
     }
 
@@ -555,5 +580,133 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
             emit PayerWithdraw(msg.sender, _token, amount);
         }
+    }
+
+    /* ======== CROSS CHAIN FUNCTIONS ======== */
+
+    function createSubscriptionByMod(
+        address _to,
+        uint256 _planId,
+        address _token,
+        uint256 _amount
+    ) external onlyValidPlan(_planId) onlyMod {
+        Subscription storage subscription = subscriptions[_to];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(_to);
+
+            if (subscription.expiredAt > block.timestamp)
+                revert ACTIVE_SUBSCRIPTION();
+        }
+
+        // deposit token
+        balanceOf[_to][_token] += _amount;
+        emit PayerDeposit(_to, _token, _amount);
+
+        // Pay first plan
+        Plan memory plan = plans[_planId];
+
+        if (balanceOf[_to][plan.token] < plan.amount)
+            revert INSUFFICIENT_FUND();
+
+        unchecked {
+            balanceOf[_to][plan.token] -= plan.amount;
+        }
+
+        // Set subscription
+        subscription.planId = _planId;
+        subscription.expiredAt = uint48(block.timestamp) + plan.period;
+
+        emit SubscriptionCreated(_to, _planId, subscription.expiredAt);
+    }
+
+    function modifySubscriptionByMod(
+        address _to,
+        uint256 _newPlanId,
+        address _token,
+        uint256 _amount
+    )
+        external
+        onlyValidPlan(_newPlanId)
+        onlyMod
+        returns (
+            uint256 oldPlanId,
+            uint256 payForNewPlan,
+            uint256 refundForOldPlan
+        )
+    {
+        // Sync the subscription
+        syncSubscription(_to);
+
+        Subscription storage subscription = subscriptions[_to];
+        oldPlanId = subscription.planId;
+
+        // If it's cancelled or expired, then create a new subscription rather than modify
+        if (oldPlanId == 0) revert INACTIVE_SUBSCRIPTION();
+        if (subscription.expiredAt <= block.timestamp)
+            revert INSUFFICIENT_FUND();
+
+        Plan memory oldPlan = plans[oldPlanId];
+        Plan memory newPlan = plans[_newPlanId];
+        uint256 paidForOldPlan = (oldPlan.amount *
+            (subscription.expiredAt - block.timestamp)) / oldPlan.period;
+
+        // Two plan's token is the same
+        if (oldPlan.token == newPlan.token) {
+            // Need to pay more (newPlan.amount - paidForOldPlan)
+            if (newPlan.amount > paidForOldPlan) {
+                unchecked {
+                    payForNewPlan = newPlan.amount - paidForOldPlan;
+                }
+            }
+            // Need to refund (paidForOldPlan - newPlan.amount)
+            else if (newPlan.amount < paidForOldPlan) {
+                unchecked {
+                    refundForOldPlan = paidForOldPlan - newPlan.amount;
+                }
+            }
+        }
+        // Two plan's token is the different
+        else {
+            // Pay new plan
+            payForNewPlan = newPlan.amount;
+
+            // Refund old plan
+            refundForOldPlan = paidForOldPlan;
+        }
+
+        // deposit token
+        balanceOf[_to][_token] += _amount;
+        emit PayerDeposit(_to, _token, _amount);
+
+        // Pay for new plan
+        if (payForNewPlan > 0) {
+            if (balanceOf[_to][newPlan.token] < payForNewPlan)
+                revert INSUFFICIENT_FUND();
+
+            unchecked {
+                balanceOf[_to][newPlan.token] -= payForNewPlan;
+            }
+        }
+        // Refund for old plan
+        if (refundForOldPlan > 0) {
+            unchecked {
+                refundOf[_to][oldPlan.token] += refundForOldPlan;
+            }
+        }
+
+        // Set subscription
+        subscription.planId = _newPlanId;
+        subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
+
+        emit SubscriptionModified(
+            _to,
+            oldPlanId,
+            refundForOldPlan,
+            _newPlanId,
+            payForNewPlan,
+            subscription.expiredAt
+        );
     }
 }

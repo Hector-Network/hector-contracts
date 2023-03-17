@@ -14,6 +14,8 @@ interface Factory {
     function parameter() external view returns (address);
 
     function subscription() external view returns (address);
+
+    function isSubscriptionActive(address) external view returns (bool);
 }
 
 interface Subscription {
@@ -225,8 +227,14 @@ contract HectorPay is
     function isActiveSubscriptionForNow(
         address from
     ) public view returns (bool isActiveForNow) {
-        (, , , isActiveForNow, ) = Subscription(factory.subscription())
-            .getSubscription(from);
+        address subscription = factory.subscription();
+
+        if (subscription == address(0)) {
+            isActiveForNow = factory.isSubscriptionActive(from);
+        } else {
+            (, , , isActiveForNow, ) = Subscription(factory.subscription())
+                .getSubscription(from);
+        }
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */

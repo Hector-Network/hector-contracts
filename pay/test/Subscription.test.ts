@@ -252,11 +252,27 @@ describe('HectorSubscription', function () {
     });
 
     it('insufficient fund', async function () {
-      await hectorToken.connect(owner).approve(hectorSubscription.address, 0);
+      await torToken.connect(owner).approve(hectorSubscription.address, 0);
 
       await expect(
         hectorSubscription.connect(owner).createSubscription(2)
-      ).to.be.revertedWith('SafeERC20: low-level call failed');
+      ).to.be.revertedWith('ERC20: transfer amount exceeds allowance');
+    });
+
+    it('to create subscription for existing deposit', async function () {
+      let amountToDeposit = await hectorSubscription
+        .connect(owner)
+        .callStatic.toCreateSubscription(1);
+
+      expect(amountToDeposit).equal(0);
+    });
+
+    it('to create subscription for no deposit', async function () {
+      let amountToDeposit = await hectorSubscription
+        .connect(owner)
+        .callStatic.toCreateSubscription(2);
+
+      expect(amountToDeposit).equal(amount1);
     });
 
     it('create subscription', async function () {
@@ -608,13 +624,194 @@ describe('HectorSubscription', function () {
     });
   });
 
-  describe.only('#subscription: Cancelled subscription handling - Michael', function () {
+  describe('#subscription - create by mod', () => {
+    it('invalid plan', async function () {
+      await expect(
+        hectorSubscription.createSubscriptionByMod(
+          owner.address,
+          3,
+          hectorToken.address,
+          amount0
+        )
+      ).to.be.revertedWith('INVALID_PLAN()');
+    });
+
+    it('insufficient fund', async function () {
+      await expect(
+        hectorSubscription.createSubscriptionByMod(
+          owner.address,
+          1,
+          hectorToken.address,
+          0
+        )
+      ).to.be.revertedWith('INSUFFICIENT_FUND()');
+    });
+
+    it('create subscription by mod', async function () {
+      let tx = await hectorSubscription.createSubscriptionByMod(
+        owner.address,
+        1,
+        hectorToken.address,
+        amount0
+      );
+      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+        tx.hash
+      );
+      let block = await hectorSubscription.provider.getBlock(
+        txReceipt.blockNumber
+      );
+      let expiredAt = block.timestamp + oneHour;
+
+      await expect(tx)
+        .emit(hectorSubscription, 'SubscriptionCreated')
+        .withArgs(owner.address, 1, expiredAt);
+
+      let subscription = await hectorSubscription.getSubscription(
+        owner.address
+      );
+
+      expect(subscription.planId).equal(1);
+      expect(subscription.expiredAt).equal(expiredAt);
+    });
+  });
+
+  describe('#subscription - modify by mod', () => {
+    let planId = 1;
+    let newPlanId = 2;
+    let timestamp: number;
+    let amount = amount0;
+
+    beforeEach(async function () {
+      let tx = await hectorSubscription.createSubscriptionByMod(
+        owner.address,
+        planId,
+        hectorToken.address,
+        amount
+      );
+      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+        tx.hash
+      );
+      let block = await hectorSubscription.provider.getBlock(
+        txReceipt.blockNumber
+      );
+      timestamp = block.timestamp;
+    });
+
+    it('to modify subscription for different token', async function () {
+      await increaseTime(oneHour / 2);
+
+      let amountToDeposit = await hectorSubscription
+        .connect(owner)
+        .callStatic.toModifySubscription(newPlanId);
+
+      expect(amountToDeposit).equal(amount1);
+    });
+
+    it('to modify subscription for same token', async function () {
+      await hectorSubscription.updatePlan(2, {
+        token: hectorToken.address,
+        period: twoHour,
+        amount: amount1,
+      });
+
+      await increaseTime(oneHour / 2);
+
+      let amountToDeposit = await hectorSubscription
+        .connect(owner)
+        .callStatic.toModifySubscription(newPlanId);
+
+      expect(amountToDeposit).gte(amount1.sub(amount0.div(2)));
+    });
+
+    it('modify subscription for different token', async function () {
+      await increaseTime(oneHour / 2);
+
+      let tx = await hectorSubscription.modifySubscriptionByMod(
+        owner.address,
+        newPlanId,
+        torToken.address,
+        amount1
+      );
+      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+        tx.hash
+      );
+      let block = await hectorSubscription.provider.getBlock(
+        txReceipt.blockNumber
+      );
+
+      const refundForOldPlan = amount0
+        .mul(timestamp + oneHour - block.timestamp)
+        .div(oneHour);
+
+      await expect(tx)
+        .emit(hectorSubscription, 'SubscriptionModified')
+        .withArgs(
+          owner.address,
+          planId,
+          refundForOldPlan,
+          newPlanId,
+          amount1,
+          block.timestamp + twoHour
+        );
+
+      expect(
+        await hectorSubscription.refundOf(owner.address, hectorToken.address)
+      ).equal(refundForOldPlan);
+    });
+
+    it('modify subscription for same token', async function () {
+      await hectorSubscription.updatePlan(2, {
+        token: hectorToken.address,
+        period: twoHour,
+        amount: amount1,
+      });
+
+      await increaseTime(oneHour / 2);
+
+      let tx = await hectorSubscription.modifySubscriptionByMod(
+        owner.address,
+        newPlanId,
+        hectorToken.address,
+        amount1
+      );
+      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+        tx.hash
+      );
+      let block = await hectorSubscription.provider.getBlock(
+        txReceipt.blockNumber
+      );
+
+      const payForNewPlan = amount1.sub(
+        amount0.mul(timestamp + oneHour - block.timestamp).div(oneHour)
+      );
+
+      await expect(tx)
+        .emit(hectorSubscription, 'SubscriptionModified')
+        .withArgs(
+          owner.address,
+          planId,
+          0,
+          newPlanId,
+          payForNewPlan,
+          block.timestamp + twoHour
+        );
+      await expect(tx)
+        .emit(hectorSubscription, 'PayerDeposit')
+        .withArgs(owner.address, hectorToken.address, amount1);
+
+      expect(
+        await hectorSubscription.refundOf(owner.address, hectorToken.address)
+      ).equal(0);
+    });
+  });
+
+  describe('#subscription: Cancelled subscription handling - Michael', function () {
     let customSubscription: HectorSubscription;
     let user1: SignerWithAddress;
     let user2: SignerWithAddress;
     let plan30Days: any;
     let plan90Days: any;
-    const expireDeadline = 60 * 60 * 24 * 7; // 1 week in seconds
+    const expireDeadline = 60 * 60 * 24 * 30; // 1 week in seconds
     const threeMonths = 60 * 60 * 24 * 90; // 3 months in seconds
 
     beforeEach(async function () {
@@ -689,7 +886,7 @@ describe('HectorSubscription', function () {
       );
 
       const userBalance = await torToken.balanceOf(user1.address);
-      expect(subscription.planId).to.not.equal(0);
+      expect(subscription.planId).to.be.equal(0);
 
       expect(userBalance).to.equal(utils.parseEther('900')); // 1000 - 100
     });
@@ -801,7 +998,7 @@ describe('HectorSubscription', function () {
         user1.address
       );
 
-      expect(subscription.planId).to.equal(3);
+      expect(subscription.planId).to.not.equal(3);
 
       //Reactivate subscription
       const userBalance = await torToken.balanceOf(user1.address);

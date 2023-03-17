@@ -26,6 +26,8 @@ interface IPay {
 }
 
 error INVALID_ADDRESS();
+error INVALID_PARAM();
+error INVALID_MODERATOR();
 
 contract HectorPayFactory is Ownable {
     /* ======== STORAGE ======== */
@@ -48,6 +50,9 @@ contract HectorPayFactory is Ownable {
     address[1000000000] public getHectorPayContractByIndex;
     mapping(address => address) public getHectorPayContractByToken;
 
+    mapping(address => bool) public moderators;
+    mapping(address => bool) public isSubscriptionActive;
+
     /* ======== EVENTS ======== */
 
     event HectorPayCreated(address token, address hectorPay);
@@ -59,15 +64,21 @@ contract HectorPayFactory is Ownable {
         address _upgradeableAdmin,
         address _subscription
     ) {
-        if (
-            _hectorPayLogic == address(0) ||
-            _upgradeableAdmin == address(0) ||
-            _subscription == address(0)
-        ) revert INVALID_ADDRESS();
+        if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
+            revert INVALID_ADDRESS();
 
         hectorPayLogic = _hectorPayLogic;
         upgradeableAdmin = _upgradeableAdmin;
         subscription = _subscription;
+
+        moderators[msg.sender] = true;
+    }
+
+    /* ======== MODIFIER ======== */
+
+    modifier onlyMod() {
+        if (!moderators[msg.sender]) revert INVALID_MODERATOR();
+        _;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -83,8 +94,29 @@ contract HectorPayFactory is Ownable {
     }
 
     function setSubscription(address _subscription) external onlyOwner {
-        if (_subscription == address(0)) revert INVALID_ADDRESS();
         subscription = _subscription;
+    }
+
+    function setModerator(
+        address _moderator,
+        bool _approved
+    ) external onlyOwner {
+        if (_moderator == address(0)) revert INVALID_ADDRESS();
+        moderators[_moderator] = _approved;
+    }
+
+    /* ======== MODERATOR FUNCTIONS ======== */
+
+    function updateSubscriptionStatus(
+        address[] memory _users,
+        bool[] memory _statuses
+    ) external onlyMod {
+        uint256 length = _users.length;
+        if (length != _statuses.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            isSubscriptionActive[_users[i]] = _statuses[i];
+        }
     }
 
     /* ======== USER FUNCTIONS ======== */
@@ -96,10 +128,9 @@ contract HectorPayFactory is Ownable {
         @param _token The ERC20 token address for which a Hector Pay contract should be deployed
         @return hectorPayContract The address of the newly created Hector Pay contract
       */
-    function createHectorPayContract(address _token)
-        external
-        returns (address hectorPayContract)
-    {
+    function createHectorPayContract(
+        address _token
+    ) external returns (address hectorPayContract) {
         // set the parameter storage slot so the contract can query it
         parameter = _token;
         // use CREATE2 so we can get a deterministic address based on the token
@@ -136,11 +167,9 @@ contract HectorPayFactory is Ownable {
       @param _token An ERC20 token address
       @return isDeployed Boolean denoting whether the contract is currently deployed
       */
-    function isDeployedHectorPayContractByToken(address _token)
-        external
-        view
-        returns (bool isDeployed)
-    {
+    function isDeployedHectorPayContractByToken(
+        address _token
+    ) external view returns (bool isDeployed) {
         isDeployed = getHectorPayContractByToken[_token] != address(0);
     }
 
