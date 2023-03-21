@@ -482,9 +482,8 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         oldPlanId = subscription.planId;
 
         // If it's cancelled or expired, then create a new subscription rather than modify
-        if (oldPlanId == 0) revert INACTIVE_SUBSCRIPTION();
-        if (subscription.expiredAt <= block.timestamp)
-            revert INSUFFICIENT_FUND();
+        if (oldPlanId == 0 || subscription.expiredAt <= block.timestamp)
+            revert INACTIVE_SUBSCRIPTION();
 
         Plan memory oldPlan = plans[oldPlanId];
         Plan memory newPlan = plans[_newPlanId];
@@ -643,9 +642,8 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         oldPlanId = subscription.planId;
 
         // If it's cancelled or expired, then create a new subscription rather than modify
-        if (oldPlanId == 0) revert INACTIVE_SUBSCRIPTION();
-        if (subscription.expiredAt <= block.timestamp)
-            revert INSUFFICIENT_FUND();
+        if (oldPlanId == 0 || subscription.expiredAt <= block.timestamp)
+            revert INACTIVE_SUBSCRIPTION();
 
         Plan memory oldPlan = plans[oldPlanId];
         Plan memory newPlan = plans[_newPlanId];
