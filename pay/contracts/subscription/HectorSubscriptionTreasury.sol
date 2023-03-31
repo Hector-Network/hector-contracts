@@ -74,7 +74,7 @@ contract HectorSubscriptionTreasury is OwnableUpgradeable, PausableUpgradeable {
     }
 
     function withdrawAll() external onlyOwner {
-        uint256 length = tokensSet.length;
+        uint256 length = tokensSet.length();
 
         for (uint256 i = 0; i < length; i++) {
             address token = tokensSet.at(0);

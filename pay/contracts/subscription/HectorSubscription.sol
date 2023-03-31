@@ -6,6 +6,8 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
+import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
+
 interface Factory {
     function parameter() external view returns (bytes memory);
 
@@ -22,21 +24,14 @@ error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
 error INVALID_MODERATOR();
 
-contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
+contract HectorSubscription is
+    IHectorSubscription,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
     using SafeERC20 for IERC20;
 
     /* ======== STORAGE ======== */
-
-    struct Plan {
-        address token; // TOR, WFTM
-        uint48 period; // 3 months, 6 months, 12 months
-        uint256 amount;
-    }
-
-    struct Subscription {
-        uint256 planId;
-        uint48 expiredAt;
-    }
 
     /// @notice product
     string public product;
@@ -45,6 +40,7 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
     address public treasury;
 
     /// @notice subscription plans configurable by admin
+    /// @dev plans[0] is free-plan
     Plan[] public plans;
 
     /// @notice expire deadline to cancel subscription
@@ -68,7 +64,8 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         uint256 indexed planId,
         address token,
         uint48 period,
-        uint256 amount
+        uint256 amount,
+        bytes data
     );
     event SubscriptionCreated(
         address indexed from,
@@ -117,7 +114,8 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             (string, address)
         );
 
-        plans.push(Plan({token: address(0), period: 0, amount: 0}));
+        // free-plan
+        plans.push(Plan({token: address(0), period: 0, amount: 0, data: ''}));
 
         moderators[factory.owner()] = true;
 
@@ -171,22 +169,32 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
                 plans.length - 1,
                 _plan.token,
                 _plan.period,
-                _plan.amount
+                _plan.amount,
+                _plan.data
             );
         }
     }
 
-    function updatePlan(
-        uint256 _planId,
-        Plan calldata _plan
-    ) external onlyMod onlyValidPlan(_planId) {
-        if (_plan.token == address(0)) revert INVALID_ADDRESS();
-        if (_plan.period == 0) revert INVALID_TIME();
-        if (_plan.amount == 0) revert INVALID_AMOUNT();
+    function updatePlan(uint256 _planId, Plan calldata _plan) external onlyMod {
+        if (_planId == 0) {
+            if (_plan.token != address(0)) revert INVALID_ADDRESS();
+            if (_plan.period != 0) revert INVALID_TIME();
+            if (_plan.amount != 0) revert INVALID_AMOUNT();
+        } else {
+            if (_plan.token == address(0)) revert INVALID_ADDRESS();
+            if (_plan.period == 0) revert INVALID_TIME();
+            if (_plan.amount == 0) revert INVALID_AMOUNT();
+        }
 
         plans[_planId] = _plan;
 
-        emit PlanUpdated(_planId, _plan.token, _plan.period, _plan.amount);
+        emit PlanUpdated(
+            _planId,
+            _plan.token,
+            _plan.period,
+            _plan.amount,
+            _plan.data
+        );
     }
 
     function updateExpireDeadline(uint48 _expireDeadline) external onlyMod {
@@ -228,11 +236,6 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
         for (uint256 i = 0; i < length; i++) {
             address to = _tos[i];
 
-            /// only active subscription
-            if (subscriptions[to].planId == 0) {
-                continue;
-            }
-
             address token = _tokens[i];
             uint256 amount = _amounts[i];
 
@@ -257,6 +260,10 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
 
     function allPlans() external view returns (Plan[] memory) {
         return plans;
+    }
+
+    function getPlan(uint256 _planId) external view returns (Plan memory) {
+        return plans[_planId];
     }
 
     function getSubscription(
@@ -706,5 +713,18 @@ contract HectorSubscription is OwnableUpgradeable, ReentrancyGuardUpgradeable {
             payForNewPlan,
             subscription.expiredAt
         );
+    }
+
+    function cancelSubscriptionByMod(address _to) external onlyMod {
+        syncSubscription(_to);
+
+        uint256 planId = subscriptions[_to].planId;
+
+        // check if active subscription
+        if (planId == 0) revert INACTIVE_SUBSCRIPTION();
+
+        subscriptions[_to].planId = 0;
+
+        emit SubscriptionCancelled(_to, planId);
     }
 }
