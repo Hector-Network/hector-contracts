@@ -6,13 +6,8 @@ import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
 
+import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
 import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
-
-interface Factory {
-    function parameter() external view returns (bytes memory);
-
-    function owner() external view returns (address);
-}
 
 error INVALID_PARAM();
 error INVALID_ADDRESS();
@@ -107,7 +102,9 @@ contract HectorSubscription is
     }
 
     function initialize() external initializer {
-        Factory factory = Factory(msg.sender);
+        IHectorSubscriptionFactory factory = IHectorSubscriptionFactory(
+            msg.sender
+        );
 
         (product, treasury) = abi.decode(
             factory.parameter(),
@@ -117,11 +114,11 @@ contract HectorSubscription is
         // free-plan
         plans.push(Plan({token: address(0), period: 0, amount: 0, data: ''}));
 
-        moderators[factory.owner()] = true;
+        moderators[factory.factoryOwner()] = true;
 
         expireDeadline = 30 days;
 
-        _transferOwnership(factory.owner());
+        _transferOwnership(factory.factoryOwner());
         __ReentrancyGuard_init();
     }
 

@@ -7,37 +7,18 @@ import {IERC20Metadata} from '@openzeppelin/contracts/token/ERC20/extensions/IER
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {ContextUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
+import {EnumerableSet} from '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
-import {BoringBatchable} from './libraries/BoringBatchable.sol';
+import {BoringBatchable} from '../libraries/BoringBatchable.sol';
 
-interface Factory {
-    function parameter() external view returns (address);
-
-    function subscription() external view returns (address);
-
-    function isSubscriptionActive(address) external view returns (bool);
-}
-
-interface Subscription {
-    function getSubscription(
-        address from
-    )
-        external
-        view
-        returns (
-            uint256 planId,
-            uint48 expiredAt,
-            bool isCancelled,
-            bool isActiveForNow,
-            uint256 chargeAmount
-        );
-}
+import {IHectorPay} from '../interfaces/IHectorPay.sol';
+import {IHectorPayFactory} from '../interfaces/IHectorPayFactory.sol';
+import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
 
 error INVALID_ADDRESS();
 error INVALID_TIME();
 error INVALID_AMOUNT();
-error INACTIVE_SUBSCRIPTION();
-error ACTIVE_SUBSCRIPTION();
+error LIMITED_SUBSCRIPTION();
 error INSUFFICIENT_FUND();
 error INACTIVE_STREAM();
 error ACTIVE_STREAM();
@@ -45,11 +26,13 @@ error STREAM_PAUSED();
 error STREAM_ENDED();
 
 contract HectorPay is
+    IHectorPay,
     ContextUpgradeable,
     ReentrancyGuardUpgradeable,
     BoringBatchable
 {
     using SafeERC20 for IERC20;
+    using EnumerableSet for EnumerableSet.Bytes32Set;
 
     /* ======== STORAGE ======== */
 
@@ -70,7 +53,7 @@ contract HectorPay is
     }
 
     /// @notice pay factory
-    Factory public factory;
+    IHectorPayFactory public factory;
 
     /// @notice payer info
     mapping(address => Payer) public payers;
@@ -89,6 +72,9 @@ contract HectorPay is
 
     /// @notice version
     string public constant VERSION = 'v1.0';
+
+    /// @notice payer's active streams
+    mapping(address => EnumerableSet.Bytes32Set) private activeStreams;
 
     /* ======== EVENTS ======== */
 
@@ -166,7 +152,7 @@ contract HectorPay is
     }
 
     function initialize() external initializer {
-        factory = Factory(msg.sender);
+        factory = IHectorPayFactory(msg.sender);
 
         token = IERC20(factory.parameter());
 
@@ -179,8 +165,8 @@ contract HectorPay is
 
     /* ======== MODIFIER ======== */
 
-    modifier onlyActiveSubscription(address from) {
-        if (!isActiveSubscriptionForNow(from)) revert INACTIVE_SUBSCRIPTION();
+    modifier availableForActiveNewStream(address from) {
+        if (!isAvailableForActiveNewStream(from)) revert LIMITED_SUBSCRIPTION();
 
         _;
     }
@@ -227,14 +213,10 @@ contract HectorPay is
     function isActiveSubscriptionForNow(
         address from
     ) public view returns (bool isActiveForNow) {
-        address subscription = factory.subscription();
-
-        if (subscription == address(0)) {
-            isActiveForNow = factory.isSubscriptionActive(from);
-        } else {
-            (, , , isActiveForNow, ) = Subscription(factory.subscription())
-                .getSubscription(from);
-        }
+        IHectorSubscription subscription = IHectorSubscription(
+            factory.subscription()
+        );
+        (, , , isActiveForNow, ) = subscription.getSubscription(from);
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */
@@ -279,6 +261,9 @@ contract HectorPay is
             lastPaid: lastPaid,
             lastPaused: 0
         });
+
+        /// active stream
+        activeStreams[msg.sender].add(streamId);
     }
 
     function _withdraw(
@@ -343,6 +328,9 @@ contract HectorPay is
 
         stream.lastPaid = 0;
 
+        /// deactive stream
+        activeStreams[msg.sender].remove(streamId);
+
         token.safeTransfer(to, amountToTransfer);
     }
 
@@ -370,6 +358,9 @@ contract HectorPay is
         stream.lastPaid = uint48(stop);
         stream.lastPaused = 0;
         isPausedBySubscription[streamId] = false;
+
+        /// active stream
+        activeStreams[msg.sender].add(streamId);
     }
 
     /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
@@ -423,6 +414,42 @@ contract HectorPay is
         }
     }
 
+    function activeStreamsByRemoveEnded(
+        address from
+    ) external returns (uint256 count) {
+        uint256 length = activeStreams[from].length();
+
+        for (uint256 i = 0; i < length; i++) {
+            bytes32 streamId = activeStreams[from].at(count);
+            Stream memory stream = streams[streamId];
+
+            if (stream.ends < block.timestamp || stream.lastPaid == 0) {
+                activeStreams[from].remove(streamId);
+                delete streams[streamId];
+            } else {
+                unchecked {
+                    ++count;
+                }
+            }
+        }
+    }
+
+    function isAvailableForActiveNewStream(
+        address from
+    ) public returns (bool isAvailable) {
+        IHectorSubscription subscription = IHectorSubscription(
+            factory.subscription()
+        );
+        (uint256 planId, , , , ) = subscription.getSubscription(from);
+        IHectorSubscription.Plan memory plan = subscription.getPlan(planId);
+
+        uint256 limitationOfActiveStreams = abi.decode(plan.data, (uint256));
+
+        isAvailable =
+            limitationOfActiveStreams >
+            factory.activeStreamsByRemoveEnded(from);
+    }
+
     /* ======== USER FUNCTIONS ======== */
 
     function createStream(
@@ -430,7 +457,7 @@ contract HectorPay is
         uint256 amountPerSec,
         uint48 starts,
         uint48 ends
-    ) public onlyActiveSubscription(msg.sender) {
+    ) public availableForActiveNewStream(msg.sender) {
         bytes32 streamId = _createStream(
             to,
             amountPerSec,
@@ -454,7 +481,7 @@ contract HectorPay is
         uint48 starts,
         uint48 ends,
         string calldata reason
-    ) public onlyActiveSubscription(msg.sender) {
+    ) public availableForActiveNewStream(msg.sender) {
         bytes32 streamId = _createStream(
             to,
             amountPerSec,
@@ -586,7 +613,7 @@ contract HectorPay is
         uint256 amountPerSec,
         uint48 starts,
         uint48 ends
-    ) public onlyActiveSubscription(msg.sender) {
+    ) public availableForActiveNewStream(msg.sender) {
         bytes32 streamId = _resumeStream(
             msg.sender,
             to,
@@ -613,7 +640,7 @@ contract HectorPay is
         address to,
         uint256 amountPerSec,
         uint48 ends
-    ) external onlyActiveSubscription(msg.sender) {
+    ) external {
         /// cancel old stream
         bytes32 oldStreamId = _cancelStream(
             msg.sender,

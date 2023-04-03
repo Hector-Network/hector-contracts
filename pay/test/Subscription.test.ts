@@ -67,11 +67,13 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: oneHour,
         amount: amount0,
+        data: '0x00',
       },
       {
         token: torToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       },
     ]);
 
@@ -146,12 +148,13 @@ describe('HectorSubscription', function () {
           token: hectorToken.address,
           period: twoHour,
           amount: amount1,
+          data: '0x00',
         },
       ]);
 
       await expect(tx)
         .to.emit(hectorSubscription, 'PlanUpdated')
-        .withArgs(3, hectorToken.address, twoHour, amount1);
+        .withArgs(3, hectorToken.address, twoHour, amount1, '0x00');
 
       let plans = await hectorSubscription.allPlans();
       expect(plans.length).equal(4);
@@ -165,11 +168,12 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       });
 
       await expect(tx)
         .to.emit(hectorSubscription, 'PlanUpdated')
-        .withArgs(2, hectorToken.address, twoHour, amount1);
+        .withArgs(2, hectorToken.address, twoHour, amount1, '0x00');
 
       let plans = await hectorSubscription.allPlans();
       expect(plans.length).equal(3);
@@ -537,6 +541,7 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       });
 
       await increaseTime(oneHour / 2);
@@ -586,6 +591,7 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       });
 
       await increaseTime(oneHour / 2);
@@ -712,6 +718,7 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       });
 
       await increaseTime(oneHour / 2);
@@ -764,6 +771,7 @@ describe('HectorSubscription', function () {
         token: hectorToken.address,
         period: twoHour,
         amount: amount1,
+        data: '0x00',
       });
 
       await increaseTime(oneHour / 2);
@@ -823,11 +831,13 @@ describe('HectorSubscription', function () {
         token: torToken.address,
         period: 2592000,
         amount: ethers.utils.parseEther('100'),
+        data: '0x00',
       }; // 30 days
       plan90Days = {
         token: hectorToken.address,
         period: 7776000,
         amount: ethers.utils.parseEther('250'),
+        data: '0x00',
       }; // 90 days
 
       await hectorSubscription.appendPlan([plan30Days, plan90Days]);

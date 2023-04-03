@@ -5,31 +5,16 @@ pragma solidity ^0.8.17;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
+import {IHectorPay} from '../interfaces/IHectorPay.sol';
+import {IHectorPayFactory} from '../interfaces/IHectorPayFactory.sol';
+
 import {HectorPay} from './HectorPay.sol';
-
-interface IPay {
-    function pauseStreamBySubscription(
-        address from,
-        address to,
-        uint256 amountPerSec,
-        uint48 starts,
-        uint48 ends
-    ) external;
-
-    function resumeStreamBySubscription(
-        address from,
-        address to,
-        uint256 amountPerSec,
-        uint48 starts,
-        uint48 ends
-    ) external;
-}
 
 error INVALID_ADDRESS();
 error INVALID_PARAM();
 error INVALID_MODERATOR();
 
-contract HectorPayFactory is Ownable {
+contract HectorPayFactory is IHectorPayFactory, Ownable {
     /* ======== STORAGE ======== */
 
     struct Stream {
@@ -51,7 +36,6 @@ contract HectorPayFactory is Ownable {
     mapping(address => address) public getHectorPayContractByToken;
 
     mapping(address => bool) public moderators;
-    mapping(address => bool) public isSubscriptionActive;
 
     /* ======== EVENTS ======== */
 
@@ -64,8 +48,11 @@ contract HectorPayFactory is Ownable {
         address _upgradeableAdmin,
         address _subscription
     ) {
-        if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
-            revert INVALID_ADDRESS();
+        if (
+            _hectorPayLogic == address(0) ||
+            _upgradeableAdmin == address(0) ||
+            _subscription == address(0)
+        ) revert INVALID_ADDRESS();
 
         hectorPayLogic = _hectorPayLogic;
         upgradeableAdmin = _upgradeableAdmin;
@@ -94,6 +81,7 @@ contract HectorPayFactory is Ownable {
     }
 
     function setSubscription(address _subscription) external onlyOwner {
+        if (_subscription == address(0)) revert INVALID_ADDRESS();
         subscription = _subscription;
     }
 
@@ -105,17 +93,14 @@ contract HectorPayFactory is Ownable {
         moderators[_moderator] = _approved;
     }
 
-    /* ======== MODERATOR FUNCTIONS ======== */
+    /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
 
-    function updateSubscriptionStatus(
-        address[] memory _users,
-        bool[] memory _statuses
-    ) external onlyMod {
-        uint256 length = _users.length;
-        if (length != _statuses.length) revert INVALID_PARAM();
-
-        for (uint256 i = 0; i < length; i++) {
-            isSubscriptionActive[_users[i]] = _statuses[i];
+    function activeStreamsByRemoveEnded(
+        address from
+    ) external returns (uint256 count) {
+        for (uint256 i = 0; i < getHectorPayContractCount; i++) {
+            count += IHectorPay(getHectorPayContractByIndex[i])
+                .activeStreamsByRemoveEnded(from);
         }
     }
 
@@ -179,7 +164,7 @@ contract HectorPayFactory is Ownable {
         uint256 length = streams.length;
         for (uint256 i = 0; i < length; i++) {
             Stream memory stream = streams[i];
-            IPay(stream.payContract).pauseStreamBySubscription(
+            IHectorPay(stream.payContract).pauseStreamBySubscription(
                 stream.from,
                 stream.to,
                 stream.amountPerSec,
@@ -193,7 +178,7 @@ contract HectorPayFactory is Ownable {
         uint256 length = streams.length;
         for (uint256 i = 0; i < length; i++) {
             Stream memory stream = streams[i];
-            IPay(stream.payContract).resumeStreamBySubscription(
+            IHectorPay(stream.payContract).resumeStreamBySubscription(
                 stream.from,
                 stream.to,
                 stream.amountPerSec,

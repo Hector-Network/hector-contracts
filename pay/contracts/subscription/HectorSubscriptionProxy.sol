@@ -5,13 +5,8 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
+import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
 import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
-
-interface Factory {
-    function parameter() external view returns (bytes memory);
-
-    function owner() external view returns (address);
-}
 
 error INVALID_ADDRESS();
 error INVALID_MODERATOR();
@@ -40,13 +35,15 @@ contract HectorSubscriptionProxy is IHectorSubscription, OwnableUpgradeable {
     }
 
     function initialize() external initializer {
-        Factory factory = Factory(msg.sender);
+        IHectorSubscriptionFactory factory = IHectorSubscriptionFactory(
+            msg.sender
+        );
 
         product = abi.decode(factory.parameter(), (string));
 
-        moderators[factory.owner()] = true;
+        moderators[factory.factoryOwner()] = true;
 
-        _transferOwnership(factory.owner());
+        _transferOwnership(factory.factoryOwner());
     }
 
     /* ======== MODIFIER ======== */

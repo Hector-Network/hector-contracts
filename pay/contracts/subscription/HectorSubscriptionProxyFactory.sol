@@ -5,10 +5,12 @@ pragma solidity ^0.8.17;
 import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
+import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
+
 error INVALID_PRODUCT();
 error INVALID_ADDRESS();
 
-contract HectorSubscriptionProxyFactory is Ownable {
+contract HectorSubscriptionProxyFactory is IHectorSubscriptionFactory, Ownable {
     /* ======== STORAGE ======== */
 
     struct Subscription {
@@ -102,6 +104,10 @@ contract HectorSubscriptionProxyFactory is Ownable {
     }
 
     /* ======== VIEW FUNCTIONS ======== */
+
+    function factoryOwner() external view returns (address) {
+        return owner();
+    }
 
     function isDeployedHectorSubscriptionProxyContractByProduct(
         string calldata _product
