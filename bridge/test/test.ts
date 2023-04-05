@@ -58,8 +58,7 @@ async function main() {
 	console.log('Bridge:', bridgeTool);
 
 	if (bridgeTool == 'stargate') {
-		specialData = tempStepData.includedSteps.find((element: any) => element.type == 'cross')
-			.estimate.data.stargateData;
+		specialData = tempStepData.estimate.gasCosts.find((element: any) => element.type == 'FEE');
 	}
 
 	// Set Fees
@@ -68,11 +67,11 @@ async function main() {
 	if (isNativeFrom) {
 		if (bridgeTool == 'stargate') {
 			fees.push(
-				BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
+				BigNumber.from(specialData.amount).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
 			);
 			mode == 'multi' &&
 				fees.push(
-					BigNumber.from(specialData.lzFee).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
+					BigNumber.from(specialData.amount).add(BigNumber.from(mockSendingAssetInfo1.sendingAmount))
 				);
 		} else {
 			fees.push(BigNumber.from(mockSendingAssetInfo1.sendingAmount));
@@ -80,8 +79,8 @@ async function main() {
 		}
 	} else {
 		if (bridgeTool == 'stargate') {
-			fees.push(BigNumber.from(specialData.lzFee));
-			mode == 'multi' && fees.push(BigNumber.from(specialData.lzFee));
+			fees.push(BigNumber.from(specialData.amount));
+			mode == 'multi' && fees.push(BigNumber.from(specialData.amount));
 		}
 	}
 
