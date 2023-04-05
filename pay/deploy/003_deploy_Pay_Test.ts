@@ -20,41 +20,6 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   // const torTokenAddress = '0x205F190776C8d466727bD0Cac6D1B564DC3C8Ea9';
   // const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
-  // {
-  //   try {
-  //     await hre.run('verify:verify', {
-  //       address: '0xa8261FDe59063025931808ac0BeDb75416733f29',
-  //       contract: 'contracts/HectorPay/v1_upfront_pay/HectorPay.sol:HectorPay',
-  //       constructorArguments: [],
-  //     });
-  //   } catch (_) {}
-
-  //   await waitSeconds(10);
-  //   try {
-  //     await hre.run('verify:verify', {
-  //       address: '0x712061c1D066B34F98381FBE057B81d29a1757F8',
-  //       contract:
-  //         'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
-  //       constructorArguments: [],
-  //     });
-  //   } catch (_) {}
-
-  //   await waitSeconds(10);
-  //   try {
-  //     await hre.run('verify:verify', {
-  //       address: '0x7E61920c0F49eA2C5A042435b80755b7afd6771a',
-  //       contract:
-  //         'contracts/HectorPay/v1_upfront_pay/HectorPayFactory.sol:HectorPayFactory',
-  //       constructorArguments: [
-  //         '0xa8261FDe59063025931808ac0BeDb75416733f29',
-  //         deployer.address,
-  //         '0x4745e4E101D8A8B687A15c138Ab4dFdf9262dFd1',
-  //       ],
-  //     });
-  //   } catch (_) {}
-  //   return;
-  // }
-
   const hectorMultiPayProduct = 'Hector Multi Pay';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
@@ -97,22 +62,117 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer
   );
 
+  const plans = [
+    // Small For 3 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 90,
+      amount: ethers.utils.parseEther('80').mul(3),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
+    },
+    // Small For 6 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 180,
+      amount: ethers.utils.parseEther('80').mul(6).mul(85).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
+    },
+    // Small For 1 Year
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 365,
+      amount: ethers.utils.parseEther('80').mul(12).mul(70).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
+    },
+
+    // Medium For 3 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 90,
+      amount: ethers.utils.parseEther('123').mul(3),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
+    },
+    // Medium For 6 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 180,
+      amount: ethers.utils.parseEther('123').mul(6).mul(85).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
+    },
+    // Medium For 1 Year
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 365,
+      amount: ethers.utils.parseEther('123').mul(12).mul(70).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
+    },
+
+    // Large For 3 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 90,
+      amount: ethers.utils.parseEther('200').mul(3),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
+    },
+    // Large For 6 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 180,
+      amount: ethers.utils.parseEther('200').mul(6).mul(85).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
+    },
+    // Large For 1 Year
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 365,
+      amount: ethers.utils.parseEther('200').mul(12).mul(70).div(100),
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
+    },
+
+    // Enterprise For 3 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 90,
+      amount: ethers.utils.parseEther('250').mul(3),
+      data: ethers.utils.hexZeroPad(
+        ethers.utils.hexlify(ethers.constants.MaxUint256),
+        32
+      ),
+    },
+    // Enterprise For 6 Months
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 180,
+      amount: ethers.utils.parseEther('250').mul(6).mul(85).div(100),
+      data: ethers.utils.hexZeroPad(
+        ethers.utils.hexlify(ethers.constants.MaxUint256),
+        32
+      ),
+    },
+    // Enterprise For 1 Year
+    {
+      token: torTokenAddress,
+      period: 3600 * 24 * 365,
+      amount: ethers.utils.parseEther('250').mul(12).mul(70).div(100),
+      data: ethers.utils.hexZeroPad(
+        ethers.utils.hexlify(ethers.constants.MaxUint256),
+        32
+      ),
+    },
+  ];
+  const freePlan = {
+    token: ethers.constants.AddressZero,
+    period: 0,
+    amount: 0,
+    data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
+  };
   await waitSeconds(10);
   try {
-    (
-      await paySubscriptionContract.appendPlan([
-        {
-          token: hectorTokenAddress,
-          period: 3600 * 24,
-          amount: ethers.utils.parseUnits('10', 9),
-        },
-        {
-          token: torTokenAddress,
-          period: 3600 * 48,
-          amount: ethers.utils.parseEther('200'),
-        },
-      ])
-    ).wait();
+    (await paySubscriptionContract.appendPlan(plans)).wait();
+  } catch (_) {}
+  await waitSeconds(10);
+  try {
+    (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
   } catch (_) {}
 
   /// MULTI PAY ///

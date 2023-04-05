@@ -37,6 +37,10 @@ describe('HectorUpfrontPay', function () {
   let amount0 = ethers.utils.parseEther('100');
   let amount1 = ethers.utils.parseEther('200');
 
+  let limitForFree = 1;
+  let limitForOneHour = 2;
+  let limitForTwoHour = ethers.constants.MaxUint256;
+
   let divisor = 100;
 
   this.beforeEach(async function () {
@@ -79,13 +83,28 @@ describe('HectorUpfrontPay', function () {
         token: hectorToken.address,
         period: oneHour,
         amount: amount0,
+        data: ethers.utils.hexZeroPad(
+          ethers.utils.hexlify(limitForOneHour),
+          32
+        ),
       },
       {
         token: torToken.address,
         period: twoHour,
         amount: amount1,
+        data: ethers.utils.hexZeroPad(
+          ethers.utils.hexlify(limitForTwoHour),
+          32
+        ),
       },
     ]);
+
+    await hectorSubscription.updatePlan(0, {
+      token: ethers.constants.AddressZero,
+      period: 0,
+      amount: 0,
+      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(limitForFree), 32),
+    });
 
     /// Pay ///
     const HectorPay = await ethers.getContractFactory('HectorPay');
@@ -255,54 +274,6 @@ describe('HectorUpfrontPay', function () {
         starts,
         ends
       );
-    });
-
-    it('inactive subscription', async function () {
-      await hectorSubscription.connect(payer).cancelSubscription();
-      await increaseTime(oneHour);
-
-      await expect(
-        hectorPay
-          .connect(payer)
-          .createStream(payee.address, amountPerSec, starts, ends)
-      ).to.be.revertedWith('INACTIVE_SUBSCRIPTION()');
-    });
-
-    it('inactive subscription for cross chain', async function () {
-      await hectorPayFactory.setSubscription(ethers.constants.AddressZero);
-
-      await expect(
-        hectorPay
-          .connect(payer)
-          .createStream(payee.address, amountPerSec, starts, ends)
-      ).to.be.revertedWith('INACTIVE_SUBSCRIPTION()');
-    });
-
-    it('active subscription for cross chain', async function () {
-      await hectorPayFactory.setSubscription(ethers.constants.AddressZero);
-      await hectorPayFactory.updateSubscriptionStatus([payer.address], [true]);
-
-      let tx = await hectorPay
-        .connect(payer)
-        .createStream(payee.address, amountPerSec, starts, ends);
-
-      await expect(tx)
-        .to.emit(hectorPay, 'StreamCreated')
-        .withArgs(
-          payer.address,
-          payee.address,
-          amountPerSec,
-          starts,
-          ends,
-          streamId
-        );
-
-      let decimalAmount = amountPerSec.mul(ends - starts);
-      let info = await hectorPay.payers(payer.address);
-      expect(info.totalCommitted).equal(decimalAmount);
-
-      let stream = await hectorPay.streams(streamId);
-      expect(stream.lastPaid).equal(starts);
     });
 
     it('create stream', async function () {
@@ -569,17 +540,6 @@ describe('HectorUpfrontPay', function () {
       pausedAt = block.timestamp;
 
       await increaseTime(10);
-    });
-
-    it('inactive subscription', async function () {
-      await hectorSubscription.connect(payer).cancelSubscription();
-      await increaseTime(oneHour);
-
-      await expect(
-        hectorPay
-          .connect(payer)
-          .resumeStream(payee.address, amountPerSec, starts, ends)
-      ).to.be.revertedWith('INACTIVE_SUBSCRIPTION()');
     });
 
     it('resume stream', async function () {
@@ -1056,6 +1016,135 @@ describe('HectorUpfrontPay', function () {
           ends
         )
       ).to.be.revertedWith('INACTIVE_STREAM()');
+    });
+  });
+
+  describe('#pay - limitation for free plan', () => {
+    let amountPerSec = ethers.utils.parseEther('100'); // divisor = 100
+    let starts = 0;
+    let ends = 0;
+    let streamId = '';
+
+    beforeEach(async function () {
+      let amount = ethers.utils.parseEther('1000');
+      await hectorPay.connect(payer).deposit(amount);
+
+      await hectorSubscription.connect(payer).cancelSubscription();
+      await increaseTime(twoHour);
+
+      starts = (await getTimeStamp()) + 10;
+      ends = starts + 100;
+
+      streamId = await hectorPay.getStreamId(
+        payer.address,
+        payee.address,
+        amountPerSec,
+        starts,
+        ends
+      );
+    });
+
+    it('create one stream with free plan', async function () {
+      let tx = await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+
+      await expect(tx)
+        .to.emit(hectorPay, 'StreamCreated')
+        .withArgs(
+          payer.address,
+          payee.address,
+          amountPerSec,
+          starts,
+          ends,
+          streamId
+        );
+    });
+
+    it('create more streams with free plan', async function () {
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+
+      await expect(
+        hectorPay
+          .connect(payer)
+          .createStream(payee.address, amountPerSec, starts + 10, ends + 10)
+      ).to.be.revertedWith('LIMITED_SUBSCRIPTION()');
+    });
+  });
+
+  describe('#pay - limiation for purchased plan', () => {
+    let amountPerSec = ethers.utils.parseEther('100'); // divisor = 100
+    let starts = 0;
+    let ends = 0;
+    let streamId = '';
+
+    beforeEach(async function () {
+      let amount = ethers.utils.parseEther('1000');
+      await hectorPay.connect(payer).deposit(amount);
+
+      starts = (await getTimeStamp()) + 10;
+      ends = starts + 100;
+
+      streamId = await hectorPay.getStreamId(
+        payer.address,
+        payee.address,
+        amountPerSec,
+        starts,
+        ends
+      );
+    });
+
+    it('create two streams with first plan', async function () {
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 10, ends + 10);
+    });
+
+    it('create more streams with first plan', async function () {
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 10, ends + 10);
+
+      await expect(
+        hectorPay
+          .connect(payer)
+          .createStream(payee.address, amountPerSec, starts + 20, ends + 20)
+      ).to.be.revertedWith('LIMITED_SUBSCRIPTION()');
+    });
+
+    it('create more streams after one is ended with first plan', async function () {
+      // Two active streams
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts, ends);
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 10, ends + 10);
+
+      // First stream is inactive so can create a new one
+      await increaseTime(ends - (await getTimeStamp()) + 1);
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 20, ends + 20);
+
+      // Two streams are both inactive so can create two ones
+      await increaseTime(ends - (await getTimeStamp()) + 21);
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 30, ends + 30);
+      await hectorPay
+        .connect(payer)
+        .createStream(payee.address, amountPerSec, starts + 40, ends + 40);
     });
   });
 });

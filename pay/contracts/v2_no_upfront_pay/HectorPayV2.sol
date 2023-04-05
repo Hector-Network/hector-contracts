@@ -8,7 +8,7 @@ import {ContextUpgradeable} from '@openzeppelin/contracts-upgradeable/utils/Cont
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {Strings} from '@openzeppelin/contracts/utils/Strings.sol';
 
-import {BoringBatchable} from './libraries/BoringBatchable.sol';
+import {BoringBatchable} from '../libraries/BoringBatchable.sol';
 
 interface Factory {
     function parameter() external view returns (address);
@@ -126,7 +126,7 @@ contract HectorPayV2 is ContextUpgradeable, BoringBatchable {
     function initialize() external initializer {
         token = IERC20(Factory(msg.sender).parameter());
         uint8 tokenDecimals = IERC20Metadata(address(token)).decimals();
-        DECIMALS_DIVISOR = 10**(20 - tokenDecimals);
+        DECIMALS_DIVISOR = 10 ** (20 - tokenDecimals);
     }
 
     function getStreamId(
@@ -140,10 +140,9 @@ contract HectorPayV2 is ContextUpgradeable, BoringBatchable {
             keccak256(abi.encodePacked(from, to, amountPerSec, starts, ends));
     }
 
-    function _updatePayer(address _payer)
-        private
-        returns (Payer storage payer)
-    {
+    function _updatePayer(
+        address _payer
+    ) private returns (Payer storage payer) {
         payer = payers[_payer];
         unchecked {
             uint256 streamed = (block.timestamp - uint256(payer.lastUpdate)) *
@@ -163,10 +162,9 @@ contract HectorPayV2 is ContextUpgradeable, BoringBatchable {
         emit UpdatePayer(_payer);
     }
 
-    function _updateStream(bytes32 streamId)
-        private
-        returns (Stream storage stream)
-    {
+    function _updateStream(
+        bytes32 streamId
+    ) private returns (Stream storage stream) {
         stream = streams[streamId];
         Payer storage payer = _updatePayer(stream.from);
 
@@ -683,11 +681,9 @@ contract HectorPayV2 is ContextUpgradeable, BoringBatchable {
     //     emit PayerWithdraw(msg.sender, toSend);
     // }
 
-    function withdrawablePayer(address from)
-        external
-        view
-        returns (bool isSufficient, uint256 amount)
-    {
+    function withdrawablePayer(
+        address from
+    ) external view returns (bool isSufficient, uint256 amount) {
         Payer memory payer = payers[from];
 
         if (payer.totalDeposited < payer.totalCommitted) {
