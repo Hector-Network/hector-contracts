@@ -5,20 +5,4 @@ interface IHectorPay {
     function activeStreamsByRemoveEnded(
         address from
     ) external returns (uint256 count);
-
-    function pauseStreamBySubscription(
-        address from,
-        address to,
-        uint256 amountPerSec,
-        uint48 starts,
-        uint48 ends
-    ) external;
-
-    function resumeStreamBySubscription(
-        address from,
-        address to,
-        uint256 amountPerSec,
-        uint48 starts,
-        uint48 ends
-    ) external;
 }

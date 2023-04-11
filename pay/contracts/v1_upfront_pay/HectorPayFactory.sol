@@ -12,7 +12,6 @@ import {HectorPay} from './HectorPay.sol';
 
 error INVALID_ADDRESS();
 error INVALID_PARAM();
-error INVALID_MODERATOR();
 
 contract HectorPayFactory is IHectorPayFactory, Ownable {
     /* ======== STORAGE ======== */
@@ -28,14 +27,12 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
 
     address public hectorPayLogic;
     address public upgradeableAdmin;
-    address public subscription;
+    address public validator;
 
     address public parameter;
     uint256 public getHectorPayContractCount;
     address[1000000000] public getHectorPayContractByIndex;
     mapping(address => address) public getHectorPayContractByToken;
-
-    mapping(address => bool) public moderators;
 
     /* ======== EVENTS ======== */
 
@@ -43,29 +40,12 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(
-        address _hectorPayLogic,
-        address _upgradeableAdmin,
-        address _subscription
-    ) {
-        if (
-            _hectorPayLogic == address(0) ||
-            _upgradeableAdmin == address(0) ||
-            _subscription == address(0)
-        ) revert INVALID_ADDRESS();
+    constructor(address _hectorPayLogic, address _upgradeableAdmin) {
+        if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
+            revert INVALID_ADDRESS();
 
         hectorPayLogic = _hectorPayLogic;
         upgradeableAdmin = _upgradeableAdmin;
-        subscription = _subscription;
-
-        moderators[msg.sender] = true;
-    }
-
-    /* ======== MODIFIER ======== */
-
-    modifier onlyMod() {
-        if (!moderators[msg.sender]) revert INVALID_MODERATOR();
-        _;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -80,20 +60,11 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
         upgradeableAdmin = _upgradeableAdmin;
     }
 
-    function setSubscription(address _subscription) external onlyOwner {
-        if (_subscription == address(0)) revert INVALID_ADDRESS();
-        subscription = _subscription;
+    function setValidator(address _validator) external onlyOwner {
+        validator = _validator;
     }
 
-    function setModerator(
-        address _moderator,
-        bool _approved
-    ) external onlyOwner {
-        if (_moderator == address(0)) revert INVALID_ADDRESS();
-        moderators[_moderator] = _approved;
-    }
-
-    /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
+    /* ======== VALIDATOR FUNCTIONS ======== */
 
     function activeStreamsByRemoveEnded(
         address from
@@ -104,15 +75,8 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
         }
     }
 
-    /* ======== USER FUNCTIONS ======== */
+    /* ======== PUBLIC FUNCTIONS ======== */
 
-    /**
-        @notice Create a new Hector Pay Streaming instance for `_token`
-        @dev Instances are created deterministically via CREATE2 and duplicate
-            instances will cause a revert
-        @param _token The ERC20 token address for which a Hector Pay contract should be deployed
-        @return hectorPayContract The address of the newly created Hector Pay contract
-      */
     function createHectorPayContract(
         address _token
     ) external returns (address hectorPayContract) {
@@ -147,44 +111,9 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
 
     /* ======== VIEW FUNCTIONS ======== */
 
-    /**
-      @notice Query the address of the Hector Pay contract for `_token` and whether it is deployed
-      @param _token An ERC20 token address
-      @return isDeployed Boolean denoting whether the contract is currently deployed
-      */
     function isDeployedHectorPayContractByToken(
         address _token
     ) external view returns (bool isDeployed) {
         isDeployed = getHectorPayContractByToken[_token] != address(0);
-    }
-
-    /* ======== SUBSCRIPTION POLICY FUNCTIONS ======== */
-
-    function pauseStreams(Stream[] calldata streams) external {
-        uint256 length = streams.length;
-        for (uint256 i = 0; i < length; i++) {
-            Stream memory stream = streams[i];
-            IHectorPay(stream.payContract).pauseStreamBySubscription(
-                stream.from,
-                stream.to,
-                stream.amountPerSec,
-                stream.starts,
-                stream.ends
-            );
-        }
-    }
-
-    function resumeStreams(Stream[] calldata streams) external {
-        uint256 length = streams.length;
-        for (uint256 i = 0; i < length; i++) {
-            Stream memory stream = streams[i];
-            IHectorPay(stream.payContract).resumeStreamBySubscription(
-                stream.from,
-                stream.to,
-                stream.amountPerSec,
-                stream.starts,
-                stream.ends
-            );
-        }
     }
 }

@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 interface IHectorPayFactory {
     function parameter() external view returns (address);
 
-    function subscription() external view returns (address);
+    function validator() external view returns (address);
 
     function activeStreamsByRemoveEnded(
         address from

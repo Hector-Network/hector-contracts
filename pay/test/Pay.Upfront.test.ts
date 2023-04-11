@@ -9,6 +9,7 @@ import {
   HectorPayFactory,
   HectorPay,
   RewardToken,
+  HectorPayValidator,
 } from '../types';
 
 describe('HectorUpfrontPay', function () {
@@ -30,6 +31,8 @@ describe('HectorUpfrontPay', function () {
   let hectorPayFactory: HectorPayFactory;
   let hectorPayLogic: HectorPay;
   let hectorPay: HectorPay;
+
+  let hectorPayValidator: HectorPayValidator;
 
   let oneHour = 3600 * 1;
   let twoHour = 3600 * 2;
@@ -115,8 +118,7 @@ describe('HectorUpfrontPay', function () {
     );
     hectorPayFactory = (await HectorPayFactory.deploy(
       hectorPayLogic.address,
-      upgradeableAdmin.address,
-      hectorSubscription.address
+      upgradeableAdmin.address
     )) as HectorPayFactory;
 
     await hectorPayFactory.createHectorPayContract(hectorToken.address);
@@ -124,6 +126,17 @@ describe('HectorUpfrontPay', function () {
       'HectorPay',
       await hectorPayFactory.getHectorPayContractByToken(hectorToken.address)
     )) as HectorPay;
+
+    /// Validator ///
+    const HectorPayValidator = await ethers.getContractFactory(
+      'HectorPayValidator'
+    );
+    hectorPayValidator = (await HectorPayValidator.deploy(
+      hectorSubscription.address,
+      hectorPayFactory.address
+    )) as HectorPayValidator;
+
+    hectorPayFactory.setValidator(hectorPayValidator.address);
 
     /// TOKEN ///
     await hectorToken.mint(payer.address, utils.parseEther('200000000000000'));
@@ -161,9 +174,9 @@ describe('HectorUpfrontPay', function () {
         upgradeableAdmin.address
       );
     });
-    it('pay subscription', async function () {
-      expect(await hectorPayFactory.subscription()).equal(
-        hectorSubscription.address
+    it('pay validator', async function () {
+      expect(await hectorPayFactory.validator()).equal(
+        hectorPayValidator.address
       );
     });
     it('pay contract', async function () {
@@ -419,9 +432,6 @@ describe('HectorUpfrontPay', function () {
       expect(stream.lastPaid).equal(0);
       expect(stream.lastPaused).equal(block.timestamp);
 
-      let paused = await hectorPay.isPausedBySubscription(streamId);
-      expect(paused).equal(false);
-
       expect(await hectorToken.balanceOf(payee.address)).equal(
         decimalAmount.div(divisor)
       );
@@ -445,59 +455,6 @@ describe('HectorUpfrontPay', function () {
           .connect(payer)
           .pauseStream(payee.address, amountPerSec, starts, ends + 10)
       ).to.be.revertedWith('INACTIVE_STREAM()');
-    });
-
-    it('pause inactive subscription', async function () {
-      await hectorSubscription.connect(payer).cancelSubscription();
-      await increaseTime(oneHour);
-
-      let tx = await hectorPay.pauseStreamBySubscription(
-        payer.address,
-        payee.address,
-        amountPerSec,
-        starts,
-        ends
-      );
-      let txReceipt = await hectorPay.provider.getTransactionReceipt(tx.hash);
-      let block = await hectorPay.provider.getBlock(txReceipt.blockNumber);
-      let decimalAmount = amountPerSec.mul(ends - starts);
-
-      await expect(tx)
-        .to.emit(hectorPay, 'StreamPaused')
-        .withArgs(
-          payer.address,
-          payee.address,
-          amountPerSec,
-          starts,
-          ends,
-          streamId
-        );
-      await expect(tx)
-        .to.emit(hectorPay, 'Withdraw')
-        .withArgs(
-          payer.address,
-          payee.address,
-          amountPerSec,
-          starts,
-          ends,
-          ends,
-          streamId,
-          decimalAmount
-        );
-
-      let info = await hectorPay.payers(payer.address);
-      expect(info.totalWithdrawn).equal(decimalAmount);
-
-      let stream = await hectorPay.streams(streamId);
-      expect(stream.lastPaid).equal(0);
-      expect(stream.lastPaused).equal(block.timestamp);
-
-      let paused = await hectorPay.isPausedBySubscription(streamId);
-      expect(paused).equal(true);
-
-      expect(await hectorToken.balanceOf(payee.address)).equal(
-        decimalAmount.div(divisor)
-      );
     });
   });
 
@@ -568,9 +525,6 @@ describe('HectorUpfrontPay', function () {
       let stream = await hectorPay.streams(streamId);
       expect(stream.lastPaid).equal(block.timestamp);
       expect(stream.lastPaused).equal(0);
-
-      let paused = await hectorPay.isPausedBySubscription(streamId);
-      expect(paused).equal(false);
     });
 
     it('resume stream again', async function () {
@@ -595,71 +549,6 @@ describe('HectorUpfrontPay', function () {
           .connect(payer)
           .resumeStream(payee.address, amountPerSec, starts, ends + 10)
       ).to.be.revertedWith('ACTIVE_STREAM()');
-    });
-
-    it('resume paused by subscription', async function () {
-      ends += oneHour;
-      await hectorPay
-        .connect(payer)
-        .createStream(payee.address, amountPerSec, starts, ends);
-      streamId = await hectorPay.getStreamId(
-        payer.address,
-        payee.address,
-        amountPerSec,
-        starts,
-        ends
-      );
-      await hectorSubscription.connect(payer).cancelSubscription();
-      await increaseTime(oneHour);
-      let tx = await hectorPay.pauseStreamBySubscription(
-        payer.address,
-        payee.address,
-        amountPerSec,
-        starts,
-        ends
-      );
-      let txReceipt = await hectorPay.provider.getTransactionReceipt(tx.hash);
-      let block = await hectorPay.provider.getBlock(txReceipt.blockNumber);
-      pausedAt = block.timestamp;
-      await hectorSubscription
-        .connect(payer)
-        .deposit(hectorToken.address, amount0);
-      await hectorSubscription.connect(payer).createSubscription(1);
-
-      tx = await hectorPay.resumeStreamBySubscription(
-        payer.address,
-        payee.address,
-        amountPerSec,
-        starts,
-        ends
-      );
-      txReceipt = await hectorPay.provider.getTransactionReceipt(tx.hash);
-      block = await hectorPay.provider.getBlock(txReceipt.blockNumber);
-
-      await expect(tx)
-        .to.emit(hectorPay, 'StreamResumed')
-        .withArgs(
-          payer.address,
-          payee.address,
-          amountPerSec,
-          starts,
-          ends,
-          streamId
-        );
-
-      let pausedAmount = amountPerSec.mul(block.timestamp - pausedAt);
-
-      let info = await hectorPay.payers(payer.address);
-      expect(info.totalCommitted).equal(
-        totalCommitted.add(amountPerSec.mul(ends - starts).sub(pausedAmount))
-      );
-
-      let stream = await hectorPay.streams(streamId);
-      expect(stream.lastPaid).equal(block.timestamp);
-      expect(stream.lastPaused).equal(0);
-
-      let paused = await hectorPay.isPausedBySubscription(streamId);
-      expect(paused).equal(false);
     });
   });
 
