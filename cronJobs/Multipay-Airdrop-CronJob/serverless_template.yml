@@ -1,0 +1,36 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: ReleaseAirdrops
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-1
+  timeout: 30
+  environment:
+    FTM_RPC_URL: https://rpc.ftm.tools
+    BSC_RPC_URL: https://bsc-dataseed.binance.org
+    ETH_RPC_URL: https://eth.llamarpc.com
+    ARBITRUM_RPC_URL: https://rpc.ankr.com/arbitrum
+    OPTIMISM_RPC_URL: https://mainnet.optimism.io
+    MATIC_RPC_URL: https://polygon.llamarpc.com
+    AVAX_RPC_URL: https://api.avax.network/ext/bc/C/rpc
+    TEST_RPC_URL: https://rpc.ankr.com/fantom_testnet
+    API_URL: https://rpc.ankr.com/fantom_testnet
+    DEFAULT_GAS_PRICE: 9000000000
+    GAS_LIMIT: 900000
+    PRIVATE_KEY: "PRIVATE_KEY"
+custom:
+  # See example: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions
+  releaseAirdropSchedule: cron(0 60 * * * ? *) # Run EVERY HOUR
+
+functions:
+  releaseAirdrops:
+    handler: functions/releaseAirdrops.handler
+    events:
+      - schedule: ${self:custom.releaseAirdropSchedule}
+
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin
