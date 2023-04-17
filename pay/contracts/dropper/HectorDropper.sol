@@ -300,4 +300,21 @@ contract HectorDropper is
 
         emit AirdropReleased(from, index);
     }
+
+    function releaseAirdrops(
+        address[] calldata froms,
+        uint256[] calldata indexes
+    ) external {
+        uint256 length = froms.length;
+        if (length == 0 || length != indexes.length) revert INVALID_LENGTH();
+
+        for (uint256 i = 0; i < length; i++) {
+            address from = froms[i];
+            uint256 index = indexes[i];
+
+            _releaseAirdrop(from, index);
+
+            emit AirdropReleased(from, index);
+        }
+    }
 }
