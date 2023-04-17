@@ -242,10 +242,10 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitSeconds(10);
     try {
       await hre.run('verify:verify', {
-        address: paySubscription.address,
+        address: payValidator.address,
         contract:
           'contracts/HectorPay/validator/HectorPayValidator.sol:HectorPayValidator',
-        constructorArguments: subscriptionParams,
+        constructorArguments: validatorParams,
       });
     } catch (_) {}
   }
