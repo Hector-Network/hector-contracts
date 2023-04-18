@@ -12,6 +12,7 @@ import {HectorDropper} from './HectorDropper.sol';
 
 error INVALID_ADDRESS();
 error INVALID_PARAM();
+error INVALID_LENGTH();
 
 contract HectorDropperFactory is IHectorDropperFactory, Ownable {
     /* ======== STORAGE ======== */
@@ -106,5 +107,25 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
         address _token
     ) external view returns (bool isDeployed) {
         isDeployed = getHectorDropperContractByToken[_token] != address(0);
+    }
+
+    /* ======== PUBLIC FUNCTIONS ======== */
+
+    function releaseAirdrops(
+        address[] calldata dropperContracts,
+        address[][] calldata froms,
+        uint256[][] calldata indexes
+    ) external {
+        uint256 length = dropperContracts.length;
+
+        if (length != froms.length || length != indexes.length)
+            revert INVALID_LENGTH();
+
+        for (uint256 i = 0; i < length; i++) {
+            IHectorDropper(dropperContracts[i]).releaseAirdrops(
+                froms[i],
+                indexes[i]
+            );
+        }
     }
 }
