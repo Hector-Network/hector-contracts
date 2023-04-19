@@ -4,8 +4,11 @@
   "description": "Run Multipay Airdrop cronjob",
   "author": "Michael Nguyen",
   "dependencies": {
+    "apollo-link": "^1.2.14",
+    "apollo-link-http": "^1.5.17",
     "dotenv": "^16.0.3",
     "ethers": "^5.5.4",
+    "graphql": "^16.6.0",
     "node-fetch": "^2.6.7",
     "serverless": "^3.23.0"
   },
