@@ -44,7 +44,6 @@ contract HectorDropper is
         uint256 amountPerRecipient;
         uint48 releaseTime;
         AirdropStatus status;
-        uint256 fee;
     }
 
     /// @notice dropper factory
@@ -58,12 +57,6 @@ contract HectorDropper is
 
     /// @notice airdrop token
     IERC20 public token;
-
-    /// @notice treasury wallet
-    address public treasury;
-
-    /// @notice airdrop fee
-    uint256 public fee;
 
     /// @notice version
     string public constant VERSION = 'v1.0';
@@ -98,12 +91,7 @@ contract HectorDropper is
     function initialize() external initializer {
         factory = IHectorDropperFactory(msg.sender);
 
-        address _token;
-        (_token, treasury, fee) = abi.decode(
-            factory.parameter(),
-            (address, address, uint256)
-        );
-        token = IERC20(_token);
+        token = IERC20(factory.parameter());
 
         _transferOwnership(factory.factoryOwner());
         __ReentrancyGuard_init();
@@ -127,21 +115,11 @@ contract HectorDropper is
 
     /* ======== POLICY FUNCTIONS ======== */
 
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert INVALID_ADDRESS();
-        treasury = _treasury;
-    }
-
-    function setFee(uint256 _fee) external onlyOwner {
-        if (_fee == 0) revert INVALID_AMOUNT();
-        fee = _fee;
-    }
-
     function takeFee() external onlyOwner {
         uint256 balance = address(this).balance;
 
         if (balance > 0) {
-            (bool success, ) = treasury.call{value: balance}('');
+            (bool success, ) = factory.treasury().call{value: balance}('');
             if (!success) revert FEE_TRANSFER_FAILED();
         }
     }
@@ -181,7 +159,7 @@ contract HectorDropper is
         if (length == 0) revert INVALID_LENGTH();
         if (amountPerRecipient == 0) revert INVALID_AMOUNT();
         if (releaseTime <= block.timestamp) revert INVALID_TIME();
-        if (msg.value < fee) revert INSUFFICIENT_FEE();
+        if (msg.value < factory.fee()) revert INSUFFICIENT_FEE();
 
         for (uint256 i = 0; i < length; i++) {
             if (tos[i] == address(0)) revert INVALID_ADDRESS();
@@ -198,7 +176,6 @@ contract HectorDropper is
         airdrop.amountPerRecipient = amountPerRecipient;
         airdrop.releaseTime = releaseTime;
         airdrop.status = AirdropStatus.InProgress;
-        airdrop.fee = fee;
 
         // fund assets
         IERC20(token).safeTransferFrom(
@@ -208,7 +185,7 @@ contract HectorDropper is
         );
 
         // take fee
-        (bool success, ) = treasury.call{value: fee}('');
+        (bool success, ) = factory.treasury().call{value: factory.fee()}('');
         if (!success) revert FEE_TRANSFER_FAILED();
     }
 
@@ -227,10 +204,6 @@ contract HectorDropper is
             msg.sender,
             airdrop.amountPerRecipient * airdrop.tos.length
         );
-
-        // refund fee
-        (bool success, ) = (msg.sender).call{value: airdrop.fee}('');
-        if (!success) revert FEE_TRANSFER_FAILED();
     }
 
     function _releaseAirdrop(address from, uint256 index) internal {

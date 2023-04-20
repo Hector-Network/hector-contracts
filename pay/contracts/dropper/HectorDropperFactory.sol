@@ -11,6 +11,7 @@ import {IHectorDropperFactory} from '../interfaces/IHectorDropperFactory.sol';
 import {HectorDropper} from './HectorDropper.sol';
 
 error INVALID_ADDRESS();
+error INVALID_AMOUNT();
 error INVALID_PARAM();
 error INVALID_LENGTH();
 
@@ -21,7 +22,10 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
     address public upgradeableAdmin;
     address public validator;
 
-    bytes public parameter;
+    address public treasury;
+    uint256 public fee;
+
+    address public parameter;
     uint256 public getHectorDropperContractCount;
     address[1000000000] public getHectorDropperContractByIndex;
     mapping(address => address) public getHectorDropperContractByToken;
@@ -32,13 +36,23 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(address _hectorDropperLogic, address _upgradeableAdmin) {
+    constructor(
+        address _hectorDropperLogic,
+        address _upgradeableAdmin,
+        address _treasury,
+        uint256 _fee
+    ) {
         if (
-            _hectorDropperLogic == address(0) || _upgradeableAdmin == address(0)
+            _hectorDropperLogic == address(0) ||
+            _upgradeableAdmin == address(0) ||
+            _treasury == address(0)
         ) revert INVALID_ADDRESS();
+        if (_fee == 0) revert INVALID_AMOUNT();
 
         hectorDropperLogic = _hectorDropperLogic;
         upgradeableAdmin = _upgradeableAdmin;
+        treasury = _treasury;
+        fee = _fee;
     }
 
     /* ======== POLICY FUNCTIONS ======== */
@@ -59,17 +73,37 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
         validator = _validator;
     }
 
-    function createHectorDropperContract(
-        address _token,
-        address _treasury,
-        uint256 _fee
-    ) external onlyOwner returns (address hectorDropperContract) {
-        if (_token == address(0)) revert INVALID_ADDRESS();
+    function setTreasury(address _treasury) external onlyOwner {
         if (_treasury == address(0)) revert INVALID_ADDRESS();
-        if (_fee == 0) revert INVALID_PARAM();
+        treasury = _treasury;
+    }
+
+    function setFee(uint256 _fee) external onlyOwner {
+        if (_fee == 0) revert INVALID_AMOUNT();
+        fee = _fee;
+    }
+
+    /* ======== VIEW FUNCTIONS ======== */
+
+    function factoryOwner() external view returns (address) {
+        return owner();
+    }
+
+    function isDeployedHectorDropperContractByToken(
+        address _token
+    ) external view returns (bool isDeployed) {
+        isDeployed = getHectorDropperContractByToken[_token] != address(0);
+    }
+
+    /* ======== PUBLIC FUNCTIONS ======== */
+
+    function createHectorDropperContract(
+        address _token
+    ) external returns (address hectorDropperContract) {
+        if (_token == address(0)) revert INVALID_ADDRESS();
 
         // set the parameter storage slot so the contract can query it
-        parameter = abi.encode(_token, _treasury, _fee);
+        parameter = _token;
         // use CREATE2 so we can get a deterministic address based on the token
         hectorDropperContract = address(
             new TransparentUpgradeableProxy{
@@ -96,20 +130,6 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
 
         emit HectorDropperCreated(_token, hectorDropperContract);
     }
-
-    /* ======== VIEW FUNCTIONS ======== */
-
-    function factoryOwner() external view returns (address) {
-        return owner();
-    }
-
-    function isDeployedHectorDropperContractByToken(
-        address _token
-    ) external view returns (bool isDeployed) {
-        isDeployed = getHectorDropperContractByToken[_token] != address(0);
-    }
-
-    /* ======== PUBLIC FUNCTIONS ======== */
 
     function releaseAirdrops(
         address[] calldata dropperContracts,
