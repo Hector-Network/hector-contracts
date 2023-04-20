@@ -44,7 +44,7 @@ export const DROPPER_SUBGRAPH = [
   }, // Fantom
   {
     id: 0xfa2,
-    url: "https://thegraph.com/hosted-service/subgraph/bejaxer/hector-dropper-ftmtestnet",
+    url: "https://thegraph.com/hosted-service/subgraph/bejaxer/hectormultipaytest",
   }, // Fantom Testnet
   { id: 0x505, url: "" }, // Moonriver
   { id: 0x89, url: "" }, // Polygon

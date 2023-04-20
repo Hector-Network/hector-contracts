@@ -49,11 +49,21 @@ export type Airdrop = {
   fee: number;
 };
 
+export type AirdropSimplified = {
+  from: string;
+  index: number;
+};
+
 enum AirdropStatus {
   InProgress,
   Completed,
   Cancelled,
 }
+
+export type AirdropInfo = {
+  address: string; //hectorDropperContract
+  airdrops: AirdropSimplified[];
+};
 
 export type SubscriptionsData = any;
 export type StreamData = any;

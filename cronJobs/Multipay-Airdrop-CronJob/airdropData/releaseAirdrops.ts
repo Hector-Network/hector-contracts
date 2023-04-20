@@ -5,7 +5,7 @@ import { createHttpLink } from "apollo-link-http";
 import gql from "graphql-tag";
 import { Chain, CHAINS } from "../utils/chain";
 import { getCurrentTimeInSecond, getDropperSubgraphURL } from "../utils/util";
-import { Airdrop } from "./interface";
+import { Airdrop, AirdropInfo } from "./interface";
 
 async function callReleaseAirdrops(
   chain: Chain,
@@ -35,39 +35,49 @@ export default async function (chainId: number) {
     //iterate through each dropper for a list of Inprogress airdrop
     //call releaseAirdrops
 
-    // while (1) {
-    //   const filteredAirdropData: Airdrop = await filterAirdrops(
-    //     chain,
-    //     perPage,
-    //     dataCount,
-    //     currentTimestamp,
-    //     "lte"
-    //   );
-    //   const subscriptionInfos: SubscriptionInfo[] =
-    //     filteredAirdropData?.data?.hectorSubscriptionContracts;
+    while (1) {
+      const filteredAirdropData = await filterAirdrops(
+        chain,
+        perPage,
+        dataCount
+      );
 
-    //   let contracts: string[] = subscriptionInfos.map(
-    //     (contract) => contract.address
-    //   );
-    //   let users: string[] = subscriptionInfos.map((contract) =>
-    //     contract.subscriptions.map((subscription) => subscription.user.address)
-    //   );
+      console.log("filteredAirdropData", filteredAirdropData);
+      const airdropInfos: AirdropInfo[] =
+        filteredAirdropData?.data?.hectorDropperContracts;
 
-    //   let usersLength = 0;
-    //   for (let i = 0; i < users.length; i++) {
-    //     usersLength += users[i].length;
-    //   }
+      console.log("airdropInfos", airdropInfos);
 
-    //   if (contracts.length > 0 && usersLength > 0) {
-    //     const result = await callReleaseAirdrops(chain, users, contracts);
-    //     if (result == false) break;
-    //   } else {
-    //     break;
-    //   }
+      let contracts: string[] = airdropInfos.map(
+        (contract) => contract.address
+      );
+      let users = airdropInfos.map((contract) =>
+        contract.airdrops.map((airdrop) => airdrop.from.address)
+      );
+      let indexes = airdropInfos.map((contract) =>
+        contract.airdrops.map((airdrop) => airdrop.index)
+      );
 
-    //   dataCount += perPage;
-    // }
+      console.log("contracts", contracts);
+      console.log("users", users);
+      console.log("indexes", indexes);
+
+      let usersLength = 0;
+      for (let i = 0; i < users.length; i++) {
+        usersLength += users[i].length;
+      }
+
+      if (contracts.length > 0 && usersLength > 0) {
+        //const result = await callReleaseAirdrops(chain, users, contracts);
+        //if (result == false) break;
+      } else {
+        break;
+      }
+
+      dataCount += perPage;
+    }
   } catch (error) {
+    console.log(error);
     return;
   }
 }
@@ -75,51 +85,23 @@ export default async function (chainId: number) {
 export async function filterAirdrops(
   chain: Chain,
   first: number,
-  skip: number,
-  currentTimestamp: number,
-  expiredOptions: string
+  skip: number
 ) {
   const uri = getDropperSubgraphURL(chain);
   const link = createHttpLink({ uri, fetch });
-  const query1: string = `
+  const query: string = `
     query {
-            hectorDropperContracts(first: 5) {
-              id
+            hectorDropperContracts {
               address
-              factory {
-                id
-              }
-              token {
-                id
-              }
-              airdrops(first: 10) {
+              airdrops(first: ${first}, skip: ${skip}, where: {status: "0"}) {
                 from {
                   address
                 }
-                tos {
-                  address
-                }
-                amountPerRecipient
-                releaseTime
-                status
+                index
               }
             }
         }`;
-  const query: string = `
-    query {
-            hectorSubscriptionContracts {
-              address
-              product
-              subscriptions(first: ${first}, skip: ${skip}, where: {expiredAt_${expiredOptions}: ${currentTimestamp},  plan_: {id_gt: "0"}}) {
-                contract {
-                  address
-                }
-                user {
-                  address
-                }
-              }
-            }
-        }`;
+
   const operation = {
     query: gql(query),
   };
