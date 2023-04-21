@@ -1,7 +1,5 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
-import { ethers } from 'hardhat';
-import { constants } from 'ethers';
 import { waitSeconds } from '../helper/helpers';
 
 const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
@@ -9,27 +7,18 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deploy } = deployments;
   const [deployer] = await ethers.getSigners();
 
-  /// Token Address: Mainnet
-  const wbtcTokenAddress = '0x321162cd933e2be498cd2267a90534a804051b11';
-  const wethTokenAddress = '0x74b23882a30290451a17c44f4f05243b6b58c76d';
-  const wftmTokenAddress = '0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83';
-  const fraxTokenAddress = '0xdc301622e621166bd8e82f2ca0a26c13ad0be355';
-  const booTokenAddress = '0x841fad6eae12c286d1fd18d1d525dffa75c7effe';
-  const spiritTokenAddress = '0x5cc61a78f164885776aa610fb0fe1257df78e59b';
-  const geistTokenAddress = '0xd8321aa83fb0a4ecd6348d4577431310a6e0814d';
-  const lqdrTokenAddress = '0x10b620b2dbac4faa7d7ffd71da486f5d44cd86f9';
-  const hectorTokenAddress = '0x5c4fdfc5233f935f20d2adba572f770c2e377ab0';
-  const daiTokenAddress = '0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e';
-  const usdcTokenAddress = '0x04068da6c83afcfa0e13ba15a6696662335d5b75';
-  const usdtTokenAddress = '0x049d68029688eabf473097a2fc38ef61633a3c7a';
-  const busdTokenAddress = '0x4fabb145d64652a948d72533023f6e7a623c7c53';
-  const torTokenAddress = '0x74e23df9110aa9ea0b6ff2faee01e740ca1c642e';
+  /// Token Address: FTM Testnet
+  const hectorTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+  const torTokenAddress = '0xCe5b1b90a1E1527E8B82a9434266b2d6B72cc70b';
+  const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
-  /// Configuration: Mainnet
-  const multiSigWallet = '0x2ba5F2ce103A45e278D7Bc99153190eD6E9c4A96';
-  const treasury = '0x2ba5F2ce103A45e278D7Bc99153190eD6E9c4A96';
-  const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
+  /// Token Address: BSC Testnet
+  // const hectorTokenAddress = '0x7400E9838BAD5cfFe1C4dc0236Fce2E725C73d42';
+  // const torTokenAddress = '0x205F190776C8d466727bD0Cac6D1B564DC3C8Ea9';
+  // const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
+
   const hectorMultiPayProduct = 'Hector Multi Pay';
+  const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
   /// SUBSCRIPTION ///
   const subscriptionLogic = await deploy('HectorSubscription', {
@@ -49,17 +38,13 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer
   );
 
-  await waitSeconds(10);
-  try {
-    (
-      await subscriptionFactoryContract.createHectorSubscriptionContract(
-        hectorMultiPayProduct,
-        treasury
-      )
-    ).wait();
-  } catch (_) {}
+  await (
+    await subscriptionFactoryContract.createHectorSubscriptionContract(
+      hectorMultiPayProduct,
+      treasury
+    )
+  ).wait();
 
-  await waitSeconds(10);
   const paySubscription =
     await subscriptionFactoryContract.getHectorSubscriptionContractByName(
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
@@ -174,14 +159,8 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     amount: 0,
     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
   };
-  await waitSeconds(10);
-  try {
-    (await paySubscriptionContract.appendPlan(plans)).wait();
-  } catch (_) {}
-  await waitSeconds(10);
-  try {
-    (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
-  } catch (_) {}
+  await (await paySubscriptionContract.appendPlan(plans)).wait();
+  await (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
 
   /// MULTI PAY ///
   const payLogic = await deploy('HectorPay', {
@@ -189,9 +168,8 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     args: [],
     log: true,
   });
-  await waitSeconds(5);
 
-  const payParams = [payLogic.address, upgradeableAdmin, paySubscription];
+  const payParams = [payLogic.address, deployer.address];
   const payFactory = await deploy('HectorPayFactory', {
     from: deployer.address,
     args: payParams,
@@ -202,79 +180,24 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     deployer
   );
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wbtcTokenAddress)).wait();
-  // } catch (_) {}
+  await (
+    await payFactoryContract.createHectorPayContract(hectorTokenAddress)
+  ).wait();
+  await (
+    await payFactoryContract.createHectorPayContract(torTokenAddress)
+  ).wait();
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wethTokenAddress)).wait();
-  // } catch (_) {}
+  /// VALIDATOR ///
+  const validatorParams = [paySubscription, payFactory.address];
+  const payValidator = await deploy('HectorPayValidator', {
+    from: deployer.address,
+    args: validatorParams,
+    log: true,
+  });
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wftmTokenAddress)).wait();
-  // } catch (_) {}
+  await (await payFactoryContract.setValidator(payValidator.address)).wait();
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(fraxTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(booTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (
-  //     await payFactoryContract.createHectorPayContract(spiritTokenAddress)
-  //   ).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (
-  //     await payFactoryContract.createHectorPayContract(geistTokenAddress)
-  //   ).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(lqdrTokenAddress)).wait();
-  // } catch (_) {}
-
-  await waitSeconds(10);
-  try {
-    (
-      await payFactoryContract.createHectorPayContract(hectorTokenAddress)
-    ).wait();
-  } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(daiTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(usdcTokenAddress)).wait();
-  // } catch (_) {}
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(usdtTokenAddress)).wait();
-  // } catch (_) {}
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(busdTokenAddress)).wait();
-  // } catch (_) {}
-  await waitSeconds(10);
-  try {
-    await payFactoryContract.createHectorPayContract(torTokenAddress);
-  } catch (_) {}
-
+  /// VERIFY ///
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
     console.log('=====> Verifing ....');
@@ -315,9 +238,19 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         constructorArguments: [],
       });
     } catch (_) {}
+
+    await waitSeconds(10);
+    try {
+      await hre.run('verify:verify', {
+        address: payValidator.address,
+        contract:
+          'contracts/HectorPay/validator/HectorPayValidator.sol:HectorPayValidator',
+        constructorArguments: validatorParams,
+      });
+    } catch (_) {}
   }
 };
 
 export default deployPay;
-deployPay.tags = ['Pay'];
+deployPay.tags = ['PayTest'];
 deployPay.dependencies = [];
