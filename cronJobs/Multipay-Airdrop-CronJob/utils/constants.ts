@@ -1,95 +1,28 @@
 // Subgraphs
-export const MULTIPAY_SUBGRAPH = [
-  { id: 0xa86a, url: "" }, // Avalanche
-  { id: 0x38, url: "" }, // Binance
-  { id: 0x61, url: "" }, // Binance Testnet
-  { id: 0x1, url: "" }, // Ethereum
-  {
-    id: 0xfa,
-    url: "https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom",
-  }, // Fantom
-  {
-    id: 0xfa2,
-    url: "https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest",
-  }, // Fantom Testnet
-  { id: 0x505, url: "" }, // Moonriver
-  { id: 0x89, url: "" }, // Polygon
-];
-
-export const SUBSCRIPTION_SUBGRAPH = [
-  { id: 0xa86a, url: "" }, // Avalanche
-  { id: 0x38, url: "" }, // Binance
-  { id: 0x61, url: "" }, // Binance Testnet
-  { id: 0x1, url: "" }, // Ethereum
-  {
-    id: 0xfa,
-    url: "https://api.thegraph.com/subgraphs/name/hector-network-devs/hectorsubscription-fantom",
-  }, // Fantom
-  {
-    id: 0xfa2,
-    url: "https://api.thegraph.com/subgraphs/name/bejaxer/hector-subscription-ftmtestnet",
-  }, // Fantom Testnet
-  { id: 0x505, url: "" }, // Moonriver
-  { id: 0x89, url: "" }, // Polygon
-];
-
 export const DROPPER_SUBGRAPH = [
-  { id: 0xa86a, url: "" }, // Avalanche
-  { id: 0x38, url: "" }, // Binance
-  { id: 0x61, url: "" }, // Binance Testnet
-  { id: 0x1, url: "" }, // Ethereum
+  { id: 0xa86a, url: process.env.ETH_RPC_URL }, // Avalanche
+  { id: 0x38, url: process.env.BSC_RPC_URL }, // Binance
+  { id: 0x61, url: process.env.BSCTEST_RPC_URL }, // Binance Testnet
+  { id: 0x1, url: process.env.ETH_RPC_URL }, // Ethereum
   {
     id: 0xfa,
-    url: "https://thegraph.com/hosted-service/subgraph/bejaxer/hector-dropper-ftmtestnet",
+    url: process.env.FTM_RPC_URL,
   }, // Fantom
   {
     id: 0xfa2,
-    url: "https://thegraph.com/hosted-service/subgraph/bejaxer/hectormultipaytest",
+    url: process.env.FTMTEST_RPC_URL,
   }, // Fantom Testnet
-  { id: 0x505, url: "" }, // Moonriver
-  { id: 0x89, url: "" }, // Polygon
-];
-
-export const HECTOR_SUBSCRIPTION = [
-  { id: 0xa86a, address: "" }, // Avalanche
-  { id: 0x38, address: "" }, // Binance
-  { id: 0x61, address: "" }, // Binance Testnet
-  { id: 0x1, address: "" }, // Ethereum
-  { id: 0xfa, address: "" }, // Fantom
-  { id: 0xfa2, address: "0x67024C7DFe5b88e8d0d78CFEB3FF61fFB1769828" }, // Fantom Testnet
-  { id: 0x505, address: "" }, // Moonriver
-  { id: 0x89, address: "" }, // Polygon
-];
-
-export const MultiPayFactory = [
-  { id: 0xa86a, address: "" }, // Avalanche
-  { id: 0x38, address: "" }, // Binance
-  { id: 0x61, address: "" }, // Binance Testnet
-  { id: 0x1, address: "" }, // Ethereum
-  { id: 0xfa, address: "0xC63FFe3b18dFC40015b7B191753A3366BA6727f3" }, // Fantom
-  { id: 0xfa2, address: "0x4A898D4505550831260EE5CEA009B984cAcEd353" }, // Fantom Testnet
-  { id: 0x505, address: "" }, // Moonriver
-  { id: 0x89, address: "" }, // Polygon
+  { id: 0x505, url: process.env.MOONRIVER_RPC_URL }, // Moonriver
+  { id: 0x89, url: process.env.POLYGON_RPC_URL }, // Polygon
 ];
 
 export const DROPPER_FACTORY = [
-  { id: 0xa86a, address: "" }, // Avalanche
-  { id: 0x38, address: "" }, // Binance
-  { id: 0x61, address: "" }, // Binance Testnet
-  { id: 0x1, address: "" }, // Ethereum
-  { id: 0xfa, address: "0x99433b50C5bBda1DCF156a031534D04E88255398" }, // Fantom
-  { id: 0xfa2, address: "0x99433b50C5bBda1DCF156a031534D04E88255398" }, // Fantom Testnet
-  { id: 0x505, address: "" }, // Moonriver
-  { id: 0x89, address: "" }, // Polygon
-];
-
-export const HECTOR_DROPPER = [
-  { id: 0xa86a, address: "" }, // Avalanche
-  { id: 0x38, address: "" }, // Binance
-  { id: 0x61, address: "" }, // Binance Testnet
-  { id: 0x1, address: "" }, // Ethereum
-  { id: 0xfa, address: "0x3356b5c256720b15325104e0652429a9e2d51630" }, // Fantom
-  { id: 0xfa2, address: "0x3356b5c256720b15325104e0652429a9e2d51630" }, // Fantom Testnet
-  { id: 0x505, address: "" }, // Moonriver
-  { id: 0x89, address: "" }, // Polygon
+  { id: 0xa86a, address: process.env.DROPPER_FACTORY_AVAX }, // Avalanche
+  { id: 0x38, address: process.env.DROPPER_FACTORY_BSC }, // Binance
+  { id: 0x61, address: process.env.DROPPER_FACTORY_BSCTEST }, // Binance Testnet
+  { id: 0x1, address: process.env.DROPPER_FACTORY_ETH }, // Ethereum
+  { id: 0xfa, address: process.env.DROPPER_FACTORY_FTM }, // Fantom
+  { id: 0xfa2, address: process.env.DROPPER_FACTORY_FTMTEST }, // Fantom Testnet
+  { id: 0x505, address: process.env.DROPPER_FACTORY_MOON }, // Moonriver
+  { id: 0x89, address: process.env.DROPPER_FACTORY_POLYGON }, // Polygon
 ];

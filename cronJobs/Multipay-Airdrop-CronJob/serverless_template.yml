@@ -8,29 +8,39 @@ provider:
   region: us-east-1
   timeout: 30
   environment:
-    FTM_RPC_URL: https://rpc.ftm.tools
-    BSC_RPC_URL: https://bsc-dataseed.binance.org
-    ETH_RPC_URL: https://eth.llamarpc.com
-    ARBITRUM_RPC_URL: https://rpc.ankr.com/arbitrum
-    OPTIMISM_RPC_URL: https://mainnet.optimism.io
-    MATIC_RPC_URL: https://polygon.llamarpc.com
-    AVAX_RPC_URL: https://api.avax.network/ext/bc/C/rpc
-    TEST_RPC_URL: https://rpc.ankr.com/fantom_testnet
-    API_URL: https://rpc.ankr.com/fantom_testnet
-    DEFAULT_GAS_PRICE: 9000000000
+    DROPPER_FACTORY_MOON:
+    DROPPER_FACTORY_AVAX:
+    DROPPER_FACTORY_POLYGON:
+    DROPPER_FACTORY_ETH:
+    DROPPER_FACTORY_BSC:
+    DROPPER_FACTORY_BSCTEST:
+    DROPPER_FACTORY_FTM: 0xE27a4Cd6C8134d79d358B989595A89b3341c498e
+    DROPPER_FACTORY_FTMTEST: 0xE27a4Cd6C8134d79d358B989595A89b3341c498e
+    FTM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    FTMTEST_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    BSC_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    BSCTEST_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    ETH_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    ARBITRUM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    OPTIMISM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    POLYGON_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    AVAX_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    MOONRIVER_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
     GAS_LIMIT: 900000
+    GAS_PREMIUM_FACTOR: 1.15
     PRIVATE_KEY:
 custom:
   # See example: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions
-  releaseAirdropSchedule: cron(0 60 * * * ? *) # Run EVERY HOUR
+  releaseAirdropSchedule: cron(0/60 * * * ? *) # Run EVERY HOUR
 
 functions:
   releaseAirdrop:
     handler: handler.releaseAirdrop
-    #events:
-    #  - schedule: ${self:custom.releaseAirdropSchedule}
+    events:
+      - schedule: ${self:custom.releaseAirdropSchedule}
 
 plugins:
   - serverless-offline
   - serverless-offline-scheduler
   - serverless-mocha-plugin
+  - serverless-plugin-typescript

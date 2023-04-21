@@ -5,14 +5,15 @@ import { createHttpLink } from "apollo-link-http";
 import gql from "graphql-tag";
 import { Chain, CHAINS } from "../utils/chain";
 import { getCurrentTimeInSecond, getDropperSubgraphURL } from "../utils/util";
-import { Airdrop, AirdropInfo } from "./interface";
+import { AirdropInfo } from "./interface";
 
 async function callReleaseAirdrops(
   chain: Chain,
-  froms: string[],
-  indexes: string[]
+  froms: string[][],
+  indexes: string[][],
+  droppperContract: string[]
 ) {
-  const status = await releaseAirdrops(chain, froms, indexes);
+  const status = await releaseAirdrops(chain, froms, indexes, droppperContract);
   if (status == 0x1) {
     return true;
   }
@@ -20,7 +21,7 @@ async function callReleaseAirdrops(
 }
 
 export default async function (chainId: number) {
-  console.log("\nStart Airdrop...\n");
+  console.log(`Initializing Airdrop process on chain ${chainId}...\n`);
   const chain = CHAINS.find((c) => c.id == chainId);
   if (chain == undefined) {
     console.error(`Chain with ID ${chainId} not found.`);
@@ -31,46 +32,49 @@ export default async function (chainId: number) {
     const perPage = 100;
     let dataCount = 0;
 
-    //Get a list of Dropper contract from factory
-    //iterate through each dropper for a list of Inprogress airdrop
-    //call releaseAirdrops
-
     while (1) {
       const filteredAirdropData = await filterAirdrops(
         chain,
         perPage,
-        dataCount
+        dataCount,
+        currentTimestamp,
+        "lte"
       );
 
-      console.log("filteredAirdropData", filteredAirdropData);
       const airdropInfos: AirdropInfo[] =
         filteredAirdropData?.data?.hectorDropperContracts;
 
-      console.log("airdropInfos", airdropInfos);
+      let contracts = airdropInfos
+        .filter((contract) => contract.airdrops.length > 0)
+        .map((contract) => contract.address);
 
-      let contracts: string[] = airdropInfos.map(
-        (contract) => contract.address
-      );
-      let users = airdropInfos.map((contract) =>
-        contract.airdrops.map((airdrop) => airdrop.from.address)
-      );
-      let indexes = airdropInfos.map((contract) =>
-        contract.airdrops.map((airdrop) => airdrop.index)
-      );
-
-      console.log("contracts", contracts);
-      console.log("users", users);
-      console.log("indexes", indexes);
+      let froms: string[][] = airdropInfos
+        .filter((contract) => contract.airdrops.length > 0)
+        .map((contract) =>
+          contract.airdrops.map((airdrop) => airdrop.from.address)
+        );
+      let indexes: string[][] = airdropInfos
+        .filter((contract) => contract.airdrops.length > 0)
+        .map((contract) => contract.airdrops.map((airdrop) => airdrop.index));
 
       let usersLength = 0;
-      for (let i = 0; i < users.length; i++) {
-        usersLength += users[i].length;
+      for (let i = 0; i < froms.length; i++) {
+        usersLength += froms[i].length;
       }
 
       if (contracts.length > 0 && usersLength > 0) {
-        //const result = await callReleaseAirdrops(chain, users, contracts);
-        //if (result == false) break;
+        console.log(`Initializing Airdrop Release on chain ${chainId}...\n`);
+
+        const isSuccess = await callReleaseAirdrops(
+          chain,
+          froms,
+          indexes,
+          contracts
+        );
+        if (!isSuccess) break;
+        console.log(`Airdrop Release completed on chain ${chainId}...\n`);
       } else {
+        console.log(`No Airdrop data is found on chain ${chainId}...\n`);
         break;
       }
 
@@ -85,7 +89,9 @@ export default async function (chainId: number) {
 export async function filterAirdrops(
   chain: Chain,
   first: number,
-  skip: number
+  skip: number,
+  currentTimestamp: number,
+  expiredOptions: string
 ) {
   const uri = getDropperSubgraphURL(chain);
   const link = createHttpLink({ uri, fetch });
@@ -93,7 +99,8 @@ export async function filterAirdrops(
     query {
             hectorDropperContracts {
               address
-              airdrops(first: ${first}, skip: ${skip}, where: {status: "0"}) {
+              id
+              airdrops(first: ${first}, skip: ${skip}, where: {status: "0", releaseTime_${expiredOptions}: ${currentTimestamp}}) {
                 from {
                   address
                 }
