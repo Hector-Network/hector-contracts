@@ -14,18 +14,18 @@ provider:
     DROPPER_FACTORY_ETH:
     DROPPER_FACTORY_BSC:
     DROPPER_FACTORY_BSCTEST:
-    DROPPER_FACTORY_FTM: 0xE27a4Cd6C8134d79d358B989595A89b3341c498e
+    DROPPER_FACTORY_FTM: 0x7cfBD627D05F1482fC578421f5680070E156D66c
     DROPPER_FACTORY_FTMTEST: 0xE27a4Cd6C8134d79d358B989595A89b3341c498e
-    FTM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    FTM_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
     FTMTEST_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    BSC_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    BSC_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
     BSCTEST_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    ETH_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    ARBITRUM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    OPTIMISM_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    POLYGON_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    AVAX_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
-    MOONRIVER_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    ETH_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    ARBITRUM_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    OPTIMISM_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    POLYGON_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    AVAX_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    MOONRIVER_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
     GAS_LIMIT: 900000
     GAS_PREMIUM_FACTOR: 1.15
     PRIVATE_KEY:
