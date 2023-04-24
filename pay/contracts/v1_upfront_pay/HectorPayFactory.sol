@@ -16,15 +16,6 @@ error INVALID_PARAM();
 contract HectorPayFactory is IHectorPayFactory, Ownable {
     /* ======== STORAGE ======== */
 
-    struct Stream {
-        address payContract;
-        address from;
-        address to;
-        uint256 amountPerSec;
-        uint48 starts;
-        uint48 ends;
-    }
-
     address public hectorPayLogic;
     address public upgradeableAdmin;
     address public validator;
