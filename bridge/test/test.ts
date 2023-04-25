@@ -58,7 +58,7 @@ async function main() {
 	console.log('Bridge:', bridgeTool);
 
 	if (bridgeTool == 'stargate') {
-		specialData = tempStepData.estimate.gasCosts.find((element: any) => element.type == 'FEE');
+		specialData = tempStepData.estimate.feeCosts.find((element: any) => element.name == 'LayerZero fees');
 	}
 
 	// Set Fees
