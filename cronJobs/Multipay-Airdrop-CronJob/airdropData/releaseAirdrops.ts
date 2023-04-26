@@ -6,6 +6,7 @@ import gql from "graphql-tag";
 import { Chain, CHAINS } from "../utils/chain";
 import { getCurrentTimeInSecond, getDropperSubgraphURL } from "../utils/util";
 import { AirdropInfo } from "./interface";
+const moment = require("moment");
 
 async function callReleaseAirdrops(
   chain: Chain,
@@ -28,12 +29,13 @@ export default async function (chainId: number) {
     return;
   }
   try {
-    const currentTimestamp = await getCurrentTimeInSecond();
+    const currentTimestamp = parseInt(moment().unix(), 10);
+
     const perPage = 100;
     let dataCount = 0;
 
     while (1) {
-      const filteredAirdropData = await filterAirdrops(
+      const filteredAirdropData = await getInProgressAirdrops(
         chain,
         perPage,
         dataCount,
@@ -86,7 +88,7 @@ export default async function (chainId: number) {
   }
 }
 
-export async function filterAirdrops(
+export async function getInProgressAirdrops(
   chain: Chain,
   first: number,
   skip: number,
