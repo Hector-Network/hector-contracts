@@ -5,8 +5,7 @@ import { createHttpLink } from "apollo-link-http";
 import gql from "graphql-tag";
 import { Chain, CHAINS } from "../utils/chain";
 import { getCurrentTimeInSecond, getDropperSubgraphURL } from "../utils/util";
-import { AirdropInfo } from "./interface";
-const moment = require("moment");
+import { AirdropInfo } from "../utils/interface";
 
 async function callReleaseAirdrops(
   chain: Chain,
@@ -29,7 +28,7 @@ export default async function (chainId: number) {
     return;
   }
   try {
-    const currentTimestamp = parseInt(moment().unix(), 10);
+    const currentTimestamp = await getCurrentTimeInSecond();
 
     const perPage = 100;
     let dataCount = 0;
@@ -76,7 +75,7 @@ export default async function (chainId: number) {
         if (!isSuccess) break;
         console.log(`Airdrop Release completed on chain ${chainId}...\n`);
       } else {
-        console.log(`No Airdrop data is found on chain ${chainId}...\n`);
+        console.log(`No Airdrop to release on chain ${chainId}...\n`);
         break;
       }
 
