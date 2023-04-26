@@ -1,30 +1,6 @@
 import fetch from "node-fetch";
-import {
-  MULTIPAY_SUBGRAPH,
-  SUBSCRIPTION_SUBGRAPH,
-  DROPPER_SUBGRAPH,
-} from "./constants";
+import { DROPPER_SUBGRAPH } from "./constants";
 import { Chain } from "./chain";
-
-export function getMultiPaySubgraphURL(chain: Chain): string {
-  const subgraph = MULTIPAY_SUBGRAPH.find(
-    (subgraph) => subgraph.id == chain.id
-  );
-  if (subgraph) {
-    return subgraph.url;
-  }
-  return "";
-}
-
-export function getSubscriptionSubgraphURL(chain: Chain): string {
-  const subgraph = SUBSCRIPTION_SUBGRAPH.find(
-    (subgraph) => subgraph.id == chain.id
-  );
-  if (subgraph) {
-    return subgraph.url;
-  }
-  return "";
-}
 
 export function getDropperSubgraphURL(chain: Chain): string {
   const subgraph = DROPPER_SUBGRAPH.find((subgraph) => subgraph.id == chain.id);

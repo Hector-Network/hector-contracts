@@ -131,6 +131,14 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
         emit HectorDropperCreated(_token, hectorDropperContract);
     }
 
+    function releaseAirdrop(
+        address dropperContract,
+        address from,
+        uint256 index
+    ) external {
+        IHectorDropper(dropperContract).releaseAirdrop(from, index);
+    }
+
     function releaseAirdrops(
         address[] calldata dropperContracts,
         address[][] calldata froms,
