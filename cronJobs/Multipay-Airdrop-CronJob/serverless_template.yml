@@ -1,6 +1,6 @@
 org: michaelnguyen102
 app: aws-node-scheduled-cron
-service: ReleaseAirdrops
+service: HectorMultipay
 
 provider:
   name: aws
