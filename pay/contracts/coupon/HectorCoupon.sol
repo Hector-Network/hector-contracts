@@ -27,7 +27,7 @@ contract HectorCoupon is IHectorCoupon, OwnableUpgradeable, EIP712Upgradeable {
     /// @notice coupon hash
     bytes32 private constant COUPON_HASH =
         keccak256(
-            'Coupon(uint256 nonce,address payer,uint256 id,string product,address token,uint256 discount,bool isFixed)'
+            'Coupon(uint256 nonce,address payer,uint256 id,bytes32 product,address token,uint256 discount,bool isFixed)'
         );
 
     /// @notice multiplier
@@ -84,17 +84,21 @@ contract HectorCoupon is IHectorCoupon, OwnableUpgradeable, EIP712Upgradeable {
         Pay calldata pay,
         bytes calldata couponInfo,
         bytes calldata signature
-    ) external returns (bool isValid, uint256 newAmount) {
-        (uint256 id, uint256 discount, bool isFixed) = abi.decode(
+    ) external returns (bool isValid, uint256 id, uint256 newAmount) {
+        string memory product = pay.product;
+        address payer = pay.payer;
+        uint256 discount;
+        bool isFixed;
+
+        (id, discount, isFixed) = abi.decode(
             couponInfo,
             (uint256, uint256, bool)
         );
-        address payer = pay.payer;
-        address token = pay.token;
-        string memory product = pay.product;
+        newAmount = pay.amount;
 
         // Verify signature
         {
+            address token = pay.token;
             uint256 nonce = nonces[payer]++;
             bytes32 structHash = keccak256(
                 abi.encode(
@@ -102,14 +106,14 @@ contract HectorCoupon is IHectorCoupon, OwnableUpgradeable, EIP712Upgradeable {
                     nonce,
                     payer,
                     id,
-                    product,
+                    bytes32(bytes(product)),
                     token,
                     discount,
                     isFixed
                 )
             );
             if (!_verifySignature(structHash, signature)) {
-                return (false, pay.amount);
+                return (false, 0, newAmount);
             }
         }
 
@@ -125,11 +129,15 @@ contract HectorCoupon is IHectorCoupon, OwnableUpgradeable, EIP712Upgradeable {
         }
         // if % discount
         else {
-            newAmount = (pay.amount * discount) / MULTIPLIER;
+            if (discount >= MULTIPLIER) {
+                newAmount = 0;
+            } else {
+                newAmount = pay.amount - (pay.amount * discount) / MULTIPLIER;
+            }
         }
 
         emit CouponApplied(payer, id, product);
 
-        return (true, newAmount);
+        return (true, id, newAmount);
     }
 }

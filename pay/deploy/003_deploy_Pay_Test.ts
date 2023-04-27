@@ -20,147 +20,16 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const hectorMultiPayProduct = 'Hector Multi Pay';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
-  /// SUBSCRIPTION ///
-  const subscriptionLogic = await deploy('HectorSubscription', {
-    from: deployer.address,
-    args: [],
-    log: true,
-  });
-
-  const subscriptionParams = [subscriptionLogic.address, upgradeableAdmin];
-  const subscriptionFactory = await deploy('HectorSubscriptionFactory', {
-    from: deployer.address,
-    args: subscriptionParams,
-    log: true,
-  });
+  /// SUBSCRIPTION (Reusing) ///
   const subscriptionFactoryContract = await ethers.getContract(
     'HectorSubscriptionFactory',
     deployer
   );
 
-  await (
-    await subscriptionFactoryContract.createHectorSubscriptionContract(
-      hectorMultiPayProduct,
-      treasury
-    )
-  ).wait();
-
   const paySubscription =
     await subscriptionFactoryContract.getHectorSubscriptionContractByName(
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
     );
-  const paySubscriptionContract = await ethers.getContractAt(
-    'HectorSubscription',
-    paySubscription,
-    deployer
-  );
-
-  const plans = [
-    // Small For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('80').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-    // Small For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('80').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-    // Small For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('80').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-
-    // Medium For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('123').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-    // Medium For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('123').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-    // Medium For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('123').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-
-    // Large For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('200').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-    // Large For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('200').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-    // Large For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('200').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-
-    // Enterprise For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('250').mul(3),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-    // Enterprise For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('250').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-    // Enterprise For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('250').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-  ];
-  const freePlan = {
-    token: ethers.constants.AddressZero,
-    period: 0,
-    amount: 0,
-    data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
-  };
-  await (await paySubscriptionContract.appendPlan(plans)).wait();
-  await (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
 
   /// MULTI PAY ///
   const payLogic = await deploy('HectorPay', {
@@ -201,26 +70,6 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
     console.log('=====> Verifing ....');
-    try {
-      await hre.run('verify:verify', {
-        address: subscriptionFactory.address,
-        contract:
-          'contracts/HectorPay/subscription/HectorSubscriptionFactory.sol:HectorSubscriptionFactory',
-        constructorArguments: subscriptionParams,
-      });
-    } catch (_) {}
-
-    await waitSeconds(10);
-    try {
-      await hre.run('verify:verify', {
-        address: subscriptionLogic.address,
-        contract:
-          'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
-        constructorArguments: [],
-      });
-    } catch (_) {}
-
-    await waitSeconds(10);
     try {
       await hre.run('verify:verify', {
         address: payFactory.address,

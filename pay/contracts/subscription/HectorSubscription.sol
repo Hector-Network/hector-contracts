@@ -72,6 +72,13 @@ contract HectorSubscription is
         uint256 indexed planId,
         uint48 expiredAt
     );
+    event SubscriptionCreatedWithCoupon(
+        address indexed from,
+        uint256 indexed planId,
+        uint256 indexed couponId,
+        uint256 amount,
+        uint48 expiredAt
+    );
     event SubscriptionSynced(
         address indexed from,
         uint256 indexed planId,
@@ -388,7 +395,7 @@ contract HectorSubscription is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (, uint256 newAmount) = IHectorCoupon(factory.coupon()).applyCoupon(
+        (, , uint256 newAmount) = IHectorCoupon(factory.coupon()).applyCoupon(
             IHectorCoupon.Pay({
                 product: product,
                 payer: msg.sender,
@@ -467,8 +474,9 @@ contract HectorSubscription is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (bool isValid, uint256 newAmount) = IHectorCoupon(factory.coupon())
-            .applyCoupon(
+        (bool isValid, uint256 couponId, uint256 newAmount) = IHectorCoupon(
+            factory.coupon()
+        ).applyCoupon(
                 IHectorCoupon.Pay({
                     product: product,
                     payer: msg.sender,
@@ -495,7 +503,13 @@ contract HectorSubscription is
 
         IERC20(plan.token).safeTransfer(treasury, newAmount);
 
-        emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
+        emit SubscriptionCreatedWithCoupon(
+            msg.sender,
+            _planId,
+            couponId,
+            newAmount,
+            subscription.expiredAt
+        );
     }
 
     function syncSubscriptions(address[] memory froms) external {

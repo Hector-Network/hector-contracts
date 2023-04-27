@@ -17,5 +17,5 @@ interface IHectorCoupon {
         Pay calldata pay,
         bytes calldata couponInfo,
         bytes calldata signature
-    ) external returns (bool isValid, uint256 newAmount);
+    ) external returns (bool isValid, uint256 id, uint256 newAmount);
 }
