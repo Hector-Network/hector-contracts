@@ -1,30 +1,30 @@
 import { ContractInterface, ethers } from "ethers";
-import { DROPPER_FACTORY } from "../constants";
+import { SUBSCRIPTION_FACTORY } from "../constants";
 import { CHAINS, Chain } from "../chain";
 import { getUpdatedGas } from "../util";
 
-export async function releaseAirdrops(
+export async function syncSubscriptions(
   chain: Chain,
-  froms: string[][],
-  indexes: string[][],
-  dropperContracts: string[]
+  users: string[][],
+  contracts: string[]
 ) {
+  console.log("Chain:", chain.shortName);
+  console.log("Count of Subscriptions:", users.length);
   const ABI: ContractInterface = [
     {
       inputs: [
         {
           internalType: "address[]",
-          name: "dropperContracts",
+          name: "subscriptionContracts",
           type: "address[]",
         },
-        { internalType: "address[][]", name: "froms", type: "address[][]" },
         {
-          internalType: "uint256[][]",
-          name: "indexes",
-          type: "uint256[][]",
+          internalType: "address[][]",
+          name: "froms",
+          type: "address[][]",
         },
       ],
-      name: "releaseAirdrops",
+      name: "syncSubscriptions",
       outputs: [],
       stateMutability: "nonpayable",
       type: "function",
@@ -44,22 +44,18 @@ export async function releaseAirdrops(
 
   const signer = new ethers.Wallet(privateKey, provider);
 
-  const hectorDroperFactory = DROPPER_FACTORY.find(
+  const hectorSubscription = SUBSCRIPTION_FACTORY.find(
     (c) => c.id == chain.id
   )?.address;
 
-  if (hectorDroperFactory && hectorDroperFactory.length > 0) {
-    const contract = new ethers.Contract(hectorDroperFactory, ABI, signer);
-    const tx = await contract.releaseAirdrops(
-      dropperContracts,
-      froms,
-      indexes,
-      overrides
-    );
+  if (hectorSubscription && hectorSubscription.length > 0) {
+    const contract = new ethers.Contract(hectorSubscription, ABI, signer);
+    const tx = await contract.syncSubscriptions(contracts, users, overrides);
     const receipt = await tx.wait();
     console.log("transactionHash:", receipt.transactionHash);
     return receipt.status;
   } else {
+    console.log("Chain:", chain.id, " Undefined HectorSubscription Address.");
     return false;
   }
 }
