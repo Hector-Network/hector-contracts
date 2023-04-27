@@ -24,6 +24,7 @@ contract HectorSubscriptionFactory is IHectorSubscriptionFactory, Ownable {
 
     address public hectorSubscriptionLogic;
     address public upgradeableAdmin;
+    address public coupon;
 
     bytes public parameter;
     Subscription[] public getHectorSubscriptionByIndex;
@@ -57,6 +58,10 @@ contract HectorSubscriptionFactory is IHectorSubscriptionFactory, Ownable {
     function setUpgradeableAdmin(address _upgradeableAdmin) external onlyOwner {
         if (_upgradeableAdmin == address(0)) revert INVALID_ADDRESS();
         upgradeableAdmin = _upgradeableAdmin;
+    }
+
+    function setCoupon(address _coupon) external onlyOwner {
+        coupon = _coupon;
     }
 
     function createHectorSubscriptionContract(

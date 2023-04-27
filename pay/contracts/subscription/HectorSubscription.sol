@@ -8,6 +8,7 @@ import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/se
 
 import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
 import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
+import {IHectorCoupon} from '../interfaces/IHectorCoupon.sol';
 
 error INVALID_PARAM();
 error INVALID_ADDRESS();
@@ -18,6 +19,7 @@ error INSUFFICIENT_FUND();
 error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
 error INVALID_MODERATOR();
+error INVALID_COUPON();
 
 contract HectorSubscription is
     IHectorSubscription,
@@ -27,6 +29,9 @@ contract HectorSubscription is
     using SafeERC20 for IERC20;
 
     /* ======== STORAGE ======== */
+
+    /// @notice subscription factory
+    IHectorSubscriptionFactory factory;
 
     /// @notice product
     string public product;
@@ -102,9 +107,7 @@ contract HectorSubscription is
     }
 
     function initialize() external initializer {
-        IHectorSubscriptionFactory factory = IHectorSubscriptionFactory(
-            msg.sender
-        );
+        factory = IHectorSubscriptionFactory(msg.sender);
 
         (product, treasury) = abi.decode(
             factory.parameter(),
@@ -131,6 +134,11 @@ contract HectorSubscription is
 
     modifier onlyValidPlan(uint256 _planId) {
         if (_planId == 0 || _planId >= plans.length) revert INVALID_PLAN();
+        _;
+    }
+
+    modifier onlyHasCoupon() {
+        if (factory.coupon() == address(0)) revert INVALID_COUPON();
         _;
     }
 
@@ -358,6 +366,45 @@ contract HectorSubscription is
         }
     }
 
+    function toCreateSubscritpionWithCoupon(
+        uint256 _planId,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    )
+        public
+        onlyValidPlan(_planId)
+        onlyHasCoupon
+        returns (uint256 amountToDeposit)
+    {
+        Subscription storage subscription = subscriptions[msg.sender];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(msg.sender);
+
+            if (subscription.expiredAt > block.timestamp) return 0;
+        }
+
+        Plan memory plan = plans[_planId];
+
+        // check if coupon is valid
+        (, uint256 newAmount) = IHectorCoupon(factory.coupon()).applyCoupon(
+            IHectorCoupon.Pay({
+                product: product,
+                payer: msg.sender,
+                token: plan.token,
+                amount: plan.amount
+            }),
+            couponInfo,
+            signature
+        );
+
+        // Deposit more to pay for new plan
+        if (balanceOf[msg.sender][plan.token] < newAmount) {
+            amountToDeposit = newAmount - balanceOf[msg.sender][plan.token];
+        }
+    }
+
     /* ======== USER FUNCTIONS ======== */
 
     function deposit(address _token, uint256 _amount) public nonReentrant {
@@ -398,6 +445,55 @@ contract HectorSubscription is
         subscription.expiredAt = uint48(block.timestamp) + plan.period;
 
         IERC20(plan.token).safeTransfer(treasury, plan.amount);
+
+        emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
+    }
+
+    function createSubscriptionWithCoupon(
+        uint256 _planId,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) public onlyValidPlan(_planId) onlyHasCoupon {
+        Subscription storage subscription = subscriptions[msg.sender];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(msg.sender);
+
+            if (subscription.expiredAt > block.timestamp)
+                revert ACTIVE_SUBSCRIPTION();
+        }
+
+        Plan memory plan = plans[_planId];
+
+        // check if coupon is valid
+        (bool isValid, uint256 newAmount) = IHectorCoupon(factory.coupon())
+            .applyCoupon(
+                IHectorCoupon.Pay({
+                    product: product,
+                    payer: msg.sender,
+                    token: plan.token,
+                    amount: plan.amount
+                }),
+                couponInfo,
+                signature
+            );
+        if (!isValid) revert INVALID_COUPON();
+
+        // Pay first plan
+        if (balanceOf[msg.sender][plan.token] < newAmount) {
+            deposit(plan.token, newAmount - balanceOf[msg.sender][plan.token]);
+        }
+
+        unchecked {
+            balanceOf[msg.sender][plan.token] -= newAmount;
+        }
+
+        // Set subscription
+        subscription.planId = _planId;
+        subscription.expiredAt = uint48(block.timestamp) + plan.period;
+
+        IERC20(plan.token).safeTransfer(treasury, newAmount);
 
         emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
     }

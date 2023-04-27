@@ -20,6 +20,7 @@ contract HectorSubscriptionProxyFactory is IHectorSubscriptionFactory, Ownable {
 
     address public hectorSubscriptionProxyLogic;
     address public upgradeableAdmin;
+    address public coupon;
 
     bytes public parameter;
     Subscription[] public getHectorSubscriptionProxyByIndex;
