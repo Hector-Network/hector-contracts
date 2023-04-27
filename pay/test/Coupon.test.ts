@@ -482,6 +482,7 @@ describe('HectorSubscription', function () {
     const planId = 1;
     let couponInfo: string;
     let signature: string;
+    let amount: BigNumber;
 
     beforeEach(async function () {
       couponInfo = await encodeCouponInfo(correctFixedCouponInfo);
@@ -490,6 +491,9 @@ describe('HectorSubscription', function () {
         owner.address,
         correctFixedCouponInfo,
         signer
+      );
+      amount = activePlans[planId - 1].amount.sub(
+        correctFixedCouponInfo.discount
       );
     });
 
@@ -502,9 +506,7 @@ describe('HectorSubscription', function () {
           signature
         );
 
-      expect(amountToDeposit).equal(
-        activePlans[planId - 1].amount.sub(correctFixedCouponInfo.discount)
-      );
+      expect(amountToDeposit).equal(amount);
     });
 
     it('create subscription with coupon', async function () {
@@ -523,11 +525,15 @@ describe('HectorSubscription', function () {
 
       await expect(tx)
         .emit(hectorSubscription, 'SubscriptionCreatedWithCoupon')
-        .withArgs(owner.address, planId, correctFixedCouponInfo.id, expiredAt);
+        .withArgs(
+          owner.address,
+          planId,
+          correctFixedCouponInfo.id,
+          amount,
+          expiredAt
+        );
 
-      expect(oldBalance.sub(newBalance)).equal(
-        activePlans[planId - 1].amount.sub(correctFixedCouponInfo.discount)
-      );
+      expect(oldBalance.sub(newBalance)).equal(amount);
     });
 
     it('create subscription with invalid coupon', async function () {
@@ -543,6 +549,7 @@ describe('HectorSubscription', function () {
     const planId = 1;
     let couponInfo: string;
     let signature: string;
+    let amount: BigNumber;
 
     beforeEach(async function () {
       couponInfo = await encodeCouponInfo(correctPercentCouponInfo);
@@ -551,6 +558,11 @@ describe('HectorSubscription', function () {
         owner.address,
         correctPercentCouponInfo,
         signer
+      );
+      amount = activePlans[planId - 1].amount.sub(
+        activePlans[planId - 1].amount
+          .mul(correctPercentCouponInfo.discount)
+          .div(await hectorCoupon.MULTIPLIER())
       );
     });
 
@@ -563,13 +575,7 @@ describe('HectorSubscription', function () {
           signature
         );
 
-      expect(amountToDeposit).equal(
-        activePlans[planId - 1].amount.sub(
-          activePlans[planId - 1].amount
-            .mul(correctPercentCouponInfo.discount)
-            .div(await hectorCoupon.MULTIPLIER())
-        )
-      );
+      expect(amountToDeposit).equal(amount);
     });
 
     it('create subscription with coupon', async function () {
@@ -592,16 +598,11 @@ describe('HectorSubscription', function () {
           owner.address,
           planId,
           correctPercentCouponInfo.id,
+          amount,
           expiredAt
         );
 
-      expect(oldBalance.sub(newBalance)).equal(
-        activePlans[planId - 1].amount.sub(
-          activePlans[planId - 1].amount
-            .mul(correctPercentCouponInfo.discount)
-            .div(await hectorCoupon.MULTIPLIER())
-        )
-      );
+      expect(oldBalance.sub(newBalance)).equal(amount);
     });
 
     it('create subscription with invalid coupon', async function () {
