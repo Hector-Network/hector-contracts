@@ -68,6 +68,82 @@ export default {
 			accounts: [process.env.PRIVATE_KEY],
 			saveDeployments: true,
 		},
+		mainnet: {
+			url: process.env.ETHMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		arbitrumOne: {
+			url: process.env.ARBITRUMMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		avalanche: {
+			url: process.env.AVALANCHEMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		optimism: {
+			url: process.env.OPTIMISMMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		moonriver: {
+			url: process.env.MOONRIVERMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		bsc: {
+			url: process.env.BSCMAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		moonbeam: {
+			url: process.env.MOONBEAM_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		gnosis: {
+			url: process.env.GNOSIS_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		aurora: {
+			url: process.env.AURORA_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		cronos: {
+			url: process.env.CRONOS_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		fuse: {
+			url: process.env.FUSE_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		celo: {
+			url: process.env.CELO_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		okex: {
+			url: process.env.OKXCHAIN_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		boba: {
+			url: process.env.BOBA_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		},
+		velas: {
+			url: process.env.VELAS_NET_API_URL,
+			accounts: [process.env.PRIVATE_KEY],
+			saveDeployments: true,
+		}
+		
 	},
 	paths: {
 		deploy: 'deploy',
@@ -76,13 +152,17 @@ export default {
 	},
 	etherscan: {
 		apiKey: {
-			bsc: 'A2HNWK3VKZNQFAGU254HW1DAG4RPB8FI8T',
-			avalanche: 'Z7ICD5QD8WJ3MGAF7PA7WBKV2YUBHU67M3',
-			polygon: 'WZB1DPUWYZ13SQSGHFTTEY43YJYAEFY2EH',
-			polygonMumbai: process.env.POLYGON_API_KEY,
-			goerli: process.env.ETH_API_KEY,
+			mainnet: process.env.ETH_API_KEY,
+			bsc: process.env.BSC_API_KEY,
+			avalanche: process.env.AVALANCHE_API_KEY,
+			polygon: process.env.POLYGON_API_KEY,
 			opera: process.env.FTM_API_KEY,
-			ftmTestnet: process.env.FTM_API_KEY,
+			optimisticEthereum: process.env.OPTIMISM_API_KEY,
+			arbitrumOne: process.env.ARBITRUM_API_KEY,
+			moonriver: process.env.MOONRIVER_API_KEY,
+			moonbeam: process.env.MOONBEAM_API_KEY,
+			gnosis: process.env.GNOSIS_API_KEY,
+			aurora: process.env.AURORA_API_KEY,
 		},
 	},
 	mocha: {

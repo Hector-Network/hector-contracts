@@ -7,6 +7,8 @@ import exec from 'child_process';
 
 async function main() {
 	const cmd = exec.exec;
+
+	
   	console.log('Verifying on the FTM network...');
 	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" ${process.env.SPLITTER_ADDRESS} --network ftm`;
 	console.log(cmdForVerify);
