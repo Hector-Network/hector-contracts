@@ -209,6 +209,39 @@ contract HectorSubscription is
         );
     }
 
+    function updatePlans(
+        uint256[] calldata _planIds,
+        Plan[] calldata _plans
+    ) external onlyMod {
+        uint256 length = _planIds.length;
+        if (length != _plans.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 _planId = _planIds[i];
+            Plan memory _plan = _plans[i];
+
+            if (_planId == 0) {
+                if (_plan.token != address(0)) revert INVALID_ADDRESS();
+                if (_plan.period != 0) revert INVALID_TIME();
+                if (_plan.amount != 0) revert INVALID_AMOUNT();
+            } else {
+                if (_plan.token == address(0)) revert INVALID_ADDRESS();
+                if (_plan.period == 0) revert INVALID_TIME();
+                if (_plan.amount == 0) revert INVALID_AMOUNT();
+            }
+
+            plans[_planId] = _plan;
+
+            emit PlanUpdated(
+                _planId,
+                _plan.token,
+                _plan.period,
+                _plan.amount,
+                _plan.data
+            );
+        }
+    }
+
     function updateExpireDeadline(uint48 _expireDeadline) external onlyMod {
         if (_expireDeadline == 0) revert INVALID_TIME();
 
