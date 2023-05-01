@@ -44,12 +44,12 @@ export async function releaseAirdrops(
 
   const signer = new ethers.Wallet(privateKey, provider);
 
-  const hectorDroperFactory = DROPPER_FACTORY.find(
+  const hectorDropperFactory = DROPPER_FACTORY.find(
     (c) => c.id == chain.id
   )?.address;
 
-  if (hectorDroperFactory && hectorDroperFactory.length > 0) {
-    const contract = new ethers.Contract(hectorDroperFactory, ABI, signer);
+  if (hectorDropperFactory && hectorDropperFactory.length > 0) {
+    const contract = new ethers.Contract(hectorDropperFactory, ABI, signer);
     const tx = await contract.releaseAirdrops(
       dropperContracts,
       froms,
