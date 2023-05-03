@@ -130,4 +130,4 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
 export default deployPay;
 deployPay.tags = ['Pay'];
-deployPay.dependencies = [];
+deployPay.dependencies = ['Subscription'];

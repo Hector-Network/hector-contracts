@@ -127,4 +127,4 @@ const deployDropper: DeployFunction = async (
 
 export default deployDropper;
 deployDropper.tags = ['DropperTest'];
-deployDropper.dependencies = [];
+deployDropper.dependencies = ['SubscriptionTest'];

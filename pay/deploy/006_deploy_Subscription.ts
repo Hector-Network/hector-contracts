@@ -86,7 +86,11 @@ const deploySubscription: DeployFunction = async (
   ).wait();
 
   /// MULTI PAY SUBSCRIPTION ///
-  {
+  if (
+    (await subscriptionFactoryContract.isDeployedHectorSubscriptionContractByProduct(
+      hectorMultiPayProduct
+    )) == false
+  ) {
     await (
       await subscriptionFactoryContract.createHectorSubscriptionContract(
         hectorMultiPayProduct,
@@ -213,7 +217,11 @@ const deploySubscription: DeployFunction = async (
   }
 
   /// TAX REPORT SUBSCRIPTION ///
-  {
+  if (
+    (await subscriptionFactoryContract.isDeployedHectorSubscriptionContractByProduct(
+      hectorTaxReportProduct
+    )) == false
+  ) {
     await (
       await subscriptionFactoryContract.createHectorSubscriptionContract(
         hectorTaxReportProduct,
