@@ -19,13 +19,13 @@ const deploySubscription: DeployFunction = async (
   const [deployer] = await ethers.getSigners();
 
   /// Token Address: Mainnet
-  // const hectorTokenAddress = '0x5c4fdfc5233f935f20d2adba572f770c2e377ab0';
-  // const torTokenAddress = '0x74e23df9110aa9ea0b6ff2faee01e740ca1c642e';
+  const hectorTokenAddress = '0x5c4fdfc5233f935f20d2adba572f770c2e377ab0';
+  const torTokenAddress = '0x74e23df9110aa9ea0b6ff2faee01e740ca1c642e';
+  const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
   /// Token Address: FTM Testnet
-  const hectorTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
-  const torTokenAddress = '0xCe5b1b90a1E1527E8B82a9434266b2d6B72cc70b';
-  const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
+  //   const hectorTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+  //   const torTokenAddress = '0xCe5b1b90a1E1527E8B82a9434266b2d6B72cc70b';
 
   /// Token Address: BSC Testnet
   // const hectorTokenAddress = '0x7400E9838BAD5cfFe1C4dc0236Fce2E725C73d42';
@@ -208,7 +208,7 @@ const deploySubscription: DeployFunction = async (
       amount: 0,
       data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
     };
-    await (await paySubscriptionContract.appendPlan(plans)).wait();
+    // await (await paySubscriptionContract.appendPlan(plans)).wait();
     await (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
   }
 
@@ -257,7 +257,7 @@ const deploySubscription: DeployFunction = async (
       amount: 0,
       data: '0x00',
     };
-    await (await paySubscriptionContract.appendPlan(plans)).wait();
+    // await (await paySubscriptionContract.appendPlan(plans)).wait();
     await (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
   }
 
@@ -296,5 +296,5 @@ const deploySubscription: DeployFunction = async (
 };
 
 export default deploySubscription;
-deploySubscription.tags = ['SubscriptionTest'];
+deploySubscription.tags = ['Subscription'];
 deploySubscription.dependencies = [];

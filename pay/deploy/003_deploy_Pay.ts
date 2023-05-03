@@ -1,8 +1,15 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { ethers } from 'hardhat';
-import { constants } from 'ethers';
 import { waitSeconds } from '../helper/helpers';
+
+async function getImplementationAddress(proxyAddress: string) {
+  const implHex = await ethers.provider.getStorageAt(
+    proxyAddress,
+    '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+  );
+  return ethers.utils.hexStripZeros(implHex);
+}
 
 const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
   const { deployments, ethers } = hre;
@@ -27,161 +34,19 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
 
   /// Configuration: Mainnet
   const multiSigWallet = '0x2ba5F2ce103A45e278D7Bc99153190eD6E9c4A96';
-  const treasury = '0x2ba5F2ce103A45e278D7Bc99153190eD6E9c4A96';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
   const hectorMultiPayProduct = 'Hector Multi Pay';
 
-  /// SUBSCRIPTION ///
-  const subscriptionLogic = await deploy('HectorSubscription', {
-    from: deployer.address,
-    args: [],
-    log: true,
-  });
-
-  const subscriptionParams = [subscriptionLogic.address, upgradeableAdmin];
-  const subscriptionFactory = await deploy('HectorSubscriptionFactory', {
-    from: deployer.address,
-    args: subscriptionParams,
-    log: true,
-  });
+  /// SUBSCRIPTION (Reusing) ///
   const subscriptionFactoryContract = await ethers.getContract(
     'HectorSubscriptionFactory',
     deployer
   );
 
-  await waitSeconds(10);
-  try {
-    (
-      await subscriptionFactoryContract.createHectorSubscriptionContract(
-        hectorMultiPayProduct,
-        treasury
-      )
-    ).wait();
-  } catch (_) {}
-
-  await waitSeconds(10);
   const paySubscription =
     await subscriptionFactoryContract.getHectorSubscriptionContractByName(
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
     );
-  const paySubscriptionContract = await ethers.getContractAt(
-    'HectorSubscription',
-    paySubscription,
-    deployer
-  );
-
-  const plans = [
-    // Small For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('80').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-    // Small For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('80').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-    // Small For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('80').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-    },
-
-    // Medium For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('123').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-    // Medium For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('123').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-    // Medium For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('123').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-    },
-
-    // Large For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('200').mul(3),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-    // Large For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('200').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-    // Large For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('200').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-    },
-
-    // Enterprise For 3 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 90,
-      amount: ethers.utils.parseEther('250').mul(3),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-    // Enterprise For 6 Months
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 180,
-      amount: ethers.utils.parseEther('250').mul(6).mul(85).div(100),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-    // Enterprise For 1 Year
-    {
-      token: torTokenAddress,
-      period: 3600 * 24 * 365,
-      amount: ethers.utils.parseEther('250').mul(12).mul(70).div(100),
-      data: ethers.utils.hexZeroPad(
-        ethers.utils.hexlify(ethers.constants.MaxUint256),
-        32
-      ),
-    },
-  ];
-  const freePlan = {
-    token: ethers.constants.AddressZero,
-    period: 0,
-    amount: 0,
-    data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
-  };
-  await waitSeconds(10);
-  try {
-    (await paySubscriptionContract.appendPlan(plans)).wait();
-  } catch (_) {}
-  await waitSeconds(10);
-  try {
-    (await paySubscriptionContract.updatePlan(0, freePlan)).wait();
-  } catch (_) {}
 
   /// MULTI PAY ///
   const payLogic = await deploy('HectorPay', {
@@ -189,121 +54,56 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     args: [],
     log: true,
   });
-  await waitSeconds(5);
 
-  const payParams = [payLogic.address, upgradeableAdmin, paySubscription];
+  const payParams = [payLogic.address, upgradeableAdmin];
   const payFactory = await deploy('HectorPayFactory', {
     from: deployer.address,
-    args: payParams,
+    args: [],
     log: true,
+    proxy: {
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        methodName: 'initialize',
+        args: payParams,
+      },
+    },
   });
+  const payFactoryImplementation = await getImplementationAddress(
+    payFactory.address
+  );
   const payFactoryContract = await ethers.getContract(
     'HectorPayFactory',
     deployer
   );
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wbtcTokenAddress)).wait();
-  // } catch (_) {}
+  await (
+    await payFactoryContract.createHectorPayContract(hectorTokenAddress)
+  ).wait();
+  await waitSeconds(1);
+  await (
+    await payFactoryContract.createHectorPayContract(torTokenAddress)
+  ).wait();
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wethTokenAddress)).wait();
-  // } catch (_) {}
+  /// VALIDATOR ///
+  const validatorParams = [paySubscription, payFactory.address];
+  const payValidator = await deploy('HectorPayValidator', {
+    from: deployer.address,
+    args: validatorParams,
+    log: true,
+  });
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(wftmTokenAddress)).wait();
-  // } catch (_) {}
+  await (await payFactoryContract.setValidator(payValidator.address)).wait();
 
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(fraxTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(booTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (
-  //     await payFactoryContract.createHectorPayContract(spiritTokenAddress)
-  //   ).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (
-  //     await payFactoryContract.createHectorPayContract(geistTokenAddress)
-  //   ).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(lqdrTokenAddress)).wait();
-  // } catch (_) {}
-
-  await waitSeconds(10);
-  try {
-    (
-      await payFactoryContract.createHectorPayContract(hectorTokenAddress)
-    ).wait();
-  } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(daiTokenAddress)).wait();
-  // } catch (_) {}
-
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(usdcTokenAddress)).wait();
-  // } catch (_) {}
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(usdtTokenAddress)).wait();
-  // } catch (_) {}
-  // await waitSeconds(10);
-  // try {
-  //   (await payFactoryContract.createHectorPayContract(busdTokenAddress)).wait();
-  // } catch (_) {}
-  await waitSeconds(10);
-  try {
-    await payFactoryContract.createHectorPayContract(torTokenAddress);
-  } catch (_) {}
-
+  /// VERIFY ///
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
     await waitSeconds(10);
     console.log('=====> Verifing ....');
     try {
       await hre.run('verify:verify', {
-        address: subscriptionFactory.address,
-        contract:
-          'contracts/HectorPay/subscription/HectorSubscriptionFactory.sol:HectorSubscriptionFactory',
-        constructorArguments: subscriptionParams,
-      });
-    } catch (_) {}
-
-    await waitSeconds(10);
-    try {
-      await hre.run('verify:verify', {
-        address: subscriptionLogic.address,
-        contract:
-          'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
-        constructorArguments: [],
-      });
-    } catch (_) {}
-
-    await waitSeconds(10);
-    try {
-      await hre.run('verify:verify', {
-        address: payFactory.address,
+        address: payFactoryImplementation,
         contract:
           'contracts/HectorPay/v1_upfront_pay/HectorPayFactory.sol:HectorPayFactory',
-        constructorArguments: payParams,
+        constructorArguments: [],
       });
     } catch (_) {}
 
@@ -313,6 +113,16 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
         address: payLogic.address,
         contract: 'contracts/HectorPay/v1_upfront_pay/HectorPay.sol:HectorPay',
         constructorArguments: [],
+      });
+    } catch (_) {}
+
+    await waitSeconds(10);
+    try {
+      await hre.run('verify:verify', {
+        address: payValidator.address,
+        contract:
+          'contracts/HectorPay/validator/HectorPayValidator.sol:HectorPayValidator',
+        constructorArguments: validatorParams,
       });
     } catch (_) {}
   }

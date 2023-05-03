@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { BigNumber, utils } from 'ethers';
 import { increaseTime, getTimeStamp } from './../helper';
 import {
@@ -65,9 +65,13 @@ describe('HectorUpfrontPay', function () {
     const HectorSubscriptionFactory = await ethers.getContractFactory(
       'HectorSubscriptionFactory'
     );
-    hectorSubscriptionFactory = (await HectorSubscriptionFactory.deploy(
-      hectorSubscriptionLogic.address,
-      upgradeableAdmin.address
+    await upgrades.silenceWarnings();
+    hectorSubscriptionFactory = (await upgrades.deployProxy(
+      HectorSubscriptionFactory,
+      [hectorSubscriptionLogic.address, upgradeableAdmin.address],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
     )) as HectorSubscriptionFactory;
 
     await hectorSubscriptionFactory.createHectorSubscriptionContract(
@@ -116,9 +120,13 @@ describe('HectorUpfrontPay', function () {
     const HectorPayFactory = await ethers.getContractFactory(
       'HectorPayFactory'
     );
-    hectorPayFactory = (await HectorPayFactory.deploy(
-      hectorPayLogic.address,
-      upgradeableAdmin.address
+    await upgrades.silenceWarnings();
+    hectorPayFactory = (await upgrades.deployProxy(
+      HectorPayFactory,
+      [hectorPayLogic.address, upgradeableAdmin.address],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
     )) as HectorPayFactory;
 
     await hectorPayFactory.createHectorPayContract(hectorToken.address);

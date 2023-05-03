@@ -137,9 +137,13 @@ describe('HectorSubscription', function () {
     const HectorSubscriptionFactory = await ethers.getContractFactory(
       'HectorSubscriptionFactory'
     );
-    hectorSubscriptionFactory = (await HectorSubscriptionFactory.deploy(
-      hectorSubscriptionLogic.address,
-      upgradeableAdmin.address
+    await upgrades.silenceWarnings();
+    hectorSubscriptionFactory = (await upgrades.deployProxy(
+      HectorSubscriptionFactory,
+      [hectorSubscriptionLogic.address, upgradeableAdmin.address],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
     )) as HectorSubscriptionFactory;
 
     // Product Subscription

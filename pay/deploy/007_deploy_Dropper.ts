@@ -11,19 +11,19 @@ async function getImplementationAddress(proxyAddress: string) {
   return ethers.utils.hexStripZeros(implHex);
 }
 
-const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
+const deployDropper: DeployFunction = async (
+  hre: HardhatRuntimeEnvironment
+) => {
   const { deployments, ethers } = hre;
   const { deploy } = deployments;
   const [deployer] = await ethers.getSigners();
 
-  /// Token Address: FTM Testnet
-  const hectorTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
+  /// Token Address: FTM
+  const hectorTokenAddress = '0x5c4fdfc5233f935f20d2adba572f770c2e377ab0';
   const torTokenAddress = '0xCe5b1b90a1E1527E8B82a9434266b2d6B72cc70b';
+  const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
-  /// Token Address: BSC Testnet
-  // const hectorTokenAddress = '0x7400E9838BAD5cfFe1C4dc0236Fce2E725C73d42';
-  // const torTokenAddress = '0x205F190776C8d466727bD0Cac6D1B564DC3C8Ea9';
-
+  const fee = ethers.utils.parseEther('0.1');
   const hectorMultiPayProduct = 'Hector Multi Pay';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
@@ -38,15 +38,15 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
     );
 
-  /// MULTI PAY ///
-  const payLogic = await deploy('HectorPay', {
+  /// Dropper ///
+  const dropperLogic = await deploy('HectorDropper', {
     from: deployer.address,
     args: [],
     log: true,
   });
 
-  const payParams = [payLogic.address, upgradeableAdmin];
-  const payFactory = await deploy('HectorPayFactory', {
+  const dropperParams = [dropperLogic.address, upgradeableAdmin, treasury, fee];
+  const dropperFactory = await deploy('HectorDropperFactory', {
     from: deployer.address,
     args: [],
     log: true,
@@ -54,35 +54,37 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
       proxyContract: 'OpenZeppelinTransparentProxy',
       execute: {
         methodName: 'initialize',
-        args: payParams,
+        args: dropperParams,
       },
     },
   });
-  const payFactoryImplementation = await getImplementationAddress(
-    payFactory.address
+  const dropperFactoryImplementation = await getImplementationAddress(
+    dropperFactory.address
   );
-  const payFactoryContract = await ethers.getContract(
-    'HectorPayFactory',
+  const dropperFactoryContract = await ethers.getContract(
+    'HectorDropperFactory',
     deployer
   );
 
   await (
-    await payFactoryContract.createHectorPayContract(hectorTokenAddress)
+    await dropperFactoryContract.createHectorDropperContract(hectorTokenAddress)
   ).wait();
   await waitSeconds(1);
   await (
-    await payFactoryContract.createHectorPayContract(torTokenAddress)
+    await dropperFactoryContract.createHectorDropperContract(torTokenAddress)
   ).wait();
 
   /// VALIDATOR ///
-  const validatorParams = [paySubscription, payFactory.address];
-  const payValidator = await deploy('HectorPayValidator', {
+  const validatorParams = [paySubscription];
+  const dropperValidator = await deploy('HectorDropperValidator', {
     from: deployer.address,
     args: validatorParams,
     log: true,
   });
 
-  await (await payFactoryContract.setValidator(payValidator.address)).wait();
+  await (
+    await dropperFactoryContract.setValidator(dropperValidator.address)
+  ).wait();
 
   /// VERIFY ///
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
@@ -90,9 +92,9 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     console.log('=====> Verifing ....');
     try {
       await hre.run('verify:verify', {
-        address: payFactoryImplementation,
+        address: dropperFactoryImplementation,
         contract:
-          'contracts/HectorPay/v1_upfront_pay/HectorPayFactory.sol:HectorPayFactory',
+          'contracts/HectorPay/dropper/HectorDropperFactory.sol:HectorDropperFactory',
         constructorArguments: [],
       });
     } catch (_) {}
@@ -100,8 +102,8 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitSeconds(10);
     try {
       await hre.run('verify:verify', {
-        address: payLogic.address,
-        contract: 'contracts/HectorPay/v1_upfront_pay/HectorPay.sol:HectorPay',
+        address: dropperLogic.address,
+        contract: 'contracts/HectorPay/dropper/HectorDropper.sol:HectorDropper',
         constructorArguments: [],
       });
     } catch (_) {}
@@ -109,15 +111,15 @@ const deployPay: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
     await waitSeconds(10);
     try {
       await hre.run('verify:verify', {
-        address: payValidator.address,
+        address: dropperValidator.address,
         contract:
-          'contracts/HectorPay/validator/HectorPayValidator.sol:HectorPayValidator',
+          'contracts/HectorPay/validator/HectorDropperValidator.sol:HectorDropperValidator',
         constructorArguments: validatorParams,
       });
     } catch (_) {}
   }
 };
 
-export default deployPay;
-deployPay.tags = ['PayTest'];
-deployPay.dependencies = [];
+export default deployDropper;
+deployDropper.tags = ['Dropper'];
+deployDropper.dependencies = [];

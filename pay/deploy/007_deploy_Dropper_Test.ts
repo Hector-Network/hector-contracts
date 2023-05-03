@@ -1,6 +1,15 @@
 import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { waitSeconds } from '../helper/helpers';
+import { ethers } from 'hardhat';
+
+async function getImplementationAddress(proxyAddress: string) {
+  const implHex = await ethers.provider.getStorageAt(
+    proxyAddress,
+    '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
+  );
+  return ethers.utils.hexStripZeros(implHex);
+}
 
 const deployDropper: DeployFunction = async (
   hre: HardhatRuntimeEnvironment
@@ -20,150 +29,19 @@ const deployDropper: DeployFunction = async (
   // const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
   const fee = ethers.utils.parseEther('0.1');
-  const hectorDropperProduct = 'Hector Airdrop';
+  const hectorMultiPayProduct = 'Hector Multi Pay';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
 
-  /// SUBSCRIPTION ///
-  // const subscriptionLogic = await deploy('HectorSubscription', {
-  //   from: deployer.address,
-  //   args: [],
-  //   log: true,
-  // });
+  /// SUBSCRIPTION (Reusing) ///
+  const subscriptionFactoryContract = await ethers.getContract(
+    'HectorSubscriptionFactory',
+    deployer
+  );
 
-  // const subscriptionParams = [subscriptionLogic.address, upgradeableAdmin];
-  // const subscriptionFactory = await deploy('HectorSubscriptionFactory', {
-  //   from: deployer.address,
-  //   args: subscriptionParams,
-  //   log: true,
-  // });
-  // const subscriptionFactoryContract = await ethers.getContract(
-  //   'HectorSubscriptionFactory',
-  //   deployer
-  // );
-
-  // await (
-  //   await subscriptionFactoryContract.createHectorSubscriptionContract(
-  //     hectorDropperProduct,
-  //     treasury
-  //   )
-  // ).wait();
-
-  // const dropperSubscription =
-  //   await subscriptionFactoryContract.getHectorSubscriptionContractByName(
-  //     ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorDropperProduct))
-  //   );
-  // const dropperSubscriptionContract = await ethers.getContractAt(
-  //   'HectorSubscription',
-  //   dropperSubscription,
-  //   deployer
-  // );
-
-  // const plans = [
-  //   // Small For 3 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 90,
-  //     amount: ethers.utils.parseEther('80').mul(3),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-  //   },
-  //   // Small For 6 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 180,
-  //     amount: ethers.utils.parseEther('80').mul(6).mul(85).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-  //   },
-  //   // Small For 1 Year
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 365,
-  //     amount: ethers.utils.parseEther('80').mul(12).mul(70).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(20), 32),
-  //   },
-
-  //   // Medium For 3 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 90,
-  //     amount: ethers.utils.parseEther('123').mul(3),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-  //   },
-  //   // Medium For 6 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 180,
-  //     amount: ethers.utils.parseEther('123').mul(6).mul(85).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-  //   },
-  //   // Medium For 1 Year
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 365,
-  //     amount: ethers.utils.parseEther('123').mul(12).mul(70).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(30), 32),
-  //   },
-
-  //   // Large For 3 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 90,
-  //     amount: ethers.utils.parseEther('200').mul(3),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-  //   },
-  //   // Large For 6 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 180,
-  //     amount: ethers.utils.parseEther('200').mul(6).mul(85).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-  //   },
-  //   // Large For 1 Year
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 365,
-  //     amount: ethers.utils.parseEther('200').mul(12).mul(70).div(100),
-  //     data: ethers.utils.hexZeroPad(ethers.utils.hexlify(50), 32),
-  //   },
-
-  //   // Enterprise For 3 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 90,
-  //     amount: ethers.utils.parseEther('250').mul(3),
-  //     data: ethers.utils.hexZeroPad(
-  //       ethers.utils.hexlify(ethers.constants.MaxUint256),
-  //       32
-  //     ),
-  //   },
-  //   // Enterprise For 6 Months
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 180,
-  //     amount: ethers.utils.parseEther('250').mul(6).mul(85).div(100),
-  //     data: ethers.utils.hexZeroPad(
-  //       ethers.utils.hexlify(ethers.constants.MaxUint256),
-  //       32
-  //     ),
-  //   },
-  //   // Enterprise For 1 Year
-  //   {
-  //     token: torTokenAddress,
-  //     period: 3600 * 24 * 365,
-  //     amount: ethers.utils.parseEther('250').mul(12).mul(70).div(100),
-  //     data: ethers.utils.hexZeroPad(
-  //       ethers.utils.hexlify(ethers.constants.MaxUint256),
-  //       32
-  //     ),
-  //   },
-  // ];
-  // const freePlan = {
-  //   token: ethers.constants.AddressZero,
-  //   period: 0,
-  //   amount: 0,
-  //   data: ethers.utils.hexZeroPad(ethers.utils.hexlify(3), 32),
-  // };
-  // await (await dropperSubscriptionContract.appendPlan(plans)).wait();
-  // await (await dropperSubscriptionContract.updatePlan(0, freePlan)).wait();
+  const paySubscription =
+    await subscriptionFactoryContract.getHectorSubscriptionContractByName(
+      ethers.utils.keccak256(ethers.utils.toUtf8Bytes(hectorMultiPayProduct))
+    );
 
   /// Dropper ///
   const dropperLogic = await deploy('HectorDropper', {
@@ -175,9 +53,19 @@ const deployDropper: DeployFunction = async (
   const dropperParams = [dropperLogic.address, upgradeableAdmin, treasury, fee];
   const dropperFactory = await deploy('HectorDropperFactory', {
     from: deployer.address,
-    args: dropperParams,
+    args: [],
     log: true,
+    proxy: {
+      proxyContract: 'OpenZeppelinTransparentProxy',
+      execute: {
+        methodName: 'initialize',
+        args: dropperParams,
+      },
+    },
   });
+  const dropperFactoryImplementation = await getImplementationAddress(
+    dropperFactory.address
+  );
   const dropperFactoryContract = await ethers.getContract(
     'HectorDropperFactory',
     deployer
@@ -186,52 +74,33 @@ const deployDropper: DeployFunction = async (
   await (
     await dropperFactoryContract.createHectorDropperContract(hectorTokenAddress)
   ).wait();
+  await waitSeconds(1);
   await (
     await dropperFactoryContract.createHectorDropperContract(torTokenAddress)
   ).wait();
 
   /// VALIDATOR ///
-  // const validatorParams = [dropperSubscription];
-  // const dropperValidator = await deploy('HectorDropperValidator', {
-  //   from: deployer.address,
-  //   args: validatorParams,
-  //   log: true,
-  // });
+  const validatorParams = [paySubscription];
+  const dropperValidator = await deploy('HectorDropperValidator', {
+    from: deployer.address,
+    args: validatorParams,
+    log: true,
+  });
 
-  //   await(
-  //     await dropperFactoryContract.setValidator(dropperValidator.address)
-  //   ).wait();
+  await (
+    await dropperFactoryContract.setValidator(dropperValidator.address)
+  ).wait();
 
   /// VERIFY ///
   if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
-    // await waitSeconds(10);
-    // console.log('=====> Verifing ....');
-    // try {
-    //   await hre.run('verify:verify', {
-    //     address: subscriptionFactory.address,
-    //     contract:
-    //       'contracts/HectorPay/subscription/HectorSubscriptionFactory.sol:HectorSubscriptionFactory',
-    //     constructorArguments: subscriptionParams,
-    //   });
-    // } catch (_) {}
-
-    // await waitSeconds(10);
-    // try {
-    //   await hre.run('verify:verify', {
-    //     address: subscriptionLogic.address,
-    //     contract:
-    //       'contracts/HectorPay/subscription/HectorSubscription.sol:HectorSubscription',
-    //     constructorArguments: [],
-    //   });
-    // } catch (_) {}
-
     await waitSeconds(10);
+    console.log('=====> Verifing ....');
     try {
       await hre.run('verify:verify', {
-        address: dropperFactory.address,
+        address: dropperFactoryImplementation,
         contract:
           'contracts/HectorPay/dropper/HectorDropperFactory.sol:HectorDropperFactory',
-        constructorArguments: dropperParams,
+        constructorArguments: [],
       });
     } catch (_) {}
 
@@ -244,15 +113,15 @@ const deployDropper: DeployFunction = async (
       });
     } catch (_) {}
 
-    // await waitSeconds(10);
-    // try {
-    //   await hre.run('verify:verify', {
-    //     address: dropperValidator.address,
-    //     contract:
-    //       'contracts/HectorPay/validator/HectorDropperValidator.sol:HectorDropperValidator',
-    //     constructorArguments: validatorParams,
-    //   });
-    // } catch (_) {}
+    await waitSeconds(10);
+    try {
+      await hre.run('verify:verify', {
+        address: dropperValidator.address,
+        contract:
+          'contracts/HectorPay/validator/HectorDropperValidator.sol:HectorDropperValidator',
+        constructorArguments: validatorParams,
+      });
+    } catch (_) {}
   }
 };
 

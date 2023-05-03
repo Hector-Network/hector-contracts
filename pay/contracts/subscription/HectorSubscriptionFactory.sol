@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.17;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
 import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
@@ -14,7 +14,10 @@ interface ISubscription {
 error INVALID_PRODUCT();
 error INVALID_ADDRESS();
 
-contract HectorSubscriptionFactory is IHectorSubscriptionFactory, Ownable {
+contract HectorSubscriptionFactory is
+    IHectorSubscriptionFactory,
+    OwnableUpgradeable
+{
     /* ======== STORAGE ======== */
 
     struct Subscription {
@@ -36,7 +39,15 @@ contract HectorSubscriptionFactory is IHectorSubscriptionFactory, Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(address _hectorSubscriptionLogic, address _upgradeableAdmin) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address _hectorSubscriptionLogic,
+        address _upgradeableAdmin
+    ) external initializer {
         if (
             _hectorSubscriptionLogic == address(0) ||
             _upgradeableAdmin == address(0)
@@ -44,6 +55,8 @@ contract HectorSubscriptionFactory is IHectorSubscriptionFactory, Ownable {
 
         hectorSubscriptionLogic = _hectorSubscriptionLogic;
         upgradeableAdmin = _upgradeableAdmin;
+
+        __Ownable_init();
     }
 
     /* ======== POLICY FUNCTIONS ======== */

@@ -1,6 +1,6 @@
 import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 import { BigNumber, utils } from 'ethers';
 import { increaseTime, getTimeStamp } from './../helper';
 import {
@@ -66,9 +66,13 @@ describe('HectorDropper', function () {
     const HectorSubscriptionFactory = await ethers.getContractFactory(
       'HectorSubscriptionFactory'
     );
-    hectorSubscriptionFactory = (await HectorSubscriptionFactory.deploy(
-      hectorSubscriptionLogic.address,
-      upgradeableAdmin.address
+    await upgrades.silenceWarnings();
+    hectorSubscriptionFactory = (await upgrades.deployProxy(
+      HectorSubscriptionFactory,
+      [hectorSubscriptionLogic.address, upgradeableAdmin.address],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
     )) as HectorSubscriptionFactory;
 
     await hectorSubscriptionFactory.createHectorSubscriptionContract(
@@ -117,11 +121,18 @@ describe('HectorDropper', function () {
     const HectorDropperFactory = await ethers.getContractFactory(
       'HectorDropperFactory'
     );
-    hectorDropperFactory = (await HectorDropperFactory.deploy(
-      hectorDropperLogic.address,
-      upgradeableAdmin.address,
-      treasury.address,
-      fee
+    await upgrades.silenceWarnings();
+    hectorDropperFactory = (await upgrades.deployProxy(
+      HectorDropperFactory,
+      [
+        hectorDropperLogic.address,
+        upgradeableAdmin.address,
+        treasury.address,
+        fee,
+      ],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
     )) as HectorDropperFactory;
 
     await hectorDropperFactory.createHectorDropperContract(hectorToken.address);
