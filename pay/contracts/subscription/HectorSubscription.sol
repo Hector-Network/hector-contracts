@@ -8,6 +8,7 @@ import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/se
 
 import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
 import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
+import {IHectorCoupon} from '../interfaces/IHectorCoupon.sol';
 
 error INVALID_PARAM();
 error INVALID_ADDRESS();
@@ -18,6 +19,7 @@ error INSUFFICIENT_FUND();
 error INACTIVE_SUBSCRIPTION();
 error ACTIVE_SUBSCRIPTION();
 error INVALID_MODERATOR();
+error INVALID_COUPON();
 
 contract HectorSubscription is
     IHectorSubscription,
@@ -27,6 +29,9 @@ contract HectorSubscription is
     using SafeERC20 for IERC20;
 
     /* ======== STORAGE ======== */
+
+    /// @notice subscription factory
+    IHectorSubscriptionFactory factory;
 
     /// @notice product
     string public product;
@@ -67,6 +72,13 @@ contract HectorSubscription is
         uint256 indexed planId,
         uint48 expiredAt
     );
+    event SubscriptionCreatedWithCoupon(
+        address indexed from,
+        uint256 indexed planId,
+        uint256 indexed couponId,
+        uint256 amount,
+        uint48 expiredAt
+    );
     event SubscriptionSynced(
         address indexed from,
         uint256 indexed planId,
@@ -102,9 +114,7 @@ contract HectorSubscription is
     }
 
     function initialize() external initializer {
-        IHectorSubscriptionFactory factory = IHectorSubscriptionFactory(
-            msg.sender
-        );
+        factory = IHectorSubscriptionFactory(msg.sender);
 
         (product, treasury) = abi.decode(
             factory.parameter(),
@@ -131,6 +141,11 @@ contract HectorSubscription is
 
     modifier onlyValidPlan(uint256 _planId) {
         if (_planId == 0 || _planId >= plans.length) revert INVALID_PLAN();
+        _;
+    }
+
+    modifier onlyHasCoupon() {
+        if (factory.coupon() == address(0)) revert INVALID_COUPON();
         _;
     }
 
@@ -192,6 +207,39 @@ contract HectorSubscription is
             _plan.amount,
             _plan.data
         );
+    }
+
+    function updatePlans(
+        uint256[] calldata _planIds,
+        Plan[] calldata _plans
+    ) external onlyMod {
+        uint256 length = _planIds.length;
+        if (length != _plans.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            uint256 _planId = _planIds[i];
+            Plan memory _plan = _plans[i];
+
+            if (_planId == 0) {
+                if (_plan.token != address(0)) revert INVALID_ADDRESS();
+                if (_plan.period != 0) revert INVALID_TIME();
+                if (_plan.amount != 0) revert INVALID_AMOUNT();
+            } else {
+                if (_plan.token == address(0)) revert INVALID_ADDRESS();
+                if (_plan.period == 0) revert INVALID_TIME();
+                if (_plan.amount == 0) revert INVALID_AMOUNT();
+            }
+
+            plans[_planId] = _plan;
+
+            emit PlanUpdated(
+                _planId,
+                _plan.token,
+                _plan.period,
+                _plan.amount,
+                _plan.data
+            );
+        }
     }
 
     function updateExpireDeadline(uint48 _expireDeadline) external onlyMod {
@@ -358,6 +406,45 @@ contract HectorSubscription is
         }
     }
 
+    function toCreateSubscritpionWithCoupon(
+        uint256 _planId,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    )
+        public
+        onlyValidPlan(_planId)
+        onlyHasCoupon
+        returns (uint256 amountToDeposit)
+    {
+        Subscription storage subscription = subscriptions[msg.sender];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(msg.sender);
+
+            if (subscription.expiredAt > block.timestamp) return 0;
+        }
+
+        Plan memory plan = plans[_planId];
+
+        // check if coupon is valid
+        (, , uint256 newAmount) = IHectorCoupon(factory.coupon()).applyCoupon(
+            IHectorCoupon.Pay({
+                product: product,
+                payer: msg.sender,
+                token: plan.token,
+                amount: plan.amount
+            }),
+            couponInfo,
+            signature
+        );
+
+        // Deposit more to pay for new plan
+        if (balanceOf[msg.sender][plan.token] < newAmount) {
+            amountToDeposit = newAmount - balanceOf[msg.sender][plan.token];
+        }
+    }
+
     /* ======== USER FUNCTIONS ======== */
 
     function deposit(address _token, uint256 _amount) public nonReentrant {
@@ -400,6 +487,62 @@ contract HectorSubscription is
         IERC20(plan.token).safeTransfer(treasury, plan.amount);
 
         emit SubscriptionCreated(msg.sender, _planId, subscription.expiredAt);
+    }
+
+    function createSubscriptionWithCoupon(
+        uint256 _planId,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) public onlyValidPlan(_planId) onlyHasCoupon {
+        Subscription storage subscription = subscriptions[msg.sender];
+
+        // check if no or expired subscription
+        if (subscription.planId > 0) {
+            syncSubscription(msg.sender);
+
+            if (subscription.expiredAt > block.timestamp)
+                revert ACTIVE_SUBSCRIPTION();
+        }
+
+        Plan memory plan = plans[_planId];
+
+        // check if coupon is valid
+        (bool isValid, uint256 couponId, uint256 newAmount) = IHectorCoupon(
+            factory.coupon()
+        ).applyCoupon(
+                IHectorCoupon.Pay({
+                    product: product,
+                    payer: msg.sender,
+                    token: plan.token,
+                    amount: plan.amount
+                }),
+                couponInfo,
+                signature
+            );
+        if (!isValid) revert INVALID_COUPON();
+
+        // Pay first plan
+        if (balanceOf[msg.sender][plan.token] < newAmount) {
+            deposit(plan.token, newAmount - balanceOf[msg.sender][plan.token]);
+        }
+
+        unchecked {
+            balanceOf[msg.sender][plan.token] -= newAmount;
+        }
+
+        // Set subscription
+        subscription.planId = _planId;
+        subscription.expiredAt = uint48(block.timestamp) + plan.period;
+
+        IERC20(plan.token).safeTransfer(treasury, newAmount);
+
+        emit SubscriptionCreatedWithCoupon(
+            msg.sender,
+            _planId,
+            couponId,
+            newAmount,
+            subscription.expiredAt
+        );
     }
 
     function syncSubscriptions(address[] memory froms) external {

@@ -11,7 +11,7 @@ async function getImplementationAddress(proxyAddress: string) {
   return ethers.utils.hexStripZeros(implHex);
 }
 
-const deploySubscription: DeployFunction = async (
+const deploySubscriptionTreasury: DeployFunction = async (
   hre: HardhatRuntimeEnvironment
 ) => {
   const { deployments, ethers } = hre;
@@ -53,3 +53,7 @@ const deploySubscription: DeployFunction = async (
     } catch (_) {}
   }
 };
+
+export default deploySubscriptionTreasury;
+deploySubscriptionTreasury.tags = ['SubscriptionTreasuryTest'];
+deploySubscriptionTreasury.dependencies = [];

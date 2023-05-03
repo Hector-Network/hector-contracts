@@ -21,7 +21,9 @@ error INSUFFICIENT_FEE();
 error INACTIVE_AIRDROP();
 error ACTIVE_AIRDROP();
 error NOT_RELEASABLE();
+error NOT_RELEASED();
 error FEE_TRANSFER_FAILED();
+error INVALID_MODERATOR();
 
 contract HectorDropper is
     IHectorDropper,
@@ -35,7 +37,8 @@ contract HectorDropper is
     enum AirdropStatus {
         InProgress,
         Completed,
-        Cancelled
+        Cancelled,
+        FeeRefunded
     }
 
     struct Airdrop {
@@ -54,6 +57,9 @@ contract HectorDropper is
 
     /// @notice airdrop info
     mapping(address => mapping(uint256 => Airdrop)) public airdrops;
+
+    /// @notice moderators data
+    mapping(address => bool) public moderators;
 
     /// @notice airdrop token
     IERC20 public token;
@@ -80,6 +86,7 @@ contract HectorDropper is
     );
     event AirdropCancelled(address indexed from, uint256 index);
     event AirdropReleased(address indexed from, uint256 index);
+    event AirdropFeeRefunded(address indexed from, uint256 index);
 
     /* ======== INITIALIZATION ======== */
 
@@ -93,11 +100,18 @@ contract HectorDropper is
 
         token = IERC20(factory.parameter());
 
+        moderators[factory.factoryOwner()] = true;
+
         _transferOwnership(factory.factoryOwner());
         __ReentrancyGuard_init();
     }
 
     /* ======== MODIFIER ======== */
+
+    modifier onlyMod() {
+        if (!moderators[msg.sender]) revert INVALID_MODERATOR();
+        _;
+    }
 
     modifier isValid(address from, uint256 numberOfRecipients) {
         address validator = factory.validator();
@@ -124,6 +138,22 @@ contract HectorDropper is
         }
     }
 
+    function setModerator(address moderator, bool approved) external onlyOwner {
+        if (moderator == address(0)) revert INVALID_ADDRESS();
+        moderators[moderator] = approved;
+    }
+
+    /* ======== MODERATOR FUNCTIONS ======== */
+
+    function setFeeRefunded(address from, uint256 index) external onlyMod {
+        Airdrop storage airdrop = airdrops[from][index];
+        if (airdrop.status != AirdropStatus.InProgress) revert NOT_RELEASED();
+
+        airdrop.status = AirdropStatus.FeeRefunded;
+
+        emit AirdropFeeRefunded(from, index);
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function airdropsByOwner(
@@ -146,6 +176,15 @@ contract HectorDropper is
         if (index >= numberOfAirdrops[from]) return false;
 
         return airdrops[from][index].releaseTime <= block.timestamp;
+    }
+
+    function isFeeRefunded(
+        address from,
+        uint256 index
+    ) external view returns (bool) {
+        if (index >= numberOfAirdrops[from]) return false;
+
+        return airdrops[from][index].status == AirdropStatus.FeeRefunded;
     }
 
     /* ======== INTERNAL FUNCTIONS ======== */

@@ -5,4 +5,6 @@ interface IHectorSubscriptionFactory {
     function parameter() external view returns (bytes memory);
 
     function factoryOwner() external view returns (address);
+
+    function coupon() external view returns (address);
 }
