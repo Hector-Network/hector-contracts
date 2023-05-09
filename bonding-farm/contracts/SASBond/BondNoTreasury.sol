@@ -3,9 +3,9 @@ pragma abicoder v2;
 pragma solidity 0.8.9;
 
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/extensions/IERC20MetadataUpgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
+import '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
+import '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import '@openzeppelin/contracts/token/ERC721/extensions/IERC721Enumerable.sol';
 
 import './interfaces/IPriceOracleAggregator.sol';
@@ -40,12 +40,11 @@ abstract contract OwnableUpgradeable is
     /**
      * @dev Initializes the contract setting the deployer as the initial owner.
      */
-    function __Ownable_init() internal initializer {
-        __Context_init_unchained();
+    function __Ownable_init() internal onlyInitializing {
         __Ownable_init_unchained();
     }
 
-    function __Ownable_init_unchained() internal initializer {
+    function __Ownable_init_unchained() internal onlyInitializing {
         _owner = msg.sender;
         emit OwnershipPushed(address(0), _owner);
     }
@@ -78,9 +77,16 @@ abstract contract OwnableUpgradeable is
         emit OwnershipPulled(_owner, _newOwner);
         _owner = _newOwner;
     }
+
+    /**
+     * @dev This empty reserved space is put in place to allow future versions to add new
+     * variables without shifting down storage in the inheritance chain.
+     * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[49] private __gap;
 }
 
-library CountersUpgradeable {
+library Counters {
     struct Counter {
         uint256 _value; // default: 0
     }
@@ -120,8 +126,8 @@ interface ILockFarm {
 }
 
 contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
-    using CountersUpgradeable for CountersUpgradeable.Counter;
-    using SafeERC20Upgradeable for IERC20Upgradeable;
+    using Counters for Counters.Counter;
+    using SafeERC20 for IERC20;
 
     /* ======== EVENTS ======== */
 
@@ -160,7 +166,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
     address[] public principals; // tokens used to create bond
     mapping(address => bool) public isPrincipal; // is token used to create bond
 
-    CountersUpgradeable.Counter public depositIdGenerator; // id for each deposit
+    Counters.Counter public depositIdGenerator; // id for each deposit
     mapping(address => mapping(uint256 => uint256)) public ownedDeposits; // each wallet owned index=>depositId
     mapping(uint256 => uint256) public depositIndexes; // each depositId and its index in ownedDeposits
     mapping(address => uint256) public depositCounts; // each wallet total deposit count
@@ -218,6 +224,11 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
     /* ======== INITIALIZATION ======== */
 
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
     function initialize(
         string memory _name,
         address _rewardToken,
@@ -241,10 +252,10 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         tokenVault = _tokenVault;
 
         name = _name;
-        rewardUnit = 10**(IERC20MetadataUpgradeable(_rewardToken).decimals());
+        rewardUnit = 10**(IERC20Metadata(_rewardToken).decimals());
         depositIdGenerator.init(1); //id starts with 1 for better handling in mapping of case NOT FOUND
 
-        IERC20Upgradeable(_rewardToken).safeApprove(_tokenVault, 2**256 - 1);
+        IERC20(_rewardToken).safeApprove(_tokenVault, 2**256 - 1);
         fnft.setApprovalForAll(_tokenVault, true);
 
         __Ownable_init();
@@ -292,7 +303,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
             require(
                 recipients[i] != fundRecipient,
-                'address in recipients can be the same as fundRecipient'
+                'address in recipients can not be the same as fundRecipient'
             );
             require(
                 feeWeightFor[recipients[i]] == 0,
@@ -476,7 +487,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
 
             require(
                 recipients[i] != fundRecipient,
-                'address in recipients can be the same as fundRecipient'
+                'address in recipients can not be the same as fundRecipient'
             );
             require(
                 feeWeightFor[recipients[i]] == 0,
@@ -547,7 +558,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         totalRemainingPayout += payout;
         require(
             totalRemainingPayout <=
-                IERC20Upgradeable(rewardToken).balanceOf(address(this)),
+                IERC20(rewardToken).balanceOf(address(this)),
             'Insufficient rewardToken'
         ); // has enough rewardToken balance for payout
 
@@ -557,11 +568,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         /**
             principal is transferred
          */
-        IERC20Upgradeable(_principal).safeTransferFrom(
-            msg.sender,
-            address(this),
-            _amount
-        );
+        IERC20(_principal).safeTransferFrom(msg.sender, address(this), _amount);
         totalPrincipals[_principal] += _amount;
 
         /**
@@ -646,7 +653,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             lockFarm.withdraw(info.fnftId);
         }
 
-        IERC20Upgradeable(rewardToken).safeTransfer(_recipient, info.payout); // send payout
+        IERC20(rewardToken).safeTransfer(_recipient, info.payout); // send payout
 
         emit BondRedeemed(_depositId, _recipient, info.payout, 0); // emit bond data
 
@@ -708,30 +715,27 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         );
 
         uint256 fee = tokenBalances[_principal][feeRecipient];
-        require(fee > 0);
+        require(fee > 0, 'claim amount is zero');
 
         tokenBalances[_principal][feeRecipient] = 0;
-        IERC20Upgradeable(_principal).safeTransfer(feeRecipient, fee);
+        IERC20(_principal).safeTransfer(feeRecipient, fee);
     }
 
     function claimFund(address _principal) external {
         uint256 fund = tokenBalances[_principal][fundRecipient];
-        require(fund > 0);
+        require(fund > 0, 'claim amount is zero');
 
         tokenBalances[_principal][fundRecipient] = 0;
-        IERC20Upgradeable(_principal).safeTransfer(fundRecipient, fund);
+        IERC20(_principal).safeTransfer(fundRecipient, fund);
     }
 
     function claimAutoStakingFee() external {
         address _rewardToken = lockFarm.rewardToken();
         uint256 fee = tokenBalances[_rewardToken][autoStakingFeeRecipient];
-        require(fee > 0);
+        require(fee > 0, 'claim amount is zero');
 
         tokenBalances[_rewardToken][autoStakingFeeRecipient] = 0;
-        IERC20Upgradeable(_rewardToken).safeTransfer(
-            autoStakingFeeRecipient,
-            fee
-        );
+        IERC20(_rewardToken).safeTransfer(autoStakingFeeRecipient, fee);
     }
 
     /* ======== INTERNAL HELPER FUNCTIONS ======== */
@@ -802,9 +806,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             'please complete initialize for AutoStakingFeeRecipient'
         );
 
-        IERC20Upgradeable _rewardToken = IERC20Upgradeable(
-            lockFarm.rewardToken()
-        );
+        IERC20 _rewardToken = IERC20(lockFarm.rewardToken());
         uint256 before = _rewardToken.balanceOf(address(this));
         lockFarm.claim(_fnftId); // claim from lock farm
         uint256 claimedAmount = _rewardToken.balanceOf(address(this)) - before;
@@ -840,8 +842,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
             (_amount *
                 priceOracleAggregator.viewPriceInUSD(_principal) *
                 rewardUnit) /
-            (nativePrice *
-                10**IERC20MetadataUpgradeable(_principal).decimals());
+            (nativePrice * 10**IERC20Metadata(_principal).decimals());
     }
 
     /**
@@ -959,7 +960,7 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
         amount_ =
             ((rewardUnit / 100) *
                 nativePrice *
-                10**IERC20MetadataUpgradeable(_principal).decimals()) /
+                10**IERC20Metadata(_principal).decimals()) /
             (priceOracleAggregator.viewPriceInUSD(_principal) * rewardUnit);
     }
 
@@ -1105,11 +1106,11 @@ contract BondNoTreasury is OwnableUpgradeable, PausableUpgradeable {
      *  @return bool
      */
     function withdrawToken(address _token) external onlyPolicy returns (bool) {
-        uint256 amount = IERC20Upgradeable(_token).balanceOf(address(this));
+        uint256 amount = IERC20(_token).balanceOf(address(this));
         if (_token == rewardToken) {
             amount = amount - totalRemainingPayout;
         }
-        IERC20Upgradeable(_token).safeTransfer(DAO, amount);
+        IERC20(_token).safeTransfer(DAO, amount);
         return true;
     }
 
