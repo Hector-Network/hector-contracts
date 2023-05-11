@@ -63,7 +63,7 @@ provider:
     AVAX_MULTIPAY_SUBGRAPH:
     MOONRIVER_MULTIPAY_SUBGRAPH:
     GAS_LIMIT: 900000
-    GAS_PREMIUM_FACTOR: 1.15
+    GAS_PREMIUM_FACTOR: 115 # 1.15x
     PRIVATE_KEY:
 custom:
   # See example: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions
