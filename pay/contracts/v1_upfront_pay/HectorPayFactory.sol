@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.17;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
 import {IHectorPay} from '../interfaces/IHectorPay.sol';
@@ -13,7 +13,7 @@ import {HectorPay} from './HectorPay.sol';
 error INVALID_ADDRESS();
 error INVALID_PARAM();
 
-contract HectorPayFactory is IHectorPayFactory, Ownable {
+contract HectorPayFactory is IHectorPayFactory, OwnableUpgradeable {
     /* ======== STORAGE ======== */
 
     address public hectorPayLogic;
@@ -31,12 +31,22 @@ contract HectorPayFactory is IHectorPayFactory, Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(address _hectorPayLogic, address _upgradeableAdmin) {
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
+        address _hectorPayLogic,
+        address _upgradeableAdmin
+    ) external initializer {
         if (_hectorPayLogic == address(0) || _upgradeableAdmin == address(0))
             revert INVALID_ADDRESS();
 
         hectorPayLogic = _hectorPayLogic;
         upgradeableAdmin = _upgradeableAdmin;
+
+        __Ownable_init();
     }
 
     /* ======== POLICY FUNCTIONS ======== */

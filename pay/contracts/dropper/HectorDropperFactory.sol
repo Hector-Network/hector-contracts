@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.17;
 
-import {Ownable} from '@openzeppelin/contracts/access/Ownable.sol';
+import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol';
 
 import {IHectorDropper} from '../interfaces/IHectorDropper.sol';
@@ -15,7 +15,7 @@ error INVALID_AMOUNT();
 error INVALID_PARAM();
 error INVALID_LENGTH();
 
-contract HectorDropperFactory is IHectorDropperFactory, Ownable {
+contract HectorDropperFactory is IHectorDropperFactory, OwnableUpgradeable {
     /* ======== STORAGE ======== */
 
     address public hectorDropperLogic;
@@ -36,12 +36,17 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
 
     /* ======== INITIALIZATION ======== */
 
-    constructor(
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(
         address _hectorDropperLogic,
         address _upgradeableAdmin,
         address _treasury,
         uint256 _fee
-    ) {
+    ) external initializer {
         if (
             _hectorDropperLogic == address(0) ||
             _upgradeableAdmin == address(0) ||
@@ -53,6 +58,8 @@ contract HectorDropperFactory is IHectorDropperFactory, Ownable {
         upgradeableAdmin = _upgradeableAdmin;
         treasury = _treasury;
         fee = _fee;
+
+        __Ownable_init();
     }
 
     /* ======== POLICY FUNCTIONS ======== */
