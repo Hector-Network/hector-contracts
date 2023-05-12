@@ -2,6 +2,7 @@
 pragma solidity ^0.8.17;
 
 import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
+import {IERC20Metadata} from '@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import {ReentrancyGuardUpgradeable} from '@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol';
@@ -243,6 +244,30 @@ contract HectorSubscriptionV2 is
         return plans;
     }
 
+    function allPlansWithTokenPrice()
+        external
+        view
+        returns (Plan[] memory, uint256[] memory, uint256[] memory)
+    {
+        uint256 length = plans.length;
+        uint256[] memory tokenPrices = new uint256[](length);
+        uint256[] memory tokenAmounts = new uint256[](length);
+
+        for (uint256 i = 0; i < length; i++) {
+            Plan memory plan = plans[i];
+            uint256 tokenPrice = viewPriceInUSD(plan.token);
+
+            tokenPrices[i] = tokenPrice;
+            tokenAmounts[i] = plan.price.mulDiv(
+                10 ** IERC20Metadata(plan.token).decimals(),
+                tokenPrice,
+                Math.Rounding.Up
+            );
+        }
+
+        return (plans, tokenPrices, tokenAmounts);
+    }
+
     function getPlan(uint256 _planId) external view returns (Plan memory) {
         return plans[_planId];
     }
@@ -270,8 +295,7 @@ contract HectorSubscriptionV2 is
         }
 
         Plan memory plan = plans[planId];
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
+        uint256 price = viewPriceInUSD(plan.token);
 
         dueDate =
             expiredAt +
@@ -320,10 +344,12 @@ contract HectorSubscriptionV2 is
         // Pay for new plan
         uint256 payForNewPlan;
         if (refundPrice < newPlan.price) {
-            uint256 price = IPriceOracleAggregator(
-                factory.priceOracleAggregator()
-            ).viewPriceInUSD(newPlan.token);
-            payForNewPlan = (newPlan.price - refundPrice).ceilDiv(price);
+            uint256 price = viewPriceInUSD(newPlan.token);
+            payForNewPlan = (newPlan.price - refundPrice).mulDiv(
+                10 ** IERC20Metadata(newPlan.token).decimals(),
+                price,
+                Math.Rounding.Up
+            );
         }
 
         // Deposit more to pay for new plan
@@ -347,9 +373,12 @@ contract HectorSubscriptionV2 is
         }
 
         Plan memory plan = plans[_planId];
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = plan.price.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = plan.price.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         // Deposit more to pay for new plan
         if (balanceOf[msg.sender][plan.token] < amount) {
@@ -391,9 +420,12 @@ contract HectorSubscriptionV2 is
                 signature
             );
 
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = newPrice.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = newPrice.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         // Deposit more to pay for new plan
         if (balanceOf[msg.sender][plan.token] < amount) {
@@ -423,9 +455,12 @@ contract HectorSubscriptionV2 is
         }
 
         Plan memory plan = plans[_planId];
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = plan.price.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = plan.price.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         // Pay first plan
         if (balanceOf[msg.sender][plan.token] < amount) {
@@ -484,9 +519,12 @@ contract HectorSubscriptionV2 is
             );
         if (!isValid) revert INVALID_COUPON();
 
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = newPrice.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = newPrice.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         // Pay first plan
         if (balanceOf[msg.sender][plan.token] < amount) {
@@ -545,9 +583,12 @@ contract HectorSubscriptionV2 is
 
         // after expiration
         Plan memory plan = plans[planId];
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = plan.price.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = plan.price.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         uint256 count = (block.timestamp -
             subscription.expiredAt +
@@ -668,11 +709,15 @@ contract HectorSubscriptionV2 is
 
         // Pay for new plan
         uint256 payForNewPlan;
+        uint256 priceForNewPlan;
         if (refundPrice < newPlan.price) {
-            uint256 price = IPriceOracleAggregator(
-                factory.priceOracleAggregator()
-            ).viewPriceInUSD(newPlan.token);
-            payForNewPlan = (newPlan.price - refundPrice).ceilDiv(price);
+            uint256 price = viewPriceInUSD(newPlan.token);
+            priceForNewPlan = newPlan.price - refundPrice;
+            payForNewPlan = priceForNewPlan.mulDiv(
+                10 ** IERC20Metadata(newPlan.token).decimals(),
+                price,
+                Math.Rounding.Up
+            );
 
             if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
                 deposit(
@@ -687,14 +732,15 @@ contract HectorSubscriptionV2 is
         }
         // Refund for old plan
         else if (refundPrice > newPlan.price) {
-            uint256 refundForOldPlan = (refundAmount *
-                (refundPrice - newPlan.price)) / refundPrice;
-            if (refundForOldPlan > 0) {
+            refundAmount =
+                (refundAmount * (refundPrice - newPlan.price)) /
+                refundPrice;
+            if (refundAmount > 0) {
                 address token = plans[oldPlanId].token;
 
-                IERC20(token).safeTransfer(msg.sender, refundForOldPlan);
+                IERC20(token).safeTransfer(msg.sender, refundAmount);
 
-                emit Refunded(msg.sender, token, refundForOldPlan);
+                emit Refunded(msg.sender, token, refundAmount);
             }
         }
 
@@ -712,14 +758,14 @@ contract HectorSubscriptionV2 is
         subscription.planId = _newPlanId;
         subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = newPlan.price;
+        subscription.lastAmountPaidInUsd = priceForNewPlan;
         subscription.lastAmountPaid = payForNewPlan;
 
         emit SubscriptionModified(
             msg.sender,
             oldPlanId,
             _newPlanId,
-            newPlan.price,
+            priceForNewPlan,
             payForNewPlan,
             subscription.expiredAt
         );
@@ -780,9 +826,12 @@ contract HectorSubscriptionV2 is
 
         // Pay first plan
         Plan memory plan = plans[_planId];
-        uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
-            .viewPriceInUSD(plan.token);
-        uint256 amount = plan.price.ceilDiv(price);
+        uint256 price = viewPriceInUSD(plan.token);
+        uint256 amount = plan.price.mulDiv(
+            10 ** IERC20Metadata(plan.token).decimals(),
+            price,
+            Math.Rounding.Up
+        );
 
         if (balanceOf[_to][plan.token] < amount) revert INSUFFICIENT_FUND();
 
@@ -847,11 +896,15 @@ contract HectorSubscriptionV2 is
 
         // Pay for new plan
         uint256 payForNewPlan;
+        uint256 priceForNewPlan;
         if (refundPrice < newPlan.price) {
-            uint256 price = IPriceOracleAggregator(
-                factory.priceOracleAggregator()
-            ).viewPriceInUSD(newPlan.token);
-            payForNewPlan = (newPlan.price - refundPrice).ceilDiv(price);
+            uint256 price = viewPriceInUSD(newPlan.token);
+            priceForNewPlan = newPlan.price - refundPrice;
+            payForNewPlan = priceForNewPlan.mulDiv(
+                10 ** IERC20Metadata(newPlan.token).decimals(),
+                price,
+                Math.Rounding.Up
+            );
 
             if (balanceOf[_to][newPlan.token] < payForNewPlan)
                 revert INSUFFICIENT_FUND();
@@ -862,12 +915,13 @@ contract HectorSubscriptionV2 is
         }
         // Refund for old plan
         else if (refundPrice > newPlan.price) {
-            uint256 refundForOldPlan = (refundAmount *
-                (refundPrice - newPlan.price)) / refundPrice;
-            if (refundForOldPlan > 0) {
+            refundAmount =
+                (refundAmount * (refundPrice - newPlan.price)) /
+                refundPrice;
+            if (refundAmount > 0) {
                 address token = plans[oldPlanId].token;
 
-                emit Refunded(_to, token, refundForOldPlan);
+                emit Refunded(_to, token, refundAmount);
             }
         }
 
@@ -883,14 +937,14 @@ contract HectorSubscriptionV2 is
         subscription.planId = _newPlanId;
         subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = newPlan.price;
+        subscription.lastAmountPaidInUsd = priceForNewPlan;
         subscription.lastAmountPaid = payForNewPlan;
 
         emit SubscriptionModified(
             _to,
             oldPlanId,
             _newPlanId,
-            newPlan.price,
+            priceForNewPlan,
             payForNewPlan,
             subscription.expiredAt
         );
