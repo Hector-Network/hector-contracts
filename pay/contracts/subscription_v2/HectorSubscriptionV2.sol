@@ -58,6 +58,7 @@ contract HectorSubscriptionV2 is
 
     /// @notice users subscription data
     mapping(address => Subscription) public subscriptions;
+    mapping(address => bool) public subscriptionByMod;
 
     /// @notice moderators data
     mapping(address => bool) public moderators;
@@ -116,6 +117,12 @@ contract HectorSubscriptionV2 is
     );
     event Refunded(address indexed to, address indexed token, uint256 amount);
     event Funded(address indexed token, uint256 amount);
+    event RefundedByMod(
+        address indexed to,
+        address indexed token,
+        uint256 amount
+    );
+    event FundedByMod(address indexed token, uint256 amount);
 
     /* ======== INITIALIZATION ======== */
 
@@ -478,6 +485,9 @@ contract HectorSubscriptionV2 is
         subscription.lastAmountPaidInUsd = plan.price;
         subscription.lastAmountPaid = amount;
 
+        // Set subscription by Mod
+        subscriptionByMod[msg.sender] = false;
+
         emit SubscriptionCreated(
             msg.sender,
             _planId,
@@ -542,6 +552,9 @@ contract HectorSubscriptionV2 is
         subscription.lastAmountPaidInUsd = newPrice;
         subscription.lastAmountPaid = amount;
 
+        // Set subscription by Mod
+        subscriptionByMod[msg.sender] = false;
+
         emit SubscriptionCreatedWithCoupon(
             msg.sender,
             _planId,
@@ -576,9 +589,13 @@ contract HectorSubscriptionV2 is
 
             address token = plans[planId].token;
 
-            IERC20(token).safeTransfer(treasury, fundAmount);
+            if (subscriptionByMod[from]) {
+                emit FundedByMod(token, fundAmount);
+            } else {
+                IERC20(token).safeTransfer(treasury, fundAmount);
 
-            emit Funded(token, fundAmount);
+                emit Funded(token, fundAmount);
+            }
         }
 
         // after expiration
@@ -761,6 +778,9 @@ contract HectorSubscriptionV2 is
         subscription.lastAmountPaidInUsd = priceForNewPlan;
         subscription.lastAmountPaid = payForNewPlan;
 
+        // Set subscription by Mod
+        subscriptionByMod[msg.sender] = false;
+
         emit SubscriptionModified(
             msg.sender,
             oldPlanId,
@@ -846,6 +866,9 @@ contract HectorSubscriptionV2 is
         subscription.lastAmountPaidInUsd = plan.price;
         subscription.lastAmountPaid = amount;
 
+        // Set subscription by Mod
+        subscriptionByMod[_to] = true;
+
         emit SubscriptionCreated(
             _to,
             _planId,
@@ -921,7 +944,7 @@ contract HectorSubscriptionV2 is
             if (refundAmount > 0) {
                 address token = plans[oldPlanId].token;
 
-                emit Refunded(_to, token, refundAmount);
+                emit RefundedByMod(_to, token, refundAmount);
             }
         }
 
@@ -930,7 +953,7 @@ contract HectorSubscriptionV2 is
         if (fundAmount > 0) {
             address token = plans[oldPlanId].token;
 
-            emit Funded(token, fundAmount);
+            emit FundedByMod(token, fundAmount);
         }
 
         // Set subscription
@@ -939,6 +962,9 @@ contract HectorSubscriptionV2 is
         subscription.lastPaidAt = uint48(block.timestamp);
         subscription.lastAmountPaidInUsd = priceForNewPlan;
         subscription.lastAmountPaid = payForNewPlan;
+
+        // Set subscription by Mod
+        subscriptionByMod[_to] = true;
 
         emit SubscriptionModified(
             _to,
@@ -971,7 +997,7 @@ contract HectorSubscriptionV2 is
         if (refundAmount > 0) {
             address token = plans[planId].token;
 
-            emit Refunded(msg.sender, token, refundAmount);
+            emit RefundedByMod(msg.sender, token, refundAmount);
         }
 
         // fund to Treasury
@@ -979,7 +1005,7 @@ contract HectorSubscriptionV2 is
         if (fundAmount > 0) {
             address token = plans[planId].token;
 
-            emit Funded(token, fundAmount);
+            emit FundedByMod(token, fundAmount);
         }
 
         // Set subscription
