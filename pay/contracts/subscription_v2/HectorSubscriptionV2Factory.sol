@@ -28,8 +28,8 @@ contract HectorSubscriptionV2Factory is
     address public hectorSubscriptionLogic;
     address public upgradeableAdmin;
 
-    address public coupon;
-    address public refund;
+    address public couponService;
+    address public refundService;
     address public priceOracleAggregator;
 
     bytes public parameter;
@@ -50,20 +50,21 @@ contract HectorSubscriptionV2Factory is
     function initialize(
         address _hectorSubscriptionLogic,
         address _upgradeableAdmin,
-        address _coupon,
-        address _refund,
+        address _couponService,
+        address _refundService,
         address _priceOracleAggregator
     ) external initializer {
         if (
             _hectorSubscriptionLogic == address(0) ||
             _upgradeableAdmin == address(0) ||
+            _refundService == address(0) ||
             _priceOracleAggregator == address(0)
         ) revert INVALID_ADDRESS();
 
         hectorSubscriptionLogic = _hectorSubscriptionLogic;
         upgradeableAdmin = _upgradeableAdmin;
-        coupon = _coupon;
-        refund = _refund;
+        couponService = _couponService;
+        refundService = _refundService;
         priceOracleAggregator = _priceOracleAggregator;
 
         __Ownable_init();
@@ -83,12 +84,13 @@ contract HectorSubscriptionV2Factory is
         upgradeableAdmin = _upgradeableAdmin;
     }
 
-    function setCoupon(address _coupon) external onlyOwner {
-        coupon = _coupon;
+    function setCoupon(address _couponService) external onlyOwner {
+        couponService = _couponService;
     }
 
-    function setRefund(address _refund) external onlyOwner {
-        refund = _refund;
+    function setRefund(address _refundService) external onlyOwner {
+        if (_refundService == address(0)) revert INVALID_ADDRESS();
+        refundService = _refundService;
     }
 
     function setPriceOracleAggregator(

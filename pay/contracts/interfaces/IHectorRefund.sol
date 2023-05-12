@@ -7,7 +7,7 @@ interface IHectorRefund {
         uint48 percent;
     }
 
-    function applyRefund(
+    function getRefundAmount(
         bytes calldata subscription
     ) external view returns (uint256 refundAmount);
 }

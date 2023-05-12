@@ -73,24 +73,24 @@ contract HectorSubscriptionV2 is
     event SubscriptionCreated(
         address indexed from,
         uint256 indexed planId,
-        uint256 lastPaidPrice,
-        uint256 lastPaidAmount,
+        uint256 lastAmountPaidInUsd,
+        uint256 lastAmountPaid,
         uint48 expiredAt
     );
     event SubscriptionCreatedWithCoupon(
         address indexed from,
         uint256 indexed planId,
         uint256 indexed couponId,
-        uint256 lastPaidPrice,
-        uint256 lastPaidAmount,
+        uint256 lastAmountPaidInUsd,
+        uint256 lastAmountPaid,
         uint48 expiredAt
     );
     event SubscriptionSynced(
         address indexed from,
         uint256 indexed planId,
         uint256 lastPaidAt,
-        uint256 lastPaidPrice,
-        uint256 lastPaidAmount,
+        uint256 lastAmountPaidInUsd,
+        uint256 lastAmountPaid,
         uint256 amount,
         uint48 expiredAt
     );
@@ -99,8 +99,8 @@ contract HectorSubscriptionV2 is
         address indexed from,
         uint256 indexed oldPlanId,
         uint256 indexed newPlanId,
-        uint256 lastPaidPrice,
-        uint256 lastPaidAmount,
+        uint256 lastAmountPaidInUsd,
+        uint256 lastAmountPaid,
         uint48 expiredAt
     );
     event PayerDeposit(
@@ -156,7 +156,7 @@ contract HectorSubscriptionV2 is
     }
 
     modifier onlyHasCoupon() {
-        if (factory.coupon() == address(0)) revert INVALID_COUPON();
+        if (factory.couponService() == address(0)) revert INVALID_COUPON();
         _;
     }
 
@@ -287,6 +287,12 @@ contract HectorSubscriptionV2 is
         }
     }
 
+    function viewPriceInUSD(address _token) public view returns (uint256) {
+        return
+            IPriceOracleAggregator(factory.priceOracleAggregator())
+                .viewPriceInUSD(_token);
+    }
+
     function toModifySubscription(
         uint256 _newPlanId
     ) public onlyValidPlan(_newPlanId) returns (uint256 amountToDeposit) {
@@ -302,13 +308,14 @@ contract HectorSubscriptionV2 is
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                oldPlanId,
-                subscription.lastPaidAt,
-                subscription.lastPaidPrice
-            )
-        );
+        uint256 refundPrice = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    oldPlanId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaidInUsd
+                )
+            );
 
         // Pay for new plan
         uint256 payForNewPlan;
@@ -372,16 +379,17 @@ contract HectorSubscriptionV2 is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (, , uint256 newPrice) = IHectorCoupon(factory.coupon()).applyCoupon(
-            IHectorCoupon.Pay({
-                product: product,
-                payer: msg.sender,
-                token: plan.token,
-                amount: plan.price
-            }),
-            couponInfo,
-            signature
-        );
+        (, , uint256 newPrice) = IHectorCoupon(factory.couponService())
+            .applyCoupon(
+                IHectorCoupon.Pay({
+                    product: product,
+                    payer: msg.sender,
+                    token: plan.token,
+                    amount: plan.price
+                }),
+                couponInfo,
+                signature
+            );
 
         uint256 price = IPriceOracleAggregator(factory.priceOracleAggregator())
             .viewPriceInUSD(plan.token);
@@ -432,8 +440,8 @@ contract HectorSubscriptionV2 is
         subscription.planId = _planId;
         subscription.expiredAt = uint48(block.timestamp) + plan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = plan.price;
-        subscription.lastPaidAmount = amount;
+        subscription.lastAmountPaidInUsd = plan.price;
+        subscription.lastAmountPaid = amount;
 
         emit SubscriptionCreated(
             msg.sender,
@@ -463,7 +471,7 @@ contract HectorSubscriptionV2 is
 
         // check if coupon is valid
         (bool isValid, uint256 couponId, uint256 newPrice) = IHectorCoupon(
-            factory.coupon()
+            factory.couponService()
         ).applyCoupon(
                 IHectorCoupon.Pay({
                     product: product,
@@ -493,8 +501,8 @@ contract HectorSubscriptionV2 is
         subscription.planId = _planId;
         subscription.expiredAt = uint48(block.timestamp) + plan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = newPrice;
-        subscription.lastPaidAmount = amount;
+        subscription.lastAmountPaidInUsd = newPrice;
+        subscription.lastAmountPaid = amount;
 
         emit SubscriptionCreatedWithCoupon(
             msg.sender,
@@ -524,9 +532,9 @@ contract HectorSubscriptionV2 is
         if (block.timestamp < subscription.expiredAt) return;
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastPaidAmount;
+        uint256 fundAmount = subscription.lastAmountPaid;
         if (fundAmount > 0) {
-            subscription.lastPaidAmount = 0;
+            subscription.lastAmountPaid = 0;
 
             address token = plans[planId].token;
 
@@ -558,24 +566,24 @@ contract HectorSubscriptionV2 is
                 balanceOf[from][plan.token] -= totalAmount;
                 subscription.expiredAt += uint48(plan.period * count);
                 subscription.lastPaidAt = subscription.expiredAt - plan.period;
-                subscription.lastPaidPrice = plan.price;
-                subscription.lastPaidAmount = amount;
+                subscription.lastAmountPaidInUsd = plan.price;
+                subscription.lastAmountPaid = amount;
             }
         }
 
         // expired for a long time (deadline), then cancel it
         if (subscription.expiredAt + expireDeadline <= block.timestamp) {
             subscription.planId = 0;
-            subscription.lastPaidPrice = 0;
-            subscription.lastPaidAmount = 0;
+            subscription.lastAmountPaidInUsd = 0;
+            subscription.lastAmountPaid = 0;
         }
 
         emit SubscriptionSynced(
             from,
             subscription.planId,
             subscription.lastPaidAt,
-            subscription.lastPaidPrice,
-            subscription.lastPaidAmount,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             totalAmount,
             subscription.expiredAt
         );
@@ -591,13 +599,14 @@ contract HectorSubscriptionV2 is
         if (planId == 0) revert INACTIVE_SUBSCRIPTION();
 
         // refund
-        uint256 refundAmount = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                planId,
-                subscription.lastPaidAt,
-                subscription.lastPaidAmount
-            )
-        );
+        uint256 refundAmount = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    planId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaid
+                )
+            );
         if (refundAmount > 0) {
             address token = plans[planId].token;
 
@@ -607,7 +616,7 @@ contract HectorSubscriptionV2 is
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastPaidAmount - refundAmount;
+        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
         if (fundAmount > 0) {
             address token = plans[planId].token;
 
@@ -619,8 +628,8 @@ contract HectorSubscriptionV2 is
         // Set subscription
         subscription.planId = 0;
         subscription.expiredAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = 0;
-        subscription.lastPaidAmount = 0;
+        subscription.lastAmountPaidInUsd = 0;
+        subscription.lastAmountPaid = 0;
 
         emit SubscriptionCancelled(msg.sender, planId);
     }
@@ -640,20 +649,22 @@ contract HectorSubscriptionV2 is
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                oldPlanId,
-                subscription.lastPaidAt,
-                subscription.lastPaidPrice
-            )
-        );
-        uint256 refundAmount = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                oldPlanId,
-                subscription.lastPaidAt,
-                subscription.lastPaidAmount
-            )
-        );
+        uint256 refundPrice = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    oldPlanId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaidInUsd
+                )
+            );
+        uint256 refundAmount = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    oldPlanId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaid
+                )
+            );
 
         // Pay for new plan
         uint256 payForNewPlan;
@@ -688,7 +699,7 @@ contract HectorSubscriptionV2 is
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastPaidAmount - refundAmount;
+        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
         if (fundAmount > 0) {
             address token = plans[oldPlanId].token;
 
@@ -701,8 +712,8 @@ contract HectorSubscriptionV2 is
         subscription.planId = _newPlanId;
         subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = newPlan.price;
-        subscription.lastPaidAmount = payForNewPlan;
+        subscription.lastAmountPaidInUsd = newPlan.price;
+        subscription.lastAmountPaid = payForNewPlan;
 
         emit SubscriptionModified(
             msg.sender,
@@ -783,8 +794,8 @@ contract HectorSubscriptionV2 is
         subscription.planId = _planId;
         subscription.expiredAt = uint48(block.timestamp) + plan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = plan.price;
-        subscription.lastPaidAmount = amount;
+        subscription.lastAmountPaidInUsd = plan.price;
+        subscription.lastAmountPaid = amount;
 
         emit SubscriptionCreated(
             _to,
@@ -817,20 +828,22 @@ contract HectorSubscriptionV2 is
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                oldPlanId,
-                subscription.lastPaidAt,
-                subscription.lastPaidPrice
-            )
-        );
-        uint256 refundAmount = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                oldPlanId,
-                subscription.lastPaidAt,
-                subscription.lastPaidAmount
-            )
-        );
+        uint256 refundPrice = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    oldPlanId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaidInUsd
+                )
+            );
+        uint256 refundAmount = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    oldPlanId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaid
+                )
+            );
 
         // Pay for new plan
         uint256 payForNewPlan;
@@ -859,7 +872,7 @@ contract HectorSubscriptionV2 is
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastPaidAmount - refundAmount;
+        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
         if (fundAmount > 0) {
             address token = plans[oldPlanId].token;
 
@@ -870,8 +883,8 @@ contract HectorSubscriptionV2 is
         subscription.planId = _newPlanId;
         subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
         subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = newPlan.price;
-        subscription.lastPaidAmount = payForNewPlan;
+        subscription.lastAmountPaidInUsd = newPlan.price;
+        subscription.lastAmountPaid = payForNewPlan;
 
         emit SubscriptionModified(
             _to,
@@ -893,13 +906,14 @@ contract HectorSubscriptionV2 is
         if (planId == 0) revert INACTIVE_SUBSCRIPTION();
 
         // refund
-        uint256 refundAmount = IHectorRefund(factory.refund()).applyRefund(
-            abi.encode(
-                planId,
-                subscription.lastPaidAt,
-                subscription.lastPaidAmount
-            )
-        );
+        uint256 refundAmount = IHectorRefund(factory.refundService())
+            .getRefundAmount(
+                abi.encode(
+                    planId,
+                    subscription.lastPaidAt,
+                    subscription.lastAmountPaid
+                )
+            );
         if (refundAmount > 0) {
             address token = plans[planId].token;
 
@@ -907,7 +921,7 @@ contract HectorSubscriptionV2 is
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastPaidAmount - refundAmount;
+        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
         if (fundAmount > 0) {
             address token = plans[planId].token;
 
@@ -917,8 +931,8 @@ contract HectorSubscriptionV2 is
         // Set subscription
         subscription.planId = 0;
         subscription.expiredAt = uint48(block.timestamp);
-        subscription.lastPaidPrice = 0;
-        subscription.lastPaidAmount = 0;
+        subscription.lastAmountPaidInUsd = 0;
+        subscription.lastAmountPaid = 0;
 
         emit SubscriptionCancelled(_to, planId);
     }

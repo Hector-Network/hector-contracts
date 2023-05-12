@@ -13,8 +13,8 @@ interface IHectorSubscriptionV2 {
         uint256 planId;
         uint48 expiredAt;
         uint48 lastPaidAt;
-        uint256 lastPaidPrice; // plan price in USD
-        uint256 lastPaidAmount; // plan token amount paid
+        uint256 lastAmountPaidInUsd; // plan price in USD
+        uint256 lastAmountPaid; // plan token amount paid
     }
 
     function getPlan(uint256 planId) external view returns (Plan memory);

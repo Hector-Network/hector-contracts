@@ -6,9 +6,9 @@ interface IHectorSubscriptionV2Factory {
 
     function factoryOwner() external view returns (address);
 
-    function coupon() external view returns (address);
+    function couponService() external view returns (address);
 
-    function refund() external view returns (address);
+    function refundService() external view returns (address);
 
     function priceOracleAggregator() external view returns (address);
 }

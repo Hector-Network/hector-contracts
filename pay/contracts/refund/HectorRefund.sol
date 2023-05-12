@@ -102,10 +102,10 @@ contract HectorRefund is IHectorRefund, OwnableUpgradeable {
         return refunds[_planId];
     }
 
-    function applyRefund(
+    function getRefundAmount(
         bytes calldata subscription
     ) external view returns (uint256 refundAmount) {
-        (uint256 planId, uint48 lastPaidAt, uint256 lastPaidAmount) = abi
+        (uint256 planId, uint48 lastPaidAt, uint256 lastAmountPaid) = abi
             .decode(subscription, (uint256, uint48, uint256));
 
         uint48 period = uint48(block.timestamp) - lastPaidAt;
@@ -123,6 +123,6 @@ contract HectorRefund is IHectorRefund, OwnableUpgradeable {
             }
         }
 
-        return (lastPaidAmount * percent) / MULTIPLIER;
+        return (lastAmountPaid * percent) / MULTIPLIER;
     }
 }
