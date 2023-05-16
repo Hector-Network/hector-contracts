@@ -1,0 +1,87 @@
+org: michaelnguyen102
+app: aws-node-scheduled-cron
+service: HectorMultipay
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  region: us-east-1
+  timeout: 30
+  environment:
+    DROPPER_FACTORY_MOON:
+    DROPPER_FACTORY_AVAX:
+    DROPPER_FACTORY_POLYGON:
+    DROPPER_FACTORY_ETH:
+    DROPPER_FACTORY_BSC:
+    DROPPER_FACTORY_BSCTEST:
+    DROPPER_FACTORY_FTM: "0x8767c1b2daDb79E896F8Bd3ca496305F2cfa1002"
+    DROPPER_FACTORY_FTMTEST: "0xE27a4Cd6C8134d79d358B989595A89b3341c498e"
+    FTM_RPC_URL: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    FTMTEST_RPC_URL: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    BSC_RPC_URL:
+    BSCTEST_RPC_URL:
+    ETH_RPC_URL:
+    ARBITRUM_RPC_URL:
+    OPTIMISM_RPC_URL:
+    POLYGON_RPC_URL:
+    AVAX_RPC_URL:
+    MOONRIVER_RPC_URL:
+    MULTIPAY_FACTORY_MOON:
+    MULTIPAY_FACTORY_AVAX:
+    MULTIPAY_FACTORY_POLYGON:
+    MULTIPAY_FACTORY_ETH:
+    MULTIPAY_FACTORY_BSC:
+    MULTIPAY_FACTORY_BSCTEST:
+    MULTIPAY_FACTORY_FTM: "0xC63FFe3b18dFC40015b7B191753A3366BA6727f3"
+    MULTIPAY_FACTORY_FTMTEST: "0x4A898D4505550831260EE5CEA009B984cAcEd353"
+    SUBSCRIPTION_FACTORY_MOON:
+    SUBSCRIPTION_FACTORY_AVAX:
+    SUBSCRIPTION_FACTORY_POLYGON:
+    SUBSCRIPTION_FACTORY_ETH:
+    SUBSCRIPTION_FACTORY_BSC:
+    SUBSCRIPTION_FACTORY_BSCTEST:
+    SUBSCRIPTION_FACTORY_FTM: "0x919aC88be0ED4789c01b5Eca964958161A6cbAEA"
+    SUBSCRIPTION_FACTORY_FTMTEST: "0x67024C7DFe5b88e8d0d78CFEB3FF61fFB1769828"
+    FTM_SUBSCRIPTION_SUBGRAPH: https://api.thegraph.com/subgraphs/name/hector-network-devs/hectorsubscription-fantom
+    FTMTEST_SUBSCRIPTION_SUBGRAPH: https://api.thegraph.com/subgraphs/name/bejaxer/hector-subscription-ftmtestnet
+    BSC_SUBSCRIPTION_SUBGRAPH:
+    BSCTEST_SUBSCRIPTION_SUBGRAPH: https://api.thegraph.com/subgraphs/name/bejaxer/hector-subscription-ftmtestnet
+    ETH_SUBSCRIPTION_SUBGRAPH:
+    ARBITRUM_SUBSCRIPTION_SUBGRAPH:
+    OPTIMISM_SUBSCRIPTION_SUBGRAPH:
+    POLYGON_SUBSCRIPTION_SUBGRAPH:
+    AVAX_SUBSCRIPTION_SUBGRAPH:
+    MOONRIVER_SUBSCRIPTION_SUBGRAPH:
+    FTM_MULTIPAY_SUBGRAPH: https://api.thegraph.com/subgraphs/name/hector-network-devs/multipay-fantom
+    FTMTEST_MULTIPAY_SUBGRAPH: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    BSC_MULTIPAY_SUBGRAPH:
+    BSCTEST_MULTIPAY_SUBGRAPH: https://api.thegraph.com/subgraphs/name/bejaxer/hectormultipaytest
+    ETH_MULTIPAY_SUBGRAPH:
+    ARBITRUM_MULTIPAY_SUBGRAPH:
+    OPTIMISM_MULTIPAY_SUBGRAPH:
+    POLYGON_MULTIPAY_SUBGRAPH:
+    AVAX_MULTIPAY_SUBGRAPH:
+    MOONRIVER_MULTIPAY_SUBGRAPH:
+    GAS_LIMIT: 900000
+    GAS_PREMIUM_FACTOR: 1.15
+    PRIVATE_KEY:
+custom:
+  # See example: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions
+  releaseAirdropSchedule: cron(0/5 * * * ? *) # Run EVERY HOUR
+  syncSubscriptionSchedule: cron(0/60 * * * ? *) # Run EVERY HOUR
+
+functions:
+  releaseAirdrop:
+    handler: handler.releaseAirdrop
+    events:
+      - schedule: ${self:custom.releaseAirdropSchedule}
+  syncSubscription:
+    handler: handler.syncSubscription
+    events:
+      - schedule: ${self:custom.syncSubscriptionSchedule}
+
+plugins:
+  - serverless-offline
+  - serverless-offline-scheduler
+  - serverless-mocha-plugin
+  - serverless-plugin-typescript
