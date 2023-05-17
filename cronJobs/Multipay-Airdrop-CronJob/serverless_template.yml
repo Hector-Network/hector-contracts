@@ -40,7 +40,7 @@ provider:
     SUBSCRIPTION_FACTORY_ETH:
     SUBSCRIPTION_FACTORY_BSC:
     SUBSCRIPTION_FACTORY_BSCTEST:
-    SUBSCRIPTION_FACTORY_FTM: "0x919aC88be0ED4789c01b5Eca964958161A6cbAEA"
+    SUBSCRIPTION_FACTORY_FTM: "0x50117416d1954A1693C8Ea148A5C3e661e276568"
     SUBSCRIPTION_FACTORY_FTMTEST: "0x67024C7DFe5b88e8d0d78CFEB3FF61fFB1769828"
     FTM_SUBSCRIPTION_SUBGRAPH: https://api.thegraph.com/subgraphs/name/hector-network-devs/hectorsubscription-fantom
     FTMTEST_SUBSCRIPTION_SUBGRAPH: https://api.thegraph.com/subgraphs/name/bejaxer/hector-subscription-ftmtestnet
@@ -63,7 +63,7 @@ provider:
     AVAX_MULTIPAY_SUBGRAPH:
     MOONRIVER_MULTIPAY_SUBGRAPH:
     GAS_LIMIT: 900000
-    GAS_PREMIUM_FACTOR: 1.15
+    GAS_PREMIUM_FACTOR: 115 # 1.15x
     PRIVATE_KEY:
 custom:
   # See example: https://docs.aws.amazon.com/AmazonCloudWatch/latest/events/ScheduledEvents.html#CronExpressions

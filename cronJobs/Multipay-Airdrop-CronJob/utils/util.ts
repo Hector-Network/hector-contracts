@@ -59,13 +59,14 @@ export async function getUpdatedGas(
   try {
     const gas_factor = process.env.GAS_PREMIUM_FACTOR
       ? process.env.GAS_PREMIUM_FACTOR
-      : "1.2";
-    const adjustedGasPrice = gasPrice
-      .mul(parseFloat(gas_factor) * 100)
-      .div(100);
+      : "115";
+    const gasFactorBN = BigNumber.from(gas_factor);
+    const adjustedGasPrice = gasPrice.mul(gasFactorBN).div(100);
+    return adjustedGasPrice;
+
     return adjustedGasPrice;
   } catch (error) {
-    console.log(error);
+    console.log("In util.getUpdatedGas", error);
     return gasPrice;
   }
 }
