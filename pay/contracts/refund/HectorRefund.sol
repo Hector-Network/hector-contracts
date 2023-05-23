@@ -109,16 +109,13 @@ contract HectorRefund is IHectorRefund, OwnableUpgradeable {
             .decode(subscription, (uint256, uint48, uint256));
 
         uint48 period = uint48(block.timestamp) - lastPaidAt;
-        uint48 limitPeriod = 2 ** 48 - 1;
         uint48 percent = 0;
         uint256 length = refunds[planId].length;
 
         for (uint256 i = 0; i < length; i++) {
             Refund memory refund = refunds[planId][i];
 
-            if (
-                limitPeriod < refund.limitPeriod && period < refund.limitPeriod
-            ) {
+            if (percent < refund.percent && period < refund.limitPeriod) {
                 percent = refund.percent;
             }
         }

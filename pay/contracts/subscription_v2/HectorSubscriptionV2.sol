@@ -245,6 +245,60 @@ contract HectorSubscriptionV2 is
         expireDeadline = _expireDeadline;
     }
 
+    /* ======== INTERNAL FUNCTIONS ======== */
+
+    function viewPriceInUSD(address _token) internal view returns (uint256) {
+        return
+            IPriceOracleAggregator(factory.priceOracleAggregator())
+                .viewPriceInUSD(_token);
+    }
+
+    function applyCoupon(
+        IHectorCoupon.Pay memory pay,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) internal returns (bool, uint256, uint256) {
+        return
+            IHectorCoupon(factory.couponService()).applyCoupon(
+                pay,
+                couponInfo,
+                signature
+            );
+    }
+
+    function getRefundAmount(
+        bytes memory subscription
+    ) internal view returns (uint256) {
+        return
+            IHectorRefund(factory.refundService()).getRefundAmount(
+                subscription
+            );
+    }
+
+    function fund(address from, address token, uint256 amount) internal {
+        if (amount == 0) return;
+
+        if (subscriptionByMod[from]) {
+            emit FundedByMod(token, amount);
+        } else {
+            IERC20(token).safeTransfer(treasury, amount);
+
+            emit Funded(token, amount);
+        }
+    }
+
+    function refund(address to, address token, uint256 amount) internal {
+        if (amount == 0) return;
+
+        if (subscriptionByMod[to]) {
+            emit RefundedByMod(to, token, amount);
+        } else {
+            IERC20(token).safeTransfer(to, amount);
+
+            emit Refunded(to, token, amount);
+        }
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function allPlans() external view returns (Plan[] memory) {
@@ -260,7 +314,7 @@ contract HectorSubscriptionV2 is
         uint256[] memory tokenPrices = new uint256[](length);
         uint256[] memory tokenAmounts = new uint256[](length);
 
-        for (uint256 i = 0; i < length; i++) {
+        for (uint256 i = 1; i < length; i++) {
             Plan memory plan = plans[i];
             uint256 tokenPrice = viewPriceInUSD(plan.token);
 
@@ -307,7 +361,9 @@ contract HectorSubscriptionV2 is
         dueDate =
             expiredAt +
             uint48(
-                ((price * balanceOf[from][plan.token]) / plan.price) *
+                ((price * balanceOf[from][plan.token]) /
+                    (plan.price *
+                        10 ** IERC20Metadata(plan.token).decimals())) *
                     plan.period
             );
         isActiveForNow = block.timestamp < dueDate;
@@ -316,12 +372,6 @@ contract HectorSubscriptionV2 is
         if (dueDate + expireDeadline <= block.timestamp) {
             planId = 0;
         }
-    }
-
-    function viewPriceInUSD(address _token) public view returns (uint256) {
-        return
-            IPriceOracleAggregator(factory.priceOracleAggregator())
-                .viewPriceInUSD(_token);
     }
 
     function toModifySubscription(
@@ -339,14 +389,13 @@ contract HectorSubscriptionV2 is
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    oldPlanId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaidInUsd
-                )
-            );
+        uint256 refundPrice = getRefundAmount(
+            abi.encode(
+                oldPlanId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaidInUsd
+            )
+        );
 
         // Pay for new plan
         uint256 payForNewPlan;
@@ -361,9 +410,11 @@ contract HectorSubscriptionV2 is
 
         // Deposit more to pay for new plan
         if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
-            amountToDeposit =
-                payForNewPlan -
-                balanceOf[msg.sender][newPlan.token];
+            unchecked {
+                amountToDeposit =
+                    payForNewPlan -
+                    balanceOf[msg.sender][newPlan.token];
+            }
         }
     }
 
@@ -389,7 +440,9 @@ contract HectorSubscriptionV2 is
 
         // Deposit more to pay for new plan
         if (balanceOf[msg.sender][plan.token] < amount) {
-            amountToDeposit = amount - balanceOf[msg.sender][plan.token];
+            unchecked {
+                amountToDeposit = amount - balanceOf[msg.sender][plan.token];
+            }
         }
     }
 
@@ -415,17 +468,16 @@ contract HectorSubscriptionV2 is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (, , uint256 newPrice) = IHectorCoupon(factory.couponService())
-            .applyCoupon(
-                IHectorCoupon.Pay({
-                    product: product,
-                    payer: msg.sender,
-                    token: plan.token,
-                    amount: plan.price
-                }),
-                couponInfo,
-                signature
-            );
+        (, , uint256 newPrice) = applyCoupon(
+            IHectorCoupon.Pay({
+                product: product,
+                payer: msg.sender,
+                token: plan.token,
+                amount: plan.price
+            }),
+            couponInfo,
+            signature
+        );
 
         uint256 price = viewPriceInUSD(plan.token);
         uint256 amount = newPrice.mulDiv(
@@ -436,14 +488,18 @@ contract HectorSubscriptionV2 is
 
         // Deposit more to pay for new plan
         if (balanceOf[msg.sender][plan.token] < amount) {
-            amountToDeposit = amount - balanceOf[msg.sender][plan.token];
+            unchecked {
+                amountToDeposit = amount - balanceOf[msg.sender][plan.token];
+            }
         }
     }
 
     /* ======== USER FUNCTIONS ======== */
 
     function deposit(address _token, uint256 _amount) public nonReentrant {
-        balanceOf[msg.sender][_token] += _amount;
+        unchecked {
+            balanceOf[msg.sender][_token] += _amount;
+        }
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
@@ -515,18 +571,16 @@ contract HectorSubscriptionV2 is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (bool isValid, uint256 couponId, uint256 newPrice) = IHectorCoupon(
-            factory.couponService()
-        ).applyCoupon(
-                IHectorCoupon.Pay({
-                    product: product,
-                    payer: msg.sender,
-                    token: plan.token,
-                    amount: plan.price
-                }),
-                couponInfo,
-                signature
-            );
+        (bool isValid, uint256 couponId, uint256 newPrice) = applyCoupon(
+            IHectorCoupon.Pay({
+                product: product,
+                payer: msg.sender,
+                token: plan.token,
+                amount: plan.price
+            }),
+            couponInfo,
+            signature
+        );
         if (!isValid) revert INVALID_COUPON();
 
         uint256 price = viewPriceInUSD(plan.token);
@@ -565,13 +619,6 @@ contract HectorSubscriptionV2 is
         );
     }
 
-    function syncSubscriptions(address[] memory froms) external {
-        uint256 length = froms.length;
-        for (uint256 i = 0; i < length; i++) {
-            syncSubscription(froms[i]);
-        }
-    }
-
     function syncSubscription(address from) public {
         Subscription storage subscription = subscriptions[from];
         uint256 planId = subscription.planId;
@@ -581,22 +628,6 @@ contract HectorSubscriptionV2 is
 
         // before expiration
         if (block.timestamp < subscription.expiredAt) return;
-
-        // fund to Treasury
-        uint256 fundAmount = subscription.lastAmountPaid;
-        if (fundAmount > 0) {
-            subscription.lastAmountPaid = 0;
-
-            address token = plans[planId].token;
-
-            if (subscriptionByMod[from]) {
-                emit FundedByMod(token, fundAmount);
-            } else {
-                IERC20(token).safeTransfer(treasury, fundAmount);
-
-                emit Funded(token, fundAmount);
-            }
-        }
 
         // after expiration
         Plan memory plan = plans[planId];
@@ -615,25 +646,39 @@ contract HectorSubscriptionV2 is
 
         // not active for now
         if (balance < totalAmount) {
-            count = balance / amount;
-            totalAmount = amount * count;
+            unchecked {
+                count = balance / amount;
+                totalAmount = amount * count;
+            }
         }
 
+        uint256 fundAmount = subscription.lastAmountPaid + totalAmount;
+        subscription.lastAmountPaid = 0;
+        subscription.lastAmountPaidInUsd = 0;
+
+        // Set subscription
         if (count > 0) {
             unchecked {
                 balanceOf[from][plan.token] -= totalAmount;
                 subscription.expiredAt += uint48(plan.period * count);
                 subscription.lastPaidAt = subscription.expiredAt - plan.period;
+            }
+
+            if (subscription.expiredAt > block.timestamp) {
+                unchecked {
+                    fundAmount -= amount;
+                }
                 subscription.lastAmountPaidInUsd = plan.price;
                 subscription.lastAmountPaid = amount;
             }
         }
 
+        // fund to Treasury
+        fund(from, plans[planId].token, fundAmount);
+
         // expired for a long time (deadline), then cancel it
         if (subscription.expiredAt + expireDeadline <= block.timestamp) {
             subscription.planId = 0;
-            subscription.lastAmountPaidInUsd = 0;
-            subscription.lastAmountPaid = 0;
         }
 
         emit SubscriptionSynced(
@@ -647,6 +692,13 @@ contract HectorSubscriptionV2 is
         );
     }
 
+    function syncSubscriptions(address[] memory froms) external {
+        uint256 length = froms.length;
+        for (uint256 i = 0; i < length; i++) {
+            syncSubscription(froms[i]);
+        }
+    }
+
     function cancelSubscription() external {
         syncSubscription(msg.sender);
 
@@ -657,31 +709,21 @@ contract HectorSubscriptionV2 is
         if (planId == 0) revert INACTIVE_SUBSCRIPTION();
 
         // refund
-        uint256 refundAmount = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    planId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaid
-                )
-            );
-        if (refundAmount > 0) {
-            address token = plans[planId].token;
-
-            IERC20(token).safeTransfer(msg.sender, refundAmount);
-
-            emit Refunded(msg.sender, token, refundAmount);
-        }
+        uint256 refundAmount = getRefundAmount(
+            abi.encode(
+                planId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaid
+            )
+        );
+        refund(msg.sender, plans[planId].token, refundAmount);
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
-        if (fundAmount > 0) {
-            address token = plans[planId].token;
-
-            IERC20(token).safeTransfer(treasury, fundAmount);
-
-            emit Funded(token, fundAmount);
-        }
+        fund(
+            msg.sender,
+            plans[planId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
 
         // Set subscription
         subscription.planId = 0;
@@ -707,29 +749,31 @@ contract HectorSubscriptionV2 is
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    oldPlanId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaidInUsd
-                )
-            );
-        uint256 refundAmount = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    oldPlanId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaid
-                )
-            );
+        uint256 refundPrice = getRefundAmount(
+            abi.encode(
+                oldPlanId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaidInUsd
+            )
+        );
+        uint256 refundAmount = getRefundAmount(
+            abi.encode(
+                oldPlanId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaid
+            )
+        );
 
         // Pay for new plan
         uint256 payForNewPlan;
         uint256 priceForNewPlan;
         if (refundPrice < newPlan.price) {
+            unchecked {
+                priceForNewPlan = newPlan.price - refundPrice;
+            }
+            refundAmount = 0;
+
             uint256 price = viewPriceInUSD(newPlan.token);
-            priceForNewPlan = newPlan.price - refundPrice;
             payForNewPlan = priceForNewPlan.mulDiv(
                 10 ** IERC20Metadata(newPlan.token).decimals(),
                 price,
@@ -748,28 +792,19 @@ contract HectorSubscriptionV2 is
             }
         }
         // Refund for old plan
-        else if (refundPrice > newPlan.price) {
+        else {
             refundAmount =
                 (refundAmount * (refundPrice - newPlan.price)) /
                 refundPrice;
-            if (refundAmount > 0) {
-                address token = plans[oldPlanId].token;
-
-                IERC20(token).safeTransfer(msg.sender, refundAmount);
-
-                emit Refunded(msg.sender, token, refundAmount);
-            }
+            refund(msg.sender, plans[oldPlanId].token, refundAmount);
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
-        if (fundAmount > 0) {
-            address token = plans[oldPlanId].token;
-
-            IERC20(token).safeTransfer(treasury, fundAmount);
-
-            emit Funded(token, fundAmount);
-        }
+        fund(
+            msg.sender,
+            plans[oldPlanId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
 
         // Set subscription
         subscription.planId = _newPlanId;
@@ -810,8 +845,6 @@ contract HectorSubscriptionV2 is
     function withdrawAll(address _token) external returns (uint256 amount) {
         syncSubscription(msg.sender);
 
-        if (_token == address(0)) revert INVALID_ADDRESS();
-
         amount = balanceOf[msg.sender][_token];
 
         if (amount > 0) {
@@ -841,8 +874,10 @@ contract HectorSubscriptionV2 is
         }
 
         // deposit token
-        balanceOf[_to][_token] += _amount;
-        emit PayerDeposit(_to, _token, _amount);
+        if (_amount > 0) {
+            balanceOf[_to][_token] += _amount;
+            emit PayerDeposit(_to, _token, _amount);
+        }
 
         // Pay first plan
         Plan memory plan = plans[_planId];
@@ -895,34 +930,38 @@ contract HectorSubscriptionV2 is
             revert INACTIVE_SUBSCRIPTION();
 
         // deposit token
-        balanceOf[_to][_token] += _amount;
-        emit PayerDeposit(_to, _token, _amount);
+        if (_amount > 0) {
+            balanceOf[_to][_token] += _amount;
+            emit PayerDeposit(_to, _token, _amount);
+        }
 
         Plan memory newPlan = plans[_newPlanId];
 
-        uint256 refundPrice = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    oldPlanId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaidInUsd
-                )
-            );
-        uint256 refundAmount = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    oldPlanId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaid
-                )
-            );
+        uint256 refundPrice = getRefundAmount(
+            abi.encode(
+                oldPlanId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaidInUsd
+            )
+        );
+        uint256 refundAmount = getRefundAmount(
+            abi.encode(
+                oldPlanId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaid
+            )
+        );
 
         // Pay for new plan
         uint256 payForNewPlan;
         uint256 priceForNewPlan;
         if (refundPrice < newPlan.price) {
+            unchecked {
+                priceForNewPlan = newPlan.price - refundPrice;
+            }
+            refundAmount = 0;
+
             uint256 price = viewPriceInUSD(newPlan.token);
-            priceForNewPlan = newPlan.price - refundPrice;
             payForNewPlan = priceForNewPlan.mulDiv(
                 10 ** IERC20Metadata(newPlan.token).decimals(),
                 price,
@@ -937,24 +976,19 @@ contract HectorSubscriptionV2 is
             }
         }
         // Refund for old plan
-        else if (refundPrice > newPlan.price) {
+        else {
             refundAmount =
                 (refundAmount * (refundPrice - newPlan.price)) /
                 refundPrice;
-            if (refundAmount > 0) {
-                address token = plans[oldPlanId].token;
-
-                emit RefundedByMod(_to, token, refundAmount);
-            }
+            refund(_to, plans[oldPlanId].token, refundAmount);
         }
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
-        if (fundAmount > 0) {
-            address token = plans[oldPlanId].token;
-
-            emit FundedByMod(token, fundAmount);
-        }
+        fund(
+            _to,
+            plans[oldPlanId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
 
         // Set subscription
         subscription.planId = _newPlanId;
@@ -986,27 +1020,21 @@ contract HectorSubscriptionV2 is
         if (planId == 0) revert INACTIVE_SUBSCRIPTION();
 
         // refund
-        uint256 refundAmount = IHectorRefund(factory.refundService())
-            .getRefundAmount(
-                abi.encode(
-                    planId,
-                    subscription.lastPaidAt,
-                    subscription.lastAmountPaid
-                )
-            );
-        if (refundAmount > 0) {
-            address token = plans[planId].token;
-
-            emit RefundedByMod(msg.sender, token, refundAmount);
-        }
+        uint256 refundAmount = getRefundAmount(
+            abi.encode(
+                planId,
+                subscription.lastPaidAt,
+                subscription.lastAmountPaid
+            )
+        );
+        refund(_to, plans[planId].token, refundAmount);
 
         // fund to Treasury
-        uint256 fundAmount = subscription.lastAmountPaid - refundAmount;
-        if (fundAmount > 0) {
-            address token = plans[planId].token;
-
-            emit FundedByMod(token, fundAmount);
-        }
+        fund(
+            _to,
+            plans[planId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
 
         // Set subscription
         subscription.planId = 0;
