@@ -9,7 +9,7 @@ interface IHectorCoupon {
         address payer;
         /// @notice payment token
         address token;
-        /// @notice payment amount
+        /// @notice payment amount/price
         uint256 amount;
     }
 

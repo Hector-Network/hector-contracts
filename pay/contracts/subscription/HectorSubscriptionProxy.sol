@@ -93,6 +93,10 @@ contract HectorSubscriptionProxy is IHectorSubscription, OwnableUpgradeable {
         return plans[_planId];
     }
 
+    function getPlanData(uint256 _planId) external view returns (bytes memory) {
+        return plans[_planId].data;
+    }
+
     function getSubscription(
         address from
     )
