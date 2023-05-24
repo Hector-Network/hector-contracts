@@ -10,5 +10,7 @@ interface IHectorSubscriptionV2Factory {
 
     function refundService() external view returns (address);
 
+    function discountService() external view returns (address);
+
     function priceOracleAggregator() external view returns (address);
 }

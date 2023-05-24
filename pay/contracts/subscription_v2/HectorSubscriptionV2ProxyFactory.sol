@@ -26,6 +26,7 @@ contract HectorSubscriptionV2ProxyFactory is
 
     address public couponService;
     address public refundService;
+    address public discountService;
     address public priceOracleAggregator;
 
     bytes public parameter;

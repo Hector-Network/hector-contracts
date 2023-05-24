@@ -311,6 +311,10 @@ contract HectorSubscription is
         return plans[_planId];
     }
 
+    function getPlanToken(uint256 _planId) external view returns (address) {
+        return plans[_planId].token;
+    }
+
     function getPlanData(uint256 _planId) external view returns (bytes memory) {
         return plans[_planId].data;
     }

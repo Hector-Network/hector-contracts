@@ -2,6 +2,8 @@
 pragma solidity ^0.8.17;
 
 interface IHectorSubscriptionBase {
+    function getPlanToken(uint256 planId) external view returns (address);
+
     function getPlanData(uint256 planId) external view returns (bytes memory);
 
     function getSubscription(

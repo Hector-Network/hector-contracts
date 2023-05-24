@@ -11,6 +11,7 @@ import {
   PriceOracleAggregator,
   MockOracle,
   HectorCoupon,
+  HectorDiscount,
 } from '../types';
 
 describe('HectorSubscriptionV2', function () {
@@ -24,6 +25,7 @@ describe('HectorSubscriptionV2', function () {
 
   let hectorCoupon: HectorCoupon;
   let hectorRefund: HectorRefund;
+  let hectorDiscount: HectorDiscount;
   let priceOracleAggregator: PriceOracleAggregator;
 
   let hectorSubscriptionFactory: HectorSubscriptionV2Factory;
@@ -85,6 +87,13 @@ describe('HectorSubscriptionV2', function () {
       ]
     );
 
+    /// Discount
+    const HectorDiscount = await ethers.getContractFactory('HectorDiscount');
+    await upgrades.silenceWarnings();
+    hectorDiscount = (await upgrades.deployProxy(HectorDiscount, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorDiscount;
+
     /// Oracle
     const Oracle = await ethers.getContractFactory('MockOracle');
     const hectorOracle = (await Oracle.deploy(
@@ -128,6 +137,7 @@ describe('HectorSubscriptionV2', function () {
         upgradeableAdmin.address,
         hectorCoupon.address,
         hectorRefund.address,
+        hectorDiscount.address,
         priceOracleAggregator.address,
       ],
       {
@@ -246,26 +256,30 @@ describe('HectorSubscriptionV2', function () {
     it('all plans with token price', async function () {
       let info = await hectorSubscription.allPlansWithTokenPrice();
       let plans = info[0];
-      let prices = info[1];
-      let amounts = info[2];
+      let planDiscountedPrices = info[1];
+      let tokenPrices = info[2];
+      let tokenAmounts = info[3];
 
       expect(plans.length).equal(3);
-      expect(prices.length).equal(3);
-      expect(amounts.length).equal(3);
+      expect(planDiscountedPrices.length).equal(3);
+      expect(tokenPrices.length).equal(3);
+      expect(tokenAmounts.length).equal(3);
 
       expect(plans[1].token).equal(hectorToken.address);
       expect(plans[1].period).equal(oneHour);
       expect(plans[1].price).equal(priceOne);
       expect(plans[1].data).equal('0x00');
-      expect(prices[1]).equal(hectorPrice);
-      expect(amounts[1]).equal(hectorAmount);
+      expect(planDiscountedPrices[1]).equal(priceOne);
+      expect(tokenPrices[1]).equal(hectorPrice);
+      expect(tokenAmounts[1]).equal(hectorAmount);
 
       expect(plans[2].token).equal(torToken.address);
       expect(plans[2].period).equal(twoHour);
       expect(plans[2].price).equal(priceTwo);
       expect(plans[2].data).equal('0x00');
-      expect(prices[2]).equal(torPrice);
-      expect(amounts[2]).equal(torAmount);
+      expect(planDiscountedPrices[2]).equal(priceTwo);
+      expect(tokenPrices[2]).equal(torPrice);
+      expect(tokenAmounts[2]).equal(torAmount);
     });
 
     it('append plan', async function () {

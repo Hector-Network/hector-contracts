@@ -11,6 +11,7 @@ import {
   PriceOracleAggregator,
   MockOracle,
   HectorCoupon,
+  HectorDiscount,
 } from '../types';
 
 const encodeCouponInfo = (coupon: {
@@ -90,6 +91,7 @@ describe('HectorSubscriptionV2 + Coupon', function () {
 
   let hectorCoupon: HectorCoupon;
   let hectorRefund: HectorRefund;
+  let hectorDiscount: HectorDiscount;
   let priceOracleAggregator: PriceOracleAggregator;
 
   let hectorSubscriptionFactory: HectorSubscriptionV2Factory;
@@ -170,6 +172,13 @@ describe('HectorSubscriptionV2 + Coupon', function () {
       ]
     );
 
+    /// Discount
+    const HectorDiscount = await ethers.getContractFactory('HectorDiscount');
+    await upgrades.silenceWarnings();
+    hectorDiscount = (await upgrades.deployProxy(HectorDiscount, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorDiscount;
+
     /// Oracle
     const Oracle = await ethers.getContractFactory('MockOracle');
     const hectorOracle = (await Oracle.deploy(
@@ -213,6 +222,7 @@ describe('HectorSubscriptionV2 + Coupon', function () {
         upgradeableAdmin.address,
         hectorCoupon.address,
         hectorRefund.address,
+        hectorDiscount.address,
         priceOracleAggregator.address,
       ],
       {
