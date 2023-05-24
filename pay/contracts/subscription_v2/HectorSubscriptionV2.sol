@@ -395,6 +395,7 @@ contract HectorSubscriptionV2 is
 
         uint256 refundPrice = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 oldPlanId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaidInUsd
@@ -715,6 +716,7 @@ contract HectorSubscriptionV2 is
         // refund
         uint256 refundAmount = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 planId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaid
@@ -755,6 +757,7 @@ contract HectorSubscriptionV2 is
 
         uint256 refundPrice = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 oldPlanId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaidInUsd
@@ -762,6 +765,7 @@ contract HectorSubscriptionV2 is
         );
         uint256 refundAmount = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 oldPlanId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaid
@@ -943,6 +947,7 @@ contract HectorSubscriptionV2 is
 
         uint256 refundPrice = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 oldPlanId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaidInUsd
@@ -950,6 +955,7 @@ contract HectorSubscriptionV2 is
         );
         uint256 refundAmount = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 oldPlanId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaid
@@ -1026,6 +1032,7 @@ contract HectorSubscriptionV2 is
         // refund
         uint256 refundAmount = getRefundAmount(
             abi.encode(
+                keccak256(bytes(product)),
                 planId,
                 subscription.lastPaidAt,
                 subscription.lastAmountPaid

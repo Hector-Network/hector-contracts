@@ -88,6 +88,7 @@ describe('HectorDropper', function () {
       unsafeAllow: ['delegatecall'],
     })) as HectorRefund;
     await hectorRefund.appendRefund(
+      product,
       [1, 2],
       [
         [
