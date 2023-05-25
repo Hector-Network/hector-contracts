@@ -1,16 +1,73 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.7;
 
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol';
-import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
-error INVALID_PARAM();
-error INVALID_ADDRESS();
-error BRIDGE_FAILURE();
-error INVALID_ALLOWANCE();
+interface IOwnableUpgradeable {
+	function owner() external view returns (address);
+
+	function renounceManagement() external;
+
+	function pushManagement(address newOwner_) external;
+
+	function pullManagement() external;
+}
+
+abstract contract OwnableUpgradeable is IOwnableUpgradeable, Initializable, ContextUpgradeable {
+	address internal _owner;
+	address internal _newOwner;
+
+	event OwnershipPushed(address indexed previousOwner, address indexed newOwner);
+	event OwnershipPulled(address indexed previousOwner, address indexed newOwner);
+
+	/**
+	 * @dev Initializes the contract setting the deployer as the initial owner.
+	 */
+	function __Ownable_init() internal onlyInitializing {
+		__Ownable_init_unchained();
+	}
+
+	function __Ownable_init_unchained() internal onlyInitializing {
+		_owner = msg.sender;
+		emit OwnershipPushed(address(0), _owner);
+	}
+
+	function owner() public view override returns (address) {
+		return _owner;
+	}
+
+	modifier onlyOwner() {
+		require(_owner == msg.sender, 'Ownable: caller is not the owner');
+		_;
+	}
+
+	function renounceManagement() public virtual override onlyOwner {
+		emit OwnershipPushed(_owner, address(0));
+		_owner = address(0);
+	}
+
+	function pushManagement(address newOwner_) public virtual override {
+		require(newOwner_ != address(0), 'Ownable: new owner is the zero address');
+		emit OwnershipPushed(_owner, newOwner_);
+		_newOwner = newOwner_;
+	}
+
+	function pullManagement() public virtual override {
+		require(msg.sender == _newOwner, 'Ownable: must be new owner to pull');
+		emit OwnershipPulled(_owner, _newOwner);
+		_owner = _newOwner;
+	}
+
+	/**
+	 * @dev This empty reserved space is put in place to allow future versions to add new
+	 * variables without shifting down storage in the inheritance chain.
+	 * See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+	 */
+	uint256[49] private __gap;
+}
 
 /**
  * @title HecBridgeSplitter
@@ -62,20 +119,23 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		bool useSquid,
 		address squidTargetAddress
 	) external payable {
-		uint256 assetLength = sendingAssetInfos.length;
-
-		if  (assetLength != callDatas.length || assetLength > CountDest) 
-			revert INVALID_PARAM();
-
-		if (useSquid && squidTargetAddress == address(0))
-			revert INVALID_ADDRESS();
+		require(
+			sendingAssetInfos.length > 0 &&
+				sendingAssetInfos.length <= CountDest &&
+				sendingAssetInfos.length == callDatas.length,
+			'Splitter: bridge or swap call data is invalid'
+		);
+		require(useSquid && squidTargetAddress != address(0), 'Splitter: squid router is invalid');
 
 		address callTargetAddress = useSquid ? squidTargetAddress : LiFiBridge;
 		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
 			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
 				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
 
-				if (srcToken.allowance(msg.sender, address(this)) <= 0) revert INVALID_ALLOWANCE();				
+				require(
+					srcToken.allowance(msg.sender, address(this)) > 0,
+					'ERC20: transfer amount exceeds allowance'
+				);
 
 				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].sendingAmount);
 				srcToken.approve(callTargetAddress, sendingAssetInfos[i].sendingAmount);
@@ -83,11 +143,11 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
 				(bool success, ) = payable(callTargetAddress).call{value: fees[i]}(callDatas[i]);
-				if (!success) revert BRIDGE_FAILURE();
+				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			} else {
 				(bool success, ) = payable(callTargetAddress).call(callDatas[i]);
-				if (!success) revert BRIDGE_FAILURE();
+				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			}
 		}
