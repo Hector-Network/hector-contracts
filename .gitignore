@@ -8,4 +8,5 @@ typechain
 cache
 artifacts
 types
+.gitignore
 .openzeppelin
