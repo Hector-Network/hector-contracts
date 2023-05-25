@@ -72,7 +72,7 @@ async function main() {
 		mockCallDatas.push(mockCallData1);
 	}
 
-	console.log('mockSendingAssetInfo1:', mockSendingAssetInfo1);
+	console.log('mockSendingAssetInfos:', mockSendingAssetInfos);
 
 	if (!isNativeFrom) {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
