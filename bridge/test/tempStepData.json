@@ -1,610 +1,291 @@
 {
-    "type": "lifi",
-    "id": "f313c0c3-f20d-42cc-b4d8-0a623048dfcf",
-    "tool": "stargate",
-    "toolDetails": {
-        "key": "stargate",
-        "name": "Stargate",
-        "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
-    },
-    "action": {
-        "fromToken": {
-            "address": "0x0000000000000000000000000000000000000000",
-            "chainId": 43114,
-            "symbol": "AVAX",
-            "decimals": 18,
-            "name": "Avalanche",
-            "priceUSD": "17.43",
-            "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-            "coinKey": "AVAX"
-        },
-        "fromAmount": "200000000000000000",
-        "toToken": {
-            "address": "0x0000000000000000000000000000000000000000",
-            "chainId": 250,
-            "symbol": "FTM",
-            "decimals": 18,
-            "name": "FTM",
-            "priceUSD": "0.4239",
-            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-            "coinKey": "FTM"
-        },
-        "fromChainId": 43114,
-        "toChainId": 250,
-        "slippage": 0.005,
-        "fromAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
-        "toAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba"
-    },
-    "estimate": {
-        "tool": "stargate",
-        "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "toAmountMin": "8209464228934407350",
-        "toAmount": "8250717818024530000",
-        "fromAmount": "200000000000000000",
-        "feeCosts": [
-            {
-                "name": "Equilibrium fees",
-                "description": "The fee paid to users who rebalance tokens for the stargate protocol",
-                "amount": "377595969460575",
-                "percentage": "0.0000",
-                "token": {
-                    "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "chainId": 43114,
-                    "symbol": "WOO.e",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27765",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO.e"
-                },
-                "amountUSD": "0.01",
-                "included": true
-            },
-            {
-                "name": "Liquidity provider fees",
-                "description": "The fee paid to liquidity providers for the stargate protocol",
-                "amount": "1258653231535253",
-                "percentage": "0.0001",
-                "token": {
-                    "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "chainId": 43114,
-                    "symbol": "WOO.e",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27765",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO.e"
-                },
-                "amountUSD": "0.01",
-                "included": true
-            },
-            {
-                "name": "Protocol fees",
-                "description": "The fee paid to the stargate protocol",
-                "amount": "377595969460575",
-                "percentage": "0.0005",
-                "token": {
-                    "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "chainId": 43114,
-                    "symbol": "WOO.e",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27765",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO.e"
-                },
-                "amountUSD": "0.01",
-                "included": true
-            },
-            {
-                "name": "LayerZero fees",
-                "description": "Infrastructure fee paid in native token",
-                "amount": "17489750556260267",
-                "percentage": "0.0916",
-                "token": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 43114,
-                    "symbol": "AVAX",
-                    "decimals": 18,
-                    "name": "Avalanche",
-                    "priceUSD": "18.04",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                    "coinKey": "AVAX"
-                },
-                "amountUSD": "0.32",
-                "included": false
-            }
-        ],
-        "gasCosts": [
-            {
-                "type": "SEND",
-                "price": "51305362165",
-                "estimate": "790047",
-                "limit": "1053396",
-                "amount": "54044876109502881",
-                "amountUSD": "0.97",
-                "token": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 43114,
-                    "symbol": "AVAX",
-                    "decimals": 18,
-                    "name": "Avalanche",
-                    "priceUSD": "18.04",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                    "coinKey": "AVAX"
-                }
-            }
-        ],
-        "executionDuration": 153,
-        "fromAmountUSD": "3.49",
-        "toAmountUSD": "3.50"
-    },
-    "includedSteps": [
-        {
-            "id": "7caa4bb4-5564-415b-89b7-ab7537c92869",
-            "type": "swap",
-            "action": {
-                "fromChainId": 43114,
-                "fromAmount": "200000000000000000",
-                "fromToken": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 43114,
-                    "symbol": "AVAX",
-                    "decimals": 18,
-                    "name": "Avalanche",
-                    "priceUSD": "17.43",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                    "coinKey": "AVAX"
-                },
-                "toChainId": 43114,
-                "toToken": {
-                    "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "chainId": 43114,
-                    "symbol": "WOO.e",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27765",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO.e"
-                },
-                "slippage": 0.005,
-                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-                "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
-            },
-            "estimate": {
-                "tool": "0x",
-                "fromAmount": "200000000000000000",
-                "toAmount": "12649781221459830000",
-                "toAmountMin": "12586532315352530850",
-                "approvalAddress": "0xdef1c0ded9bec7f1a1670819833240f027b25eff",
-                "executionDuration": 30,
-                "feeCosts": [],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "51305362165",
-                        "estimate": "225000",
-                        "limit": "300000",
-                        "amount": "15391608649500000",
-                        "amountUSD": "0.28",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 43114,
-                            "symbol": "AVAX",
-                            "decimals": 18,
-                            "name": "Avalanche",
-                            "priceUSD": "18.04",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                            "coinKey": "AVAX"
-                        }
-                    }
-                ],
-                "toolData": {
-                    "chainId": 43114,
-                    "price": "63.24890610729915",
-                    "guaranteedPrice": "62.93266157676265425",
-                    "estimatedPriceImpact": "0",
-                    "to": "0xdef1c0ded9bec7f1a1670819833240f027b25eff",
-                    "data": "0x415565b0000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d08300000000000000000000000000000000000000000000000002c68af0bb140000000000000000000000000000000000000000000000000000aeac58745a8fffa200000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000002c68af0bb14000000000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000034000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d08300000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002c000000000000000000000000000000000000000000000000002c68af0bb1400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000025472616465724a6f650000000000000000000000000000000000000000000000000000000000000002c68af0bb140000000000000000000000000000000000000000000000000000aeac58745a8fffa2000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000060ae616a2155ee3d9a68541ba4544862310933d400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d083000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000869584cd00000000000000000000000026c16b6926637cf5eb62c42991b4166add66ff9e0000000000000000000000000000000000000000000000547bd5aac4644a8cd5",
-                    "value": "200000000000000000",
-                    "gas": "240000",
-                    "estimatedGas": "240000",
-                    "gasPrice": "44256840000",
-                    "protocolFee": "0",
-                    "minimumProtocolFee": "0",
-                    "buyTokenAddress": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "sellTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-                    "buyAmount": "12649781221459830000",
-                    "sellAmount": "200000000000000000",
-                    "sources": [
-                        {
-                            "name": "Pangolin",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "TraderJoe",
-                            "proportion": "1"
-                        },
-                        {
-                            "name": "SushiSwap",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Curve",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Curve_V2",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "KyberDMM",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Synapse",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "GMX",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Platypus",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "WOOFi",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "TraderJoe_V2",
-                            "proportion": "0"
-                        }
-                    ],
-                    "orders": [
-                        {
-                            "type": 0,
-                            "source": "TraderJoe",
-                            "makerToken": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                            "takerToken": "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
-                            "makerAmount": "12649781221459830000",
-                            "takerAmount": "200000000000000000",
-                            "fillData": {
-                                "tokenAddressPath": [
-                                    "0xb31f66aa3c1e785363f0875a1b74e27b85fd66c7",
-                                    "0xabc9547b534519ff73921b1fba6e672b5f58d083"
-                                ],
-                                "router": "0x60ae616a2155ee3d9a68541ba4544862310933d4"
-                            },
-                            "fill": {
-                                "input": "200000000000000000",
-                                "output": "12649781221459830000",
-                                "adjustedOutput": "12414274935249889815",
-                                "gas": 90000
-                            }
-                        }
-                    ],
-                    "allowanceTarget": "0x0000000000000000000000000000000000000000",
-                    "decodedUniqueId": "547bd5aac4-1682607317",
-                    "sellTokenToEthRate": "1",
-                    "buyTokenToEthRate": "59.126148939774729398",
-                    "expectedSlippage": null
-                }
-            },
-            "tool": "0x",
-            "toolDetails": {
-                "key": "0x",
-                "name": "0x",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/zerox.png"
-            }
-        },
-        {
-            "id": "6fd62766-25fe-4612-b16e-3d7ab05b783a",
-            "type": "cross",
-            "action": {
-                "fromChainId": 43114,
-                "fromAmount": "12586532315352530850",
-                "fromToken": {
-                    "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                    "chainId": 43114,
-                    "symbol": "WOO.e",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27765",
-                    "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO.e"
-                },
-                "toChainId": 250,
-                "toToken": {
-                    "address": "0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a",
-                    "chainId": 250,
-                    "symbol": "WOO",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27787334166579103",
-                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO"
-                },
-                "slippage": 0.005,
-                "destinationGasConsumption": "600000",
-                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-                "toAddress": "0x0BAEE5700179d87FabAd13022447Bd4E160374DD"
-            },
-            "estimate": {
-                "tool": "stargate",
-                "fromAmount": "12586532315352530850",
-                "toAmount": "12578980395963319332",
-                "toAmountMin": "12516085493983502735",
-                "approvalAddress": "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd",
-                "executionDuration": 93,
-                "feeCosts": [
-                    {
-                        "name": "Equilibrium fees",
-                        "description": "The fee paid to users who rebalance tokens for the stargate protocol",
-                        "amount": "377595969460575",
-                        "percentage": "0.0000",
-                        "token": {
-                            "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                            "chainId": 43114,
-                            "symbol": "WOO.e",
-                            "decimals": 18,
-                            "name": "Wootrade Network",
-                            "priceUSD": "0.27765",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                            "coinKey": "WOO.e"
-                        },
-                        "amountUSD": "0.01",
-                        "included": true
-                    },
-                    {
-                        "name": "Liquidity provider fees",
-                        "description": "The fee paid to liquidity providers for the stargate protocol",
-                        "amount": "1258653231535253",
-                        "percentage": "0.0001",
-                        "token": {
-                            "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                            "chainId": 43114,
-                            "symbol": "WOO.e",
-                            "decimals": 18,
-                            "name": "Wootrade Network",
-                            "priceUSD": "0.27765",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                            "coinKey": "WOO.e"
-                        },
-                        "amountUSD": "0.01",
-                        "included": true
-                    },
-                    {
-                        "name": "Protocol fees",
-                        "description": "The fee paid to the stargate protocol",
-                        "amount": "377595969460575",
-                        "percentage": "0.0005",
-                        "token": {
-                            "address": "0xabc9547b534519ff73921b1fba6e672b5f58d083",
-                            "chainId": 43114,
-                            "symbol": "WOO.e",
-                            "decimals": 18,
-                            "name": "Wootrade Network",
-                            "priceUSD": "0.27765",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/0xabc9547b534519ff73921b1fba6e672b5f58d083/c20b98e87358c365844d4f27fabd1c44.png",
-                            "coinKey": "WOO.e"
-                        },
-                        "amountUSD": "0.01",
-                        "included": true
-                    },
-                    {
-                        "name": "LayerZero fees",
-                        "description": "Infrastructure fee paid in native token",
-                        "amount": "17489750556260267",
-                        "percentage": "0.0916",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 43114,
-                            "symbol": "AVAX",
-                            "decimals": 18,
-                            "name": "Avalanche",
-                            "priceUSD": "18.04",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                            "coinKey": "AVAX"
-                        },
-                        "amountUSD": "0.32",
-                        "included": false
-                    }
-                ],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "51305362165",
-                        "estimate": "492188",
-                        "limit": "656250",
-                        "amount": "33669143920781250",
-                        "amountUSD": "0.61",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 43114,
-                            "symbol": "AVAX",
-                            "decimals": 18,
-                            "name": "Avalanche",
-                            "priceUSD": "18.04",
-                            "logoURI": "https://static.debank.com/image/avax_token/logo_url/avax/0b9c84359c84d6bdd5bfda9c2d4c4a82.png",
-                            "coinKey": "AVAX"
-                        }
-                    }
-                ],
-                "toolData": {}
-            },
-            "tool": "stargate",
-            "toolDetails": {
-                "key": "stargate",
-                "name": "Stargate",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
-            }
-        },
-        {
-            "id": "0270730a-984b-4feb-ba03-6e93180d391e",
-            "type": "swap",
-            "action": {
-                "fromChainId": 250,
-                "fromAmount": "12516085493983502735",
-                "fromToken": {
-                    "address": "0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a",
-                    "chainId": 250,
-                    "symbol": "WOO",
-                    "decimals": 18,
-                    "name": "Wootrade Network",
-                    "priceUSD": "0.27787334166579103",
-                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a/c20b98e87358c365844d4f27fabd1c44.png",
-                    "coinKey": "WOO"
-                },
-                "toChainId": 250,
-                "toToken": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 250,
-                    "symbol": "FTM",
-                    "decimals": 18,
-                    "name": "FTM",
-                    "priceUSD": "0.4239",
-                    "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-                    "coinKey": "FTM"
-                },
-                "slippage": 0.005,
-                "fromAddress": "0xDD1305150D27aecc60C066630105DB419977e367",
-                "toAddress": "0xDD1305150D27aecc60C066630105DB419977e367"
-            },
-            "estimate": {
-                "tool": "0x",
-                "fromAmount": "12516085493983502735",
-                "toAmount": "8250717818024530000",
-                "toAmountMin": "8209464228934407350",
-                "approvalAddress": "0xdef189deaef76e379df891899eb5a00a94cbc250",
-                "executionDuration": 30,
-                "feeCosts": [],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "382235679079",
-                        "estimate": "225000",
-                        "limit": "300000",
-                        "amount": "114670703723700000",
-                        "amountUSD": "0.05",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 250,
-                            "symbol": "FTM",
-                            "decimals": 18,
-                            "name": "FTM",
-                            "priceUSD": "0.4262",
-                            "logoURI": "https://static.debank.com/image/ftm_token/logo_url/ftm/33fdb9c5067e94f3a1b9e78f6fa86984.png",
-                            "coinKey": "FTM"
-                        }
-                    }
-                ],
-                "toolData": {
-                    "chainId": 250,
-                    "price": "0.659209129083582875",
-                    "guaranteedPrice": "0.655913083438164961",
-                    "estimatedPriceImpact": "0.4022",
-                    "to": "0xdef189deaef76e379df891899eb5a00a94cbc250",
-                    "data": "0x415565b00000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000071ede03879e954b600000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000001100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000340000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002c0000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000253706f6f6b7953776170000000000000000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000071ede03879e954b6000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c29000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004000000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000010000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a0000000000000000000000000000000000000000000000000000000000000000869584cd00000000000000000000000026c16b6926637cf5eb62c42991b4166add66ff9e00000000000000000000000000000000000000000000004976c26a2c644a8cd5",
-                    "value": "0",
-                    "gas": "240000",
-                    "estimatedGas": "240000",
-                    "gasPrice": "319863690000",
-                    "protocolFee": "0",
-                    "minimumProtocolFee": "0",
-                    "buyTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-                    "sellTokenAddress": "0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a",
-                    "buyAmount": "8250717818024530000",
-                    "sellAmount": "12516085493983502735",
-                    "sources": [
-                        {
-                            "name": "Beethovenx",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Curve",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Curve_V2",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "MorpheusSwap",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "SpiritSwap",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "SpookySwap",
-                            "proportion": "1"
-                        },
-                        {
-                            "name": "SushiSwap",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Synapse",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "Yoshi",
-                            "proportion": "0"
-                        },
-                        {
-                            "name": "WOOFi",
-                            "proportion": "0"
-                        }
-                    ],
-                    "orders": [
-                        {
-                            "type": 0,
-                            "source": "SpookySwap",
-                            "makerToken": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
-                            "takerToken": "0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a",
-                            "makerAmount": "8250717818024530000",
-                            "takerAmount": "12516085493983502735",
-                            "fillData": {
-                                "tokenAddressPath": [
-                                    "0x6626c47c00f1d87902fc13eecfac3ed06d5e8d8a",
-                                    "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83"
-                                ],
-                                "router": "0xf491e7b69e4244ad4002bc14e878a34207e38c29"
-                            },
-                            "fill": {
-                                "input": "12516085493983502735",
-                                "output": "8250717818024530000",
-                                "adjustedOutput": "8221930085924530000",
-                                "gas": 90000
-                            }
-                        }
-                    ],
-                    "allowanceTarget": "0xdef189deaef76e379df891899eb5a00a94cbc250",
-                    "decodedUniqueId": "4976c26a2c-1682607317",
-                    "sellTokenToEthRate": "1.510869095968626628",
-                    "buyTokenToEthRate": "1",
-                    "expectedSlippage": null
-                }
-            },
-            "tool": "0x",
-            "toolDetails": {
-                "key": "0x",
-                "name": "0x",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/zerox.png"
-            }
-        }
-    ],
-    "integrator": "jumper.exchange",
-    "transactionRequest": {
-        "data": "0xd7556c1e000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000002200000000000000000000000000000000000000000000000000000000000000a6086d43cac23a1c8efc2d448500ae9f205bc0be96f7620f306f36eb25ddcdb9fbf000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d083000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000aeac58745a8fffa200000000000000000000000000000000000000000000000000000000000000fa0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000087374617267617465000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f6a756d7065722e65786368616e6765000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff000000000000000000000000def1c0ded9bec7f1a1670819833240f027b25eff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d08300000000000000000000000000000000000000000000000002c68af0bb14000000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000006e8415565b0000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d08300000000000000000000000000000000000000000000000002c68af0bb140000000000000000000000000000000000000000000000000000aeac58745a8fffa200000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000040000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000000000000000000000000000002c68af0bb14000000000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000034000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d08300000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002c000000000000000000000000000000000000000000000000002c68af0bb1400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000025472616465724a6f650000000000000000000000000000000000000000000000000000000000000002c68af0bb140000000000000000000000000000000000000000000000000000aeac58745a8fffa2000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000060ae616a2155ee3d9a68541ba4544862310933d400000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000002000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000abc9547b534519ff73921b1fba6e672b5f58d083000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000b31f66aa3c1e785363f0875a1b74e27b85fd66c7000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000000000000000000000869584cd00000000000000000000000026c16b6926637cf5eb62c42991b4166add66ff9e0000000000000000000000000000000000000000000000547bd5aac4644a8cd50000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000000000000000927c0000000000000000000000000000000000000000000000000003e22d5e11db7ab000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba00000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000012000000000000000000000000000000000000000000000000000000000000000140baee5700179d87fabad13022447bd4e160374dd00000000000000000000000000000000000000000000000000000000000000000000000000000000000008a086d43cac23a1c8efc2d448500ae9f205bc0be96f7620f306f36eb25ddcdb9fbf00000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000020000000000000000000000000def189deaef76e379df891899eb5a00a94cbc250000000000000000000000000def189deaef76e379df891899eb5a00a94cbc2500000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000006c8415565b00000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000071ede03879e954b600000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004a0000000000000000000000000000000000000000000000000000000000000001100000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000340000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000000000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000002c0000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000300000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000253706f6f6b7953776170000000000000000000000000000000000000000000000000000000000000adb21171974e618f00000000000000000000000000000000000000000000000071ede03879e954b6000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c29000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000020000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a00000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000004000000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c83ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000000010000000000000000000000006626c47c00f1d87902fc13eecfac3ed06d5e8d8a0000000000000000000000000000000000000000000000000000000000000000869584cd00000000000000000000000026c16b6926637cf5eb62c42991b4166add66ff9e00000000000000000000000000000000000000000000004976c26a2c644a8cd5000000000000000000000000000000000000000000000000",
-        "to": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "value": "0x0304adc69c31b7ab",
-        "from": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
-        "chainId": 43114,
-        "gasPrice": "0x0bf209b2f5",
-        "gasLimit": "0x1012d4"
-    }
+	"estimate": {
+		"fromAmount": "10000000000000000",
+		"sendAmount": "3256",
+		"toAmount": "3774205359159688",
+		"toAmountMin": "3717592278772293",
+		"fromAmountUSD": "0.0033",
+		"route": {
+			"fromChain": [
+				{
+					"type": "SWAP",
+					"dex": {
+						"chainName": "Fantom",
+						"dexName": "Spookyswap",
+						"swapRouter": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+						"factory": "0x152eE697f2E276fA89E96742e9bB9aB1F2E61bE3",
+						"isCrypto": true
+					},
+					"target": "0xF491e7B69E4244ad4002BC14e878a34207E38c29",
+					"path": [
+						"0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
+						"0x04068DA6C83AFCFA0e13ba15A6696662335D5B75"
+					],
+					"swapType": "crypto",
+					"squidCallType": 2,
+					"fromToken": {
+						"chainId": 250,
+						"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+						"name": "Fantom",
+						"symbol": "FTM",
+						"decimals": 18,
+						"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+						"coingeckoId": "fantom",
+						"commonKey": "wftm-wei"
+					},
+					"toToken": {
+						"name": "USDCoin",
+						"address": "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+						"symbol": "USDC",
+						"decimals": 6,
+						"chainId": 250,
+						"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+						"coingeckoId": "usd-coin"
+					},
+					"fromAmount": "10000000000000000",
+					"toAmount": "3261",
+					"toAmountMin": "3243",
+					"exchangeRate": "0.3261",
+					"priceImpact": "0.0",
+					"isFrom": true,
+					"dynamicSlippage": 0.5539416769578809
+				},
+				{
+					"type": "SWAP",
+					"dex": {
+						"chainName": "Fantom",
+						"dexName": "Curve_v2",
+						"swapRouter": "0xFD8C73D35e522648312A43E7Ceb85Fe12C8c1760",
+						"isStable": true,
+						"isCrypto": true
+					},
+					"target": "0xFD8C73D35e522648312A43E7Ceb85Fe12C8c1760",
+					"path": [
+						"0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+						"0x1B6382DBDEa11d97f24495C9A90b7c88469134a4"
+					],
+					"swapType": "stable",
+					"squidCallType": 1,
+					"fromToken": {
+						"name": "USDCoin",
+						"address": "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+						"symbol": "USDC",
+						"decimals": 6,
+						"chainId": 250,
+						"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+						"coingeckoId": "usd-coin"
+					},
+					"toToken": {
+						"chainId": 250,
+						"address": "0x1B6382DBDEa11d97f24495C9A90b7c88469134a4",
+						"name": "Axelar USDC",
+						"symbol": "axlUSDC",
+						"decimals": 6,
+						"logoURI": "https://assets.coingecko.com/coins/images/6319/thumb/USD_Coin_icon.png?1547042389",
+						"coingeckoId": "axlusdc",
+						"commonKey": "uusdc"
+					},
+					"fromAmount": "3261",
+					"toAmount": "3256",
+					"toAmountMin": "3231",
+					"exchangeRate": "0.998466727997546764",
+					"priceImpact": "0.0",
+					"isFrom": true,
+					"dynamicSlippage": 0.7539416769578808
+				}
+			],
+			"toChain": [
+				{
+					"type": "SWAP",
+					"dex": {
+						"chainName": "Polygon",
+						"dexName": "Curve_v2",
+						"swapRouter": "0x2a426b3Bb4fa87488387545f15D01d81352732F9",
+						"isStable": true,
+						"isCrypto": true
+					},
+					"target": "0x2a426b3Bb4fa87488387545f15D01d81352732F9",
+					"path": [
+						"0x750e4C4984a9e0f12978eA6742Bc1c5D248f40ed",
+						"0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+					],
+					"swapType": "stable",
+					"squidCallType": 1,
+					"fromToken": {
+						"chainId": 137,
+						"address": "0x750e4C4984a9e0f12978eA6742Bc1c5D248f40ed",
+						"name": "axlUSDC",
+						"symbol": "axlUSDC",
+						"decimals": 6,
+						"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+						"coingeckoId": "axlusdc",
+						"commonKey": "uusdc"
+					},
+					"toToken": {
+						"name": "USD Coin",
+						"address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+						"symbol": "USDC",
+						"decimals": 6,
+						"chainId": 137,
+						"logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+						"coingeckoId": "usd-coin"
+					},
+					"fromAmount": "3256",
+					"toAmount": "3259",
+					"toAmountMin": "3228",
+					"exchangeRate": "1.000921375921375921",
+					"priceImpact": "0.0",
+					"isFrom": false,
+					"dynamicSlippage": 0.9539416769578808
+				},
+				{
+					"type": "SWAP",
+					"dex": {
+						"chainName": "Polygon",
+						"dexName": "UniswapV3",
+						"swapRouter": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+						"quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+						"isCrypto": true,
+						"isStable": true
+					},
+					"target": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+					"path": [
+						"0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+						"0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+					],
+					"poolFees": [100],
+					"swapType": "crypto",
+					"squidCallType": 1,
+					"fromToken": {
+						"name": "USD Coin",
+						"address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+						"symbol": "USDC",
+						"decimals": 6,
+						"chainId": 137,
+						"logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+						"coingeckoId": "usd-coin"
+					},
+					"toToken": {
+						"chainId": 137,
+						"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+						"name": "MATIC",
+						"symbol": "MATIC",
+						"decimals": 18,
+						"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png",
+						"coingeckoId": "matic-network",
+						"commonKey": "wmatic-wei"
+					},
+					"fromAmount": "3259",
+					"toAmount": "3774205359159688",
+					"toAmountMin": "3717592278772293",
+					"exchangeRate": "1.1468581848542",
+					"priceImpact": "-0.98",
+					"isFrom": false,
+					"dynamicSlippage": 1.5
+				}
+			]
+		},
+		"feeCosts": [
+			{
+				"name": "Gas Receiver Fee",
+				"description": "Estimated Gas Receiver fee",
+				"percentage": "0",
+				"token": {
+					"chainId": 250,
+					"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+					"name": "Fantom",
+					"symbol": "FTM",
+					"decimals": 18,
+					"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+					"coingeckoId": "fantom",
+					"commonKey": "wftm-wei"
+				},
+				"amount": "1084234948779948306",
+				"amountUSD": "0.3543"
+			},
+			{
+				"name": "Express Fee",
+				"description": "Estimated Express fee",
+				"percentage": "0",
+				"token": {
+					"chainId": 250,
+					"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+					"name": "Fantom",
+					"symbol": "FTM",
+					"decimals": 18,
+					"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+					"coingeckoId": "fantom",
+					"commonKey": "wftm-wei"
+				},
+				"amount": "1604457356876634266",
+				"amountUSD": "0.5243"
+			}
+		],
+		"gasCosts": [
+			{
+				"type": "executeCall",
+				"token": {
+					"chainId": 250,
+					"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+					"name": "Fantom",
+					"symbol": "FTM",
+					"decimals": 18,
+					"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+					"coingeckoId": "fantom",
+					"commonKey": "wftm-wei"
+				},
+				"amount": "578251725360754000",
+				"amountUSD": "0.1889",
+				"gasPrice": "274662853116",
+				"maxFeePerGas": "412096915722",
+				"maxPriorityFeePerGas": "412096915721",
+				"estimate": "842000",
+				"limit": "842000"
+			}
+		],
+		"estimatedRouteDuration": 20,
+		"isExpressSupported": true,
+		"exchangeRate": "0.3774205359159688",
+		"aggregatePriceImpact": "-0.98",
+		"toAmountUSD": "0.0033"
+	},
+	"params": {
+		"enableExpress": true,
+		"slippage": 1.5,
+		"quoteOnly": false,
+		"toAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
+		"fromAmount": "10000000000000000",
+		"toToken": {
+			"chainId": 137,
+			"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+			"name": "MATIC",
+			"symbol": "MATIC",
+			"decimals": 18,
+			"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png",
+			"coingeckoId": "matic-network",
+			"commonKey": "wmatic-wei"
+		},
+		"fromToken": {
+			"chainId": 250,
+			"address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+			"name": "Fantom",
+			"symbol": "FTM",
+			"decimals": 18,
+			"logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+			"coingeckoId": "fantom",
+			"commonKey": "wftm-wei"
+		},
+		"toChain": "137",
+		"fromChain": "250"
+	},
+	"transactionRequest": {
+		"routeType": "CALL_BRIDGE_CALL",
+		"targetAddress": "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+		"data": "0x8ca3bf680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002386f26fc100000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000a20000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000007506f6c79676f6e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000761786c555344430000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000003c00000000000000000000000000000000000000000000000000000000000000002000000000000000000000000f491e7b69e4244ad4002bc14e878a34207e38c29000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000e47ff36ab50000000000000000000000000000000000000000000000000000000000000cab00000000000000000000000000000000000000000000000000000000000000800000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd30000000000000000000000000000000000000000000000000000018850d595a9000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000fd8c73d35e522648312a43e7ceb85fe12c8c1760000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b7500000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000fd8c73d35e522648312a43e7ceb85fe12c8c1760000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000046000000000000000000000000000000000000000000000000000000000000003840651cb3500000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000261036923f4aaf1322a3173921fcbdae51352cae0000000000000000000000001b6382dbdea11d97f24495c9a90b7c88469134a40000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cbd0000000000000000000000000000000000000000000000000000000000000c9f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ce16f69375520ab01377ce7b88f5ba8c48f8d66600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b750000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000001e00000000000000000000000000000000000000000000000000000000000000360000000000000000000000000000000000000000000000000000000000000082000000000000000000000000000000000000000000000000000000000000009a00000000000000000000000000000000000000000000000000000000000000bc00000000000000000000000000000000000000000000000000000000000000d2000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b30000000000000000000000002a426b3bb4fa87488387545f15d01d81352732f90000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000002a426b3bb4fa87488387545f15d01d81352732f9000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000046000000000000000000000000000000000000000000000000000000000000003840651cb35000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000fba3b7bb043415035220b1c44fb47564346393920000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000cb80000000000000000000000000000000000000000000000000000000000000c9c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd3000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000000000000000000000000000000000000000001500000000000000000000000000000000000000000000000000000000000000010000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b300000000000000000000000068b3465833fb72a70ecdf485e0e4c7bd8665fc4500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000068b3465833fb72a70ecdf485e0e4c7bd8665fc45000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000e404e45aaf0000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf127000000000000000000000000000000000000000000000000000000000000000640000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd30000000000000000000000000000000000000000000000000000000000000cbb000000000000000000000000000000000000000000000000000d352167322a4500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000010000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf1270000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000242e1a7d4d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf127000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+		"value": "2698692305656582572",
+		"gasLimit": "842000",
+		"gasPrice": "274662853116",
+		"maxFeePerGas": "412096915722",
+		"maxPriorityFeePerGas": "412096915721"
+	}
 }

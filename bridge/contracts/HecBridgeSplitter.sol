@@ -110,10 +110,14 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	/// @param sendingAssetInfos Array Data used purely for sending assets
 	/// @param fees Amounts of native coin amounts for bridge
 	/// @param callDatas CallDatas from lifi sdk
+	/// @param useSquid use Squid or Lifi
+	/// @param squidTargetAddress use in executing squid bridge contract
 	function Bridge(
 		SendingAssetInfo[] memory sendingAssetInfos,
 		uint256[] memory fees,
-		bytes[] memory callDatas
+		bytes[] memory callDatas,
+		bool useSquid,
+		address squidTargetAddress
 	) external payable {
 		require(
 			sendingAssetInfos.length > 0 &&
@@ -121,6 +125,9 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				sendingAssetInfos.length == callDatas.length,
 			'Splitter: bridge or swap call data is invalid'
 		);
+		require(useSquid && squidTargetAddress != address(0), 'Splitter: squid router is invalid');
+
+		address callTargetAddress = useSquid ? squidTargetAddress : LiFiBridge;
 		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
 			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
 				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
@@ -131,15 +138,15 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				);
 
 				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].sendingAmount);
-				srcToken.approve(LiFiBridge, sendingAssetInfos[i].sendingAmount);
+				srcToken.approve(callTargetAddress, sendingAssetInfos[i].sendingAmount);
 			}
 
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
-				(bool success, ) = payable(LiFiBridge).call{value: fees[i]}(callDatas[i]);
+				(bool success, ) = payable(callTargetAddress).call{value: fees[i]}(callDatas[i]);
 				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			} else {
-				(bool success, ) = payable(LiFiBridge).call(callDatas[i]);
+				(bool success, ) = payable(callTargetAddress).call(callDatas[i]);
 				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			}

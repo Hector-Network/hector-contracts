@@ -2,7 +2,7 @@ import { BigNumber } from 'ethers';
 const { ethers, upgrades } = require("hardhat");
 require("dotenv").config();
 
-const UPGRADEABLE_PROXY = process.env.SPLITTER_ADDRESS;
+const UPGRADEABLE_PROXY = process.env.FTM_MAIN_SPLITTER_ADDRESS;
 
 async function main() {
   const [deployer] = await ethers.getSigners();

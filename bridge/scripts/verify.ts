@@ -8,9 +8,8 @@ import exec from 'child_process';
 async function main() {
 	const cmd = exec.exec;
 
-	
   	console.log('Verifying on the FTM network...');
-	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" ${process.env.SPLITTER_ADDRESS} --network ftm`;
+	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" 0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b --network ftm`;
 	console.log(cmdForVerify);
 	cmd(cmdForVerify, (error) => {
 		if (error !== null) {

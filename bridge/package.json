@@ -10,7 +10,8 @@
     "deploy": "hardhat run ./scripts/deployHecBridgeSplitter.ts --network",
     "update": "hardhat run ./scripts/upgradeHecBridgeSplitter.ts --network",
     "verify": "hardhat run  ./scripts/verify.ts",
-    "test": "hardhat run  ./test/test.ts --network",
+    "test-lifi": "hardhat run  ./test/test.ts --network",
+    "test": "hardhat run  ./test/test.squid.ts --network",
     "test:generic": "hardhat run  ./test/test_generic.ts --network"
   },
   "devDependencies": {
