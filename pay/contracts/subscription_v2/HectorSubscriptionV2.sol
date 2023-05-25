@@ -91,7 +91,7 @@ contract HectorSubscriptionV2 is
     event SubscriptionSynced(
         address indexed from,
         uint256 indexed planId,
-        uint256 lastPaidAt,
+        uint48 lastPaidAt,
         uint256 lastAmountPaidInUsd,
         uint256 lastAmountPaid,
         uint256 amount,
@@ -284,7 +284,7 @@ contract HectorSubscriptionV2 is
 
     function getRefundAmount(
         uint256 planId,
-        uint256 lastPaidAt,
+        uint48 lastPaidAt,
         uint256 lastAmountPaid
     ) internal view returns (uint256) {
         return
