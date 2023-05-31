@@ -78,11 +78,15 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	address public LiFiBridge;
 	uint256 public CountDest; // Count of the destination wallets
+	uint public minFeePercentage;
+	address public DAO;
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
 		address sendingAssetId;
 		uint256 sendingAmount;
+		uint256 totalAmount;
+		uint feePercentage;
 	}
 
 	/* ======== INITIALIZATION ======== */
@@ -125,10 +129,19 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				sendingAssetInfos.length == callDatas.length,
 			'Splitter: bridge or swap call data is invalid'
 		);
-		require(useSquid && squidTargetAddress != address(0), 'Splitter: squid router is invalid');
+		require(
+			(useSquid && squidTargetAddress != address(0)) ||
+				(!useSquid && squidTargetAddress == address(0)),
+			'Splitter: squid router is invalid'
+		);
 
 		address callTargetAddress = useSquid ? squidTargetAddress : LiFiBridge;
 		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
+			require(
+				sendingAssetInfos[i].feePercentage >= minFeePercentage,
+				'Spltter: invalid asset info'
+			);
+
 			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
 				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
 
@@ -137,8 +150,10 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 					'ERC20: transfer amount exceeds allowance'
 				);
 
-				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].sendingAmount);
-				srcToken.approve(callTargetAddress, sendingAssetInfos[i].sendingAmount);
+				uint256 calcBridgeAmount = sendingAssetInfos[i].sendingAmount;
+
+				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].totalAmount);
+				srcToken.approve(callTargetAddress, calcBridgeAmount);
 			}
 
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
@@ -150,9 +165,28 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				require(success, 'Splitter: bridge swap transaction was failed');
 				emit CallData(success, callDatas[i]);
 			}
+			_takeFee(sendingAssetInfos[i]);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
+	}
+
+	// Send Fee to DAO wallet
+	function _takeFee(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
+		uint256 feeAmount = (sendingAssetInfo.totalAmount * sendingAssetInfo.feePercentage) / 1000;
+		if (sendingAssetInfo.sendingAssetId != address(0)) {
+			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
+			feeAmount = token.balanceOf(address(this)) < feeAmount
+				? token.balanceOf(address(this))
+				: feeAmount;
+			token.safeTransferFrom(address(this), DAO, feeAmount);
+			return (sendingAssetInfo.sendingAssetId, feeAmount);
+		} else {
+			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
+			(bool success, ) = payable(DAO).call{value: feeAmount}('');
+			require(success, 'Splitter: Fee has been taken successully');
+			return (address(0), feeAmount);
+		}
 	}
 
 	// Custom counts of detinations
@@ -167,9 +201,23 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetBridge(_bridge);
 	}
 
+	// Set Minimum Fee Percentage
+	function setMinFeePercentage(uint _feePercentage) external onlyOwner {
+		minFeePercentage = _feePercentage;
+		emit SetMinFeePercentage(_feePercentage);
+	}
+
+	// Set DAO wallet
+	function setDAOWallet(address _daoWallet) external onlyOwner {
+		DAO = _daoWallet;
+		emit SetDAOWallet(_daoWallet);
+	}
+
 	// All events
 	event SetCountDest(uint256 countDest);
+	event SetMinFeePercentage(uint256 feePercentage);
 	event SetBridge(address bridge);
+	event SetDAOWallet(address daoWallet);
 	event CallData(bool success, bytes callData);
 	event HectorBridge(address user, SendingAssetInfo[] sendingAssetInfos);
 }

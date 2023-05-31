@@ -11,7 +11,7 @@ async function main() {
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0x1C691D61eb9A4E253BA96B22a311453074073BC5";
+	const SPLITTER_ADDRESS = "0x418C684D8EA4BDf3FB487B0d596A34ec44af4A25";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
@@ -48,6 +48,10 @@ async function main() {
 				: originSwapData.action.fromToken.address
 			: tempStepData.action.fromToken.address,
 		sendingAmount: enableSwap ? originSwapData.action.fromAmount : tempStepData.action.fromAmount,
+		totalAmount: enableSwap
+			? BigNumber.from(originSwapData.action.fromAmount).mul(100000).div(100000 - 75)
+			: BigNumber.from(tempStepData.action.fromAmount).mul(100000).div(100000 - 75),
+		feePercentage: 75
 	};
 	// CallData
 	const mockCallData1 = tempStepData.transactionRequest.data;
@@ -85,11 +89,22 @@ async function main() {
 		}
 	}
 
+	let feesForNative: Array<BigNumber> = [];
+	if (isNativeFrom) {
+		feesForNative.push(BigNumber.from(mockSendingAssetInfo1.totalAmount).mul(mockSendingAssetInfo1.feePercentage).div(1000));
+		mode == 'multi' &&
+			feesForNative.push(BigNumber.from(mockSendingAssetInfo1.totalAmount).mul(mockSendingAssetInfo1.feePercentage).div(1000));
+	}
+
 	let fee = BigNumber.from(0);
 
 	fees.map((item) => {
 		fee = fee.add(item);
 	});
+
+	feesForNative.map((item) => {
+		fee = fee.add(item);
+	})
 
 	mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	mockCallDatas.push(mockCallData1);
@@ -105,23 +120,23 @@ async function main() {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
 		let approveAmount;
 		if (mode == 'multi' && enableSwap) {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
-				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.totalAmount)
 			);
 		}
 
 		if (mode == 'single' && enableSwap) {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount);
 		}
 
 		if (mode == 'multi' && !enableSwap) {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
-				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.totalAmount)
 			);
 		}
 
 		if (mode == 'single' && !enableSwap) {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount);
 		}
 
 		const ERC20Contract = new ethers.Contract(
@@ -146,6 +161,8 @@ async function main() {
 			mockSendingAssetInfos,
 			fees,
 			mockCallDatas,
+			false,
+			ZERO_ADDRESS,
 			{
 				value: fee,
 			}

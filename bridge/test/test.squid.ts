@@ -6,6 +6,10 @@ const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token
 const tempStepData = require('./tempStepData.json');
 require('dotenv').config();
 
+const calcFee = () => {
+
+}
+
 async function main() {
 	let mode = 'single'; // mode: single, multi
 	const [deployer] = await hre.ethers.getSigners();
@@ -39,7 +43,9 @@ async function main() {
 		sendingAssetId: isNativeFrom
 			? ZERO_ADDRESS
 			: tempStepData.params.fromToken.address,
-		sendingAmount: tempStepData.params.fromAmount
+		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
+		totalAmount: BigNumber.from(tempStepData.params.fromAmount).mul(100000).div(100000 - 75), // Mock Total Amount
+		feePercentage: 75 // MockFee - 0.075%
 	};
 
 	// CallData
@@ -58,11 +64,22 @@ async function main() {
 			BigNumber.from(tempStepData.transactionRequest.value)
 		);
 
+	let feesForNative: Array<BigNumber> = [];
+	if (isNativeFrom) {
+		feesForNative.push(BigNumber.from(mockSendingAssetInfo1.totalAmount).mul(mockSendingAssetInfo1.feePercentage).div(1000));
+		mode == 'multi' &&
+			feesForNative.push(BigNumber.from(mockSendingAssetInfo1.totalAmount).mul(mockSendingAssetInfo1.feePercentage).div(1000));
+	}
+
 	let fee = BigNumber.from(0);
 
 	fees.map((item) => {
 		fee = fee.add(item);
 	});
+
+	feesForNative.map((item) => {
+		fee = fee.add(item);
+	})
 
 	mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	mockCallDatas.push(mockCallData1);
@@ -79,12 +96,12 @@ async function main() {
 		let approveAmount;
 
 		if (mode == 'single') {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount);
 		}
 
 		if (mode == 'multi') {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
-				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.totalAmount)
 			);
 		}
 
@@ -104,6 +121,7 @@ async function main() {
 	}
 
 	console.log({ fee, fees });
+	console.log({ useSquid: true, targetAddress });
 	console.log('Start bridge...');
 
 	try {

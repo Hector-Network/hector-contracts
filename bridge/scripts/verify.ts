@@ -7,9 +7,10 @@ import exec from 'child_process';
 
 async function main() {
 	const cmd = exec.exec;
+	const Bridge = "0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b";
 
-  	console.log('Verifying on the FTM network...');
-	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" 0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b --network ftm`;
+	console.log('Verifying on the FTM network...');
+	const cmdForVerify = `hardhat verify --contract \"contracts/HecBridgeSplitter.sol:HecBridgeSplitter\" ${Bridge} --network ftm`;
 	console.log(cmdForVerify);
 	cmd(cmdForVerify, (error) => {
 		if (error !== null) {
@@ -20,6 +21,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+	console.error(error);
+	process.exitCode = 1;
 });
