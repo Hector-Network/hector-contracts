@@ -2,6 +2,7 @@ import { HardhatRuntimeEnvironment } from 'hardhat/types';
 import { DeployFunction } from 'hardhat-deploy/types';
 import { waitSeconds } from '../helper/helpers';
 import { ethers } from 'hardhat';
+import { BigNumber } from 'ethers';
 
 async function getImplementationAddress(proxyAddress: string) {
   const implHex = await ethers.provider.getStorageAt(
@@ -10,6 +11,13 @@ async function getImplementationAddress(proxyAddress: string) {
   );
   return ethers.utils.hexStripZeros(implHex);
 }
+
+type PlanType = {
+  token: string;
+  period: number;
+  price: BigNumber;
+  data: string;
+};
 
 const deploySubscription: DeployFunction = async (
   hre: HardhatRuntimeEnvironment
@@ -25,6 +33,7 @@ const deploySubscription: DeployFunction = async (
   /// Token Address: FTM Testnet
   const hectorTokenAddress = '0x55639b1833Ddc160c18cA60f5d0eC9286201f525';
   const torTokenAddress = '0xCe5b1b90a1E1527E8B82a9434266b2d6B72cc70b';
+  const usdcTokenAddress = '0x6f3da9C6700cAfBAb0323cF344F58C54B3ddB66b';
   const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
   const upgradeableAdmin = '0x45D2a1f4e76523e74EAe9aCE2d765d527433705a';
   const priceOracleAggregatorAddress =
@@ -35,51 +44,50 @@ const deploySubscription: DeployFunction = async (
   // const torTokenAddress = '0x205F190776C8d466727bD0Cac6D1B564DC3C8Ea9';
   // const treasury = '0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba';
 
-  const multiPay = { product: 'Hector Multi Pay' };
+  /// CONFIGURATION ///
+
+  const LEVEL = {
+    Small: 0,
+    Medium: 1,
+    Large: 2,
+  };
+
+  const multiPay = {
+    product: 'Hector Multi Pay',
+    maxStreamsByLevel: {
+      [LEVEL.Small]: 3,
+      [LEVEL.Medium]: 10,
+      [LEVEL.Large]: 50,
+    } as Record<string, number>,
+    maxRecipientsByLevel: {
+      [LEVEL.Small]: 15,
+      [LEVEL.Medium]: 150,
+      [LEVEL.Large]: 500,
+    } as Record<string, number>,
+    discountInUSD: {
+      3: [0, 0, 0],
+      6: [60, 70, 99],
+      12: [160, 190, 249],
+    } as Record<string, number[]>,
+    pricePerMonthInUSD: [70, 99, 199], // 70$, 99$, 199$
+    levels: [LEVEL.Small, LEVEL.Medium, LEVEL.Large],
+    months: [3, 6, 12], // 3 months, 6 months, 12 months
+    tokens: [hectorTokenAddress, torTokenAddress, usdcTokenAddress], // HEC, TOR, USDC
+    plans: [] as PlanType[],
+  };
 
   const taxReport = {
     product: 'Hector Tax Report',
-    plans: [
-      // 3 months subscription: 15$
-      {
-        token: hectorTokenAddress,
-        period: 3600 * 24 * 30 * 3,
-        price: 1500000000,
-        data: '0x00',
-      },
-      {
-        token: torTokenAddress,
-        period: 3600 * 24 * 30 * 3,
-        price: 1500000000,
-        data: '0x00',
-      },
-      // 6 months subscription: 25$
-      {
-        token: hectorTokenAddress,
-        period: 3600 * 24 * 30 * 6,
-        price: 2500000000,
-        data: '0x00',
-      },
-      {
-        token: torTokenAddress,
-        period: 3600 * 24 * 30 * 6,
-        price: 2500000000,
-        data: '0x00',
-      },
-      // 12 months subscription: 45$
-      {
-        token: hectorTokenAddress,
-        period: 3600 * 24 * 365,
-        price: 4500000000,
-        data: '0x00',
-      },
-      {
-        token: torTokenAddress,
-        period: 3600 * 24 * 365,
-        price: 4500000000,
-        data: '0x00',
-      },
-    ],
+    discountInUSD: {
+      3: [0],
+      6: [5],
+      12: [15],
+    } as Record<string, number[]>,
+    pricePerMonthInUSD: [5], // 5$
+    levels: [LEVEL.Small],
+    months: [3, 6, 12], // 3 months, 6 months, 12 months
+    tokens: [hectorTokenAddress, torTokenAddress], // HEC, TOR
+    plans: [] as PlanType[],
     refunds: {
       planIds: [1, 2, 3, 4, 5, 6],
       refunds: [
@@ -119,6 +127,38 @@ const deploySubscription: DeployFunction = async (
       ],
     },
   };
+
+  {
+    for (let product of [multiPay, taxReport]) {
+      for (let level of product.levels) {
+        for (let month of product.months) {
+          for (let token of product.tokens) {
+            product.plans.push({
+              token: token,
+              period: 2_592_000 * month,
+              price: ethers.utils.parseUnits(
+                (
+                  product.pricePerMonthInUSD[level] * month -
+                  product.discountInUSD[month]![level]
+                ).toString(),
+                8
+              ),
+              data:
+                product == multiPay
+                  ? ethers.utils.defaultAbiCoder.encode(
+                      ['uint256', 'uint256'],
+                      [
+                        product.maxStreamsByLevel[level],
+                        product.maxRecipientsByLevel[level],
+                      ]
+                    )
+                  : '0x00',
+            });
+          }
+        }
+      }
+    }
+  }
 
   const discounts = {
     tokens: [hectorTokenAddress, torTokenAddress],
@@ -259,6 +299,8 @@ const deploySubscription: DeployFunction = async (
       paySubscription,
       deployer
     );
+
+    await (await paySubscriptionContract.appendPlan(multiPay.plans)).wait();
   }
 
   /// TAX REPORT SUBSCRIPTION ///
