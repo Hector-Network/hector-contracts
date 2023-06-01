@@ -80,6 +80,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	uint256 public CountDest; // Count of the destination wallets
 	uint public minFeePercentage;
 	address public DAO;
+	string public version;
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
@@ -213,11 +214,18 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetDAOWallet(_daoWallet);
 	}
 
+	// Set DAO wallet
+	function setVersion(string memory _version) external onlyOwner {
+		version = _version;
+		emit SetVersion(_version);
+	}
+
 	// All events
 	event SetCountDest(uint256 countDest);
 	event SetMinFeePercentage(uint256 feePercentage);
 	event SetBridge(address bridge);
 	event SetDAOWallet(address daoWallet);
+	event SetVersion(string _version);
 	event CallData(bool success, bytes callData);
 	event HectorBridge(address user, SendingAssetInfo[] sendingAssetInfos);
 }

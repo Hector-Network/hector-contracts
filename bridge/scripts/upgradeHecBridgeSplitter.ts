@@ -7,6 +7,7 @@ require("dotenv").config();
 const UPGRADEABLE_PROXY = "0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b";
 const feePercentage = 75;
 const DAO = "0x677d6EC74fA352D4Ef9B1886F6155384aCD70D90";
+const version = "2.0";
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -26,6 +27,8 @@ async function main() {
   await upgrade.setMinFeePercentage(feePercentage);
   await waitSeconds(3);
   await upgrade.setDAOWallet(DAO);
+  await waitSeconds(3);
+  await upgrade.setVersion(version);
 
   console.log("HecBridgeSplitter contract upgraded to:", upgrade.address);
 }

@@ -1,518 +1,294 @@
 {
-    "type": "lifi",
-    "id": "7bc11d6c-9588-408c-8b2d-483ed3473ddf",
-    "tool": "stargate",
-    "toolDetails": {
-        "key": "stargate",
-        "name": "Stargate",
-        "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
-    },
-    "action": {
-        "fromToken": {
-            "address": "0x0000000000000000000000000000000000000000",
-            "symbol": "MATIC",
-            "decimals": 18,
-            "chainId": 137,
-            "name": "MATIC",
-            "coinKey": "MATIC",
-            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-            "priceUSD": "0.885341"
-        },
-        "fromAmount": "10000000000000000",
-        "toToken": {
-            "address": "0x0000000000000000000000000000000000000000",
-            "chainId": 56,
-            "symbol": "BNB",
-            "decimals": 18,
-            "name": "BNB",
-            "priceUSD": "307.09",
-            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
-            "coinKey": "BNB"
-        },
-        "fromChainId": 137,
-        "toChainId": 56,
-        "slippage": 0.005,
-        "fromAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
-        "toAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba"
-    },
     "estimate": {
-        "tool": "stargate",
-        "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "toAmountMin": "28712545048210",
-        "toAmount": "28856829194181",
-        "fromAmount": "10000000000000000",
+        "fromAmount": "100000000000000000",
+        "sendAmount": "31073",
+        "toAmount": "35085825276173152",
+        "toAmountMin": "34559537897030555",
+        "fromAmountUSD": "0.0312",
+        "route": {
+            "fromChain": [
+                {
+                    "type": "SWAP",
+                    "dex": {
+                        "chainName": "Fantom",
+                        "dexName": "Sushiswap",
+                        "swapRouter": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+                        "factory": "0xc35DADB65012eC5796536bD9864eD8773aBc74C4",
+                        "isCrypto": true
+                    },
+                    "target": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+                    "path": [
+                        "0x21be370D5312f44cB42ce377BC9b8a0cEF1A4C83",
+                        "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75"
+                    ],
+                    "swapType": "crypto",
+                    "squidCallType": 2,
+                    "fromToken": {
+                        "chainId": 250,
+                        "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+                        "name": "Fantom",
+                        "symbol": "FTM",
+                        "decimals": 18,
+                        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+                        "coingeckoId": "fantom",
+                        "commonKey": "wftm-wei"
+                    },
+                    "toToken": {
+                        "name": "USDCoin",
+                        "address": "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "chainId": 250,
+                        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+                        "coingeckoId": "usd-coin"
+                    },
+                    "fromAmount": "100000000000000000",
+                    "toAmount": "31129",
+                    "toAmountMin": "30957",
+                    "exchangeRate": "0.31129",
+                    "priceImpact": "0.0",
+                    "isFrom": true,
+                    "dynamicSlippage": 0.5539416769578809
+                },
+                {
+                    "type": "SWAP",
+                    "dex": {
+                        "chainName": "Fantom",
+                        "dexName": "Curve_v2",
+                        "swapRouter": "0xFD8C73D35e522648312A43E7Ceb85Fe12C8c1760",
+                        "isStable": true,
+                        "isCrypto": true
+                    },
+                    "target": "0xFD8C73D35e522648312A43E7Ceb85Fe12C8c1760",
+                    "path": [
+                        "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+                        "0x1B6382DBDEa11d97f24495C9A90b7c88469134a4"
+                    ],
+                    "swapType": "stable",
+                    "squidCallType": 1,
+                    "fromToken": {
+                        "name": "USDCoin",
+                        "address": "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "chainId": 250,
+                        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+                        "coingeckoId": "usd-coin"
+                    },
+                    "toToken": {
+                        "chainId": 250,
+                        "address": "0x1B6382DBDEa11d97f24495C9A90b7c88469134a4",
+                        "name": "Axelar USDC",
+                        "symbol": "axlUSDC",
+                        "decimals": 6,
+                        "logoURI": "https://assets.coingecko.com/coins/images/6319/thumb/USD_Coin_icon.png?1547042389",
+                        "coingeckoId": "axlusdc",
+                        "commonKey": "uusdc"
+                    },
+                    "fromAmount": "31129",
+                    "toAmount": "31073",
+                    "toAmountMin": "30839",
+                    "exchangeRate": "0.998201034405217",
+                    "priceImpact": "0.0",
+                    "isFrom": true,
+                    "dynamicSlippage": 0.7539416769578808
+                }
+            ],
+            "toChain": [
+                {
+                    "type": "SWAP",
+                    "dex": {
+                        "chainName": "Polygon",
+                        "dexName": "Quickswap_v3",
+                        "swapRouter": "0xf5b509bb0909a69b1c207e495f687a596c168e12",
+                        "deployer": "0x2D98E2FA9da15aa6dC9581AB097Ced7af697CB92",
+                        "quoter": "0xa15F0D7377B2A0C0c10db057f641beD21028FC89",
+                        "isStable": true
+                    },
+                    "target": "0xf5b509bb0909a69b1c207e495f687a596c168e12",
+                    "path": [
+                        "0x750e4C4984a9e0f12978eA6742Bc1c5D248f40ed",
+                        "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+                    ],
+                    "swapType": "stable",
+                    "squidCallType": 1,
+                    "fromToken": {
+                        "chainId": 137,
+                        "address": "0x750e4C4984a9e0f12978eA6742Bc1c5D248f40ed",
+                        "name": "axlUSDC",
+                        "symbol": "axlUSDC",
+                        "decimals": 6,
+                        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/21420.png",
+                        "coingeckoId": "axlusdc",
+                        "commonKey": "uusdc"
+                    },
+                    "toToken": {
+                        "name": "USD Coin",
+                        "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "chainId": 137,
+                        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+                        "coingeckoId": "usd-coin"
+                    },
+                    "fromAmount": "31073",
+                    "toAmount": "31088",
+                    "toAmountMin": "30791",
+                    "exchangeRate": "1.000482734206545875",
+                    "priceImpact": "0.0",
+                    "isFrom": false,
+                    "dynamicSlippage": 0.9539416769578808
+                },
+                {
+                    "type": "SWAP",
+                    "dex": {
+                        "chainName": "Polygon",
+                        "dexName": "UniswapV3",
+                        "swapRouter": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+                        "quoter": "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6",
+                        "isCrypto": true,
+                        "isStable": true
+                    },
+                    "target": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+                    "path": [
+                        "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                        "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
+                    ],
+                    "poolFees": [
+                        500
+                    ],
+                    "swapType": "crypto",
+                    "squidCallType": 1,
+                    "fromToken": {
+                        "name": "USD Coin",
+                        "address": "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                        "symbol": "USDC",
+                        "decimals": 6,
+                        "chainId": 137,
+                        "logoURI": "https://raw.githubusercontent.com/trustwallet/assets/master/blockchains/ethereum/assets/0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48/logo.png",
+                        "coingeckoId": "usd-coin"
+                    },
+                    "toToken": {
+                        "chainId": 137,
+                        "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+                        "name": "MATIC",
+                        "symbol": "MATIC",
+                        "decimals": 18,
+                        "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png",
+                        "coingeckoId": "matic-network",
+                        "commonKey": "wmatic-wei"
+                    },
+                    "fromAmount": "31088",
+                    "toAmount": "35085825276173152",
+                    "toAmountMin": "34559537897030555",
+                    "exchangeRate": "1.11788642664312",
+                    "priceImpact": "-0.96",
+                    "isFrom": false,
+                    "dynamicSlippage": 1.5
+                }
+            ]
+        },
         "feeCosts": [
             {
-                "name": "LP Fee",
-                "description": "Fee paid to the Liquidity Provider",
-                "percentage": "0.003",
+                "name": "Gas Receiver Fee",
+                "description": "Estimated Gas Receiver fee",
+                "percentage": "0",
                 "token": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "symbol": "MATIC",
+                    "chainId": 250,
+                    "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+                    "name": "Fantom",
+                    "symbol": "FTM",
                     "decimals": 18,
-                    "chainId": 137,
-                    "name": "MATIC",
-                    "coinKey": "MATIC",
-                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                    "priceUSD": "0.885341"
+                    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+                    "coingeckoId": "fantom",
+                    "commonKey": "wftm-wei"
                 },
-                "amount": "30000000000000",
-                "amountUSD": "0.01",
-                "included": true
+                "amount": "1404683152947964289",
+                "amountUSD": "0.4381"
             },
             {
-                "name": "Equilibrium fees",
-                "description": "The fee paid to users who rebalance tokens for the stargate protocol",
-                "amount": "0",
-                "percentage": "0.0000",
+                "name": "Express Fee",
+                "description": "Estimated Express fee",
+                "percentage": "0",
                 "token": {
-                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "chainId": 137,
-                    "name": "USD Coin (PoS)",
-                    "coinKey": "USDC",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "priceUSD": "0.9997"
-                },
-                "amountUSD": "0.00",
-                "included": true
-            },
-            {
-                "name": "Liquidity provider fees",
-                "description": "The fee paid to liquidity providers for the stargate protocol",
-                "amount": "0",
-                "percentage": "0.0000",
-                "token": {
-                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "chainId": 137,
-                    "name": "USD Coin (PoS)",
-                    "coinKey": "USDC",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "priceUSD": "0.9997"
-                },
-                "amountUSD": "0.00",
-                "included": true
-            },
-            {
-                "name": "Protocol fees",
-                "description": "The fee paid to the stargate protocol",
-                "amount": "0",
-                "percentage": "0.0005",
-                "token": {
-                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "chainId": 137,
-                    "name": "USD Coin (PoS)",
-                    "coinKey": "USDC",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "priceUSD": "0.9997"
-                },
-                "amountUSD": "0.00",
-                "included": true
-            },
-            {
-                "name": "LayerZero fees",
-                "description": "Infrastructure fee paid in native token",
-                "amount": "1517923682286204597",
-                "percentage": "152.6226",
-                "token": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 137,
-                    "symbol": "MATIC",
+                    "chainId": 250,
+                    "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+                    "name": "Fantom",
+                    "symbol": "FTM",
                     "decimals": 18,
-                    "name": "MATIC",
-                    "priceUSD": "0.890439",
-                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                    "coinKey": "MATIC"
+                    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+                    "coingeckoId": "fantom",
+                    "commonKey": "wftm-wei"
                 },
-                "amountUSD": "1.35",
-                "included": false
-            },
-            {
-                "name": "LP Fee",
-                "description": "Fee paid to the Liquidity Provider",
-                "percentage": "0.003",
-                "token": {
-                    "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
-                    "chainId": 56,
-                    "symbol": "BUSD",
-                    "decimals": 18,
-                    "name": "BUSD Token",
-                    "priceUSD": "0.9998",
-                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0xe9e7cea3dedca5984780bafc599bd69add087d56/588ad5043e23b6c46aeda945852c3273.png",
-                    "coinKey": "BUSD"
-                },
-                "amount": "26399340000000",
-                "amountUSD": "0.01",
-                "included": true
+                "amount": "1713390224694705033",
+                "amountUSD": "0.5343"
             }
         ],
         "gasCosts": [
             {
-                "type": "SEND",
-                "price": "164405328097",
-                "estimate": "638023",
-                "limit": "957035",
-                "amount": "104894380648432231",
-                "amountUSD": "0.09",
+                "type": "executeCall",
                 "token": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 137,
-                    "symbol": "MATIC",
+                    "chainId": 250,
+                    "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+                    "name": "Fantom",
+                    "symbol": "FTM",
                     "decimals": 18,
-                    "name": "MATIC",
-                    "priceUSD": "0.890439",
-                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                    "coinKey": "MATIC"
-                }
+                    "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+                    "coingeckoId": "fantom",
+                    "commonKey": "wftm-wei"
+                },
+                "amount": "205541833149147096",
+                "amountUSD": "0.0641",
+                "gasPrice": "242322129005",
+                "maxFeePerGas": "66441106280",
+                "maxPriorityFeePerGas": "66441106279",
+                "estimate": "665694",
+                "limit": "665694"
             }
         ],
-        "executionDuration": 1294,
-        "fromAmountUSD": "0.01",
-        "toAmountUSD": "0.01"
+        "estimatedRouteDuration": 20,
+        "isExpressSupported": true,
+        "exchangeRate": "0.35085825276173152",
+        "aggregatePriceImpact": "-0.96",
+        "toAmountUSD": "0.0311"
     },
-    "includedSteps": [
-        {
-            "id": "4ba04c66-31fe-4955-b0c8-1ccc8a02b45e",
-            "type": "swap",
-            "action": {
-                "fromChainId": 137,
-                "fromAmount": "10000000000000000",
-                "fromToken": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "symbol": "MATIC",
-                    "decimals": 18,
-                    "chainId": 137,
-                    "name": "MATIC",
-                    "coinKey": "MATIC",
-                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                    "priceUSD": "0.885341"
-                },
-                "toChainId": 137,
-                "toToken": {
-                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "chainId": 137,
-                    "name": "USD Coin (PoS)",
-                    "coinKey": "USDC",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "priceUSD": "0.9997"
-                },
-                "slippage": 0.005,
-                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-                "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
-            },
-            "estimate": {
-                "tool": "lif3swap-pol",
-                "fromAmount": "10000000000000000",
-                "toAmount": "8892",
-                "toAmountMin": "8848",
-                "approvalAddress": "0x67dC2703D306F72E94DbB0cE0aa0CB86149EAc70",
-                "executionDuration": 30,
-                "feeCosts": [
-                    {
-                        "name": "LP Fee",
-                        "description": "Fee paid to the Liquidity Provider",
-                        "percentage": "0.003",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "symbol": "MATIC",
-                            "decimals": 18,
-                            "chainId": 137,
-                            "name": "MATIC",
-                            "coinKey": "MATIC",
-                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                            "priceUSD": "0.885341"
-                        },
-                        "amount": "30000000000000",
-                        "amountUSD": "0.01",
-                        "included": true
-                    }
-                ],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "164405328097",
-                        "estimate": "350000",
-                        "limit": "525000",
-                        "amount": "57541864833950000",
-                        "amountUSD": "0.05",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 137,
-                            "symbol": "MATIC",
-                            "decimals": 18,
-                            "name": "MATIC",
-                            "priceUSD": "0.890439",
-                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                            "coinKey": "MATIC"
-                        }
-                    }
-                ],
-                "toolData": {
-                    "path": [
-                        "0x0d500b1d8e8ef31e21c99d1db9a6444d3adf1270",
-                        "0x2791bca1f2de4661ed88a30c99a7a9449aa84174"
-                    ],
-                    "routerAddress": "0x67dC2703D306F72E94DbB0cE0aa0CB86149EAc70"
-                }
-            },
-            "tool": "lif3swap-pol",
-            "toolDetails": {
-                "key": "lif3swap-pol",
-                "name": "Lif3 Swap",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/lif3.png"
-            }
+    "params": {
+        "enableExpress": true,
+        "slippage": 1.5,
+        "quoteOnly": false,
+        "toAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
+        "fromAmount": "100000000000000000",
+        "toToken": {
+            "chainId": 137,
+            "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+            "name": "MATIC",
+            "symbol": "MATIC",
+            "decimals": 18,
+            "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3890.png",
+            "coingeckoId": "matic-network",
+            "commonKey": "wmatic-wei"
         },
-        {
-            "id": "ca984d1b-3ee4-40e8-81af-8728f2ca8866",
-            "type": "cross",
-            "action": {
-                "fromChainId": 137,
-                "fromAmount": "8848",
-                "fromToken": {
-                    "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                    "symbol": "USDC",
-                    "decimals": 6,
-                    "chainId": 137,
-                    "name": "USD Coin (PoS)",
-                    "coinKey": "USDC",
-                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                    "priceUSD": "0.9997"
-                },
-                "toChainId": 56,
-                "toToken": {
-                    "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
-                    "chainId": 56,
-                    "symbol": "BUSD",
-                    "decimals": 18,
-                    "name": "BUSD Token",
-                    "priceUSD": "0.9998",
-                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0xe9e7cea3dedca5984780bafc599bd69add087d56/588ad5043e23b6c46aeda945852c3273.png",
-                    "coinKey": "BUSD"
-                },
-                "slippage": 0.005,
-                "destinationGasConsumption": "825000",
-                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-                "toAddress": "0x74674DAFd6f4495e7F63F7637E94b8B89B2f01dB"
-            },
-            "estimate": {
-                "tool": "stargate",
-                "fromAmount": "8848",
-                "toAmount": "8844000000000000",
-                "toAmountMin": "8799780000000000",
-                "approvalAddress": "0x45A01E4e04F14f7A4a6702c74187c5F6222033cd",
-                "executionDuration": 1234,
-                "feeCosts": [
-                    {
-                        "name": "Equilibrium fees",
-                        "description": "The fee paid to users who rebalance tokens for the stargate protocol",
-                        "amount": "0",
-                        "percentage": "0.0000",
-                        "token": {
-                            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                            "symbol": "USDC",
-                            "decimals": 6,
-                            "chainId": 137,
-                            "name": "USD Coin (PoS)",
-                            "coinKey": "USDC",
-                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                            "priceUSD": "0.9997"
-                        },
-                        "amountUSD": "0.00",
-                        "included": true
-                    },
-                    {
-                        "name": "Liquidity provider fees",
-                        "description": "The fee paid to liquidity providers for the stargate protocol",
-                        "amount": "0",
-                        "percentage": "0.0000",
-                        "token": {
-                            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                            "symbol": "USDC",
-                            "decimals": 6,
-                            "chainId": 137,
-                            "name": "USD Coin (PoS)",
-                            "coinKey": "USDC",
-                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                            "priceUSD": "0.9997"
-                        },
-                        "amountUSD": "0.00",
-                        "included": true
-                    },
-                    {
-                        "name": "Protocol fees",
-                        "description": "The fee paid to the stargate protocol",
-                        "amount": "0",
-                        "percentage": "0.0005",
-                        "token": {
-                            "address": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
-                            "symbol": "USDC",
-                            "decimals": 6,
-                            "chainId": 137,
-                            "name": "USD Coin (PoS)",
-                            "coinKey": "USDC",
-                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdc/e87790bfe0b3f2ea855dc29069b38818.png",
-                            "priceUSD": "0.9997"
-                        },
-                        "amountUSD": "0.00",
-                        "included": true
-                    },
-                    {
-                        "name": "LayerZero fees",
-                        "description": "Infrastructure fee paid in native token",
-                        "amount": "1517923682286204597",
-                        "percentage": "152.6226",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 137,
-                            "symbol": "MATIC",
-                            "decimals": 18,
-                            "name": "MATIC",
-                            "priceUSD": "0.890439",
-                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                            "coinKey": "MATIC"
-                        },
-                        "amountUSD": "1.35",
-                        "included": false
-                    }
-                ],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "164405328097",
-                        "estimate": "525000",
-                        "limit": "787500",
-                        "amount": "86312797250925000",
-                        "amountUSD": "0.08",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 137,
-                            "symbol": "MATIC",
-                            "decimals": 18,
-                            "name": "MATIC",
-                            "priceUSD": "0.890439",
-                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
-                            "coinKey": "MATIC"
-                        }
-                    }
-                ],
-                "toolData": {}
-            },
-            "tool": "stargate",
-            "toolDetails": {
-                "key": "stargate",
-                "name": "Stargate",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/5685c638772f533edad80fcb210b4bb89e30a50f/src/assets/icons/bridges/stargate.png"
-            }
+        "fromToken": {
+            "chainId": 250,
+            "address": "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE",
+            "name": "Fantom",
+            "symbol": "FTM",
+            "decimals": 18,
+            "logoURI": "https://s2.coinmarketcap.com/static/img/coins/64x64/3513.png",
+            "coingeckoId": "fantom",
+            "commonKey": "wftm-wei"
         },
-        {
-            "id": "a427076d-0dec-4c7b-a97d-11d084602081",
-            "type": "swap",
-            "action": {
-                "fromChainId": 56,
-                "fromAmount": "8799780000000000",
-                "fromToken": {
-                    "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
-                    "chainId": 56,
-                    "symbol": "BUSD",
-                    "decimals": 18,
-                    "name": "BUSD Token",
-                    "priceUSD": "0.9998",
-                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0xe9e7cea3dedca5984780bafc599bd69add087d56/588ad5043e23b6c46aeda945852c3273.png",
-                    "coinKey": "BUSD"
-                },
-                "toChainId": 56,
-                "toToken": {
-                    "address": "0x0000000000000000000000000000000000000000",
-                    "chainId": 56,
-                    "symbol": "BNB",
-                    "decimals": 18,
-                    "name": "BNB",
-                    "priceUSD": "307.09",
-                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
-                    "coinKey": "BNB"
-                },
-                "slippage": 0.005,
-                "fromAddress": "0xDD1305150D27aecc60C066630105DB419977e367",
-                "toAddress": "0xDD1305150D27aecc60C066630105DB419977e367"
-            },
-            "estimate": {
-                "tool": "lif3swap-bsc",
-                "fromAmount": "8799780000000000",
-                "toAmount": "28856829194181",
-                "toAmountMin": "28712545048210",
-                "approvalAddress": "0x1956005bA9690B7A00b09c78769675C0cE1457AF",
-                "executionDuration": 30,
-                "feeCosts": [
-                    {
-                        "name": "LP Fee",
-                        "description": "Fee paid to the Liquidity Provider",
-                        "percentage": "0.003",
-                        "token": {
-                            "address": "0xe9e7cea3dedca5984780bafc599bd69add087d56",
-                            "chainId": 56,
-                            "symbol": "BUSD",
-                            "decimals": 18,
-                            "name": "BUSD Token",
-                            "priceUSD": "0.9998",
-                            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0xe9e7cea3dedca5984780bafc599bd69add087d56/588ad5043e23b6c46aeda945852c3273.png",
-                            "coinKey": "BUSD"
-                        },
-                        "amount": "26399340000000",
-                        "amountUSD": "0.01",
-                        "included": true
-                    }
-                ],
-                "gasCosts": [
-                    {
-                        "type": "SEND",
-                        "price": "3000000000",
-                        "estimate": "350000",
-                        "limit": "525000",
-                        "amount": "1050000000000000",
-                        "amountUSD": "0.32",
-                        "token": {
-                            "address": "0x0000000000000000000000000000000000000000",
-                            "chainId": 56,
-                            "symbol": "BNB",
-                            "decimals": 18,
-                            "name": "BNB",
-                            "priceUSD": "306.35",
-                            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
-                            "coinKey": "BNB"
-                        }
-                    }
-                ],
-                "toolData": {
-                    "path": [
-                        "0xe9e7cea3dedca5984780bafc599bd69add087d56",
-                        "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
-                    ],
-                    "routerAddress": "0x1956005bA9690B7A00b09c78769675C0cE1457AF"
-                }
-            },
-            "tool": "lif3swap-bsc",
-            "toolDetails": {
-                "key": "lif3swap-bsc",
-                "name": "Lif3 Swap",
-                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/lif3.png"
-            }
-        }
-    ],
-    "integrator": "jumper.exchange",
+        "toChain": "137",
+        "fromChain": "250"
+    },
     "transactionRequest": {
-        "data": "0xd7556c1e0000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000000000004600279eafe4d14d79eed26c54699f2ad5b93b56a6c195e304960ef8cd5775110550000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000000000000229000000000000000000000000000000000000000000000000000000000000000380000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000087374617267617465000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f6a756d7065722e65786368616e676500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000002000000000000000000000000067dc2703d306f72e94dbb0ce0aa0cb86149eac7000000000000000000000000067dc2703d306f72e94dbb0ce0aa0cb86149eac7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000002386f26fc1000000000000000000000000000000000000000000000000000000000000000000e0000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000e4b6f9de95000000000000000000000000000000000000000000000000000000000000229000000000000000000000000000000000000000000000000000000000000000800000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000064777e7e00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf12700000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000005000000000000000000000000000000000000000000000000000000000000226000000000000000000000000000000000000000000000000000000000000c96a80000000000000000000000000000000000000000000000001510bf8bf6d276b5000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba00000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000001474674dafd6f4495e7f63f7637e94b8b89b2f01db00000000000000000000000000000000000000000000000000000000000000000000000000000000000002e00279eafe4d14d79eed26c54699f2ad5b93b56a6c195e304960ef8cd57751105500000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000001956005ba9690b7a00b09c78769675c0ce1457af0000000000000000000000001956005ba9690b7a00b09c78769675c0ce1457af000000000000000000000000e9e7cea3dedca5984780bafc599bd69add087d560000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001f435a7100680000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000104791ac947000000000000000000000000000000000000000000000000001f435a7100680000000000000000000000000000000000000000000000000000001a1d290c569200000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000dd1305150d27aecc60c066630105db419977e3670000000000000000000000000000000000000000000000000000000064777e7e0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000e9e7cea3dedca5984780bafc599bd69add087d56000000000000000000000000bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c00000000000000000000000000000000000000000000000000000000",
-        "to": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
-        "value": "0x1534467e669376b5",
-        "from": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
-        "chainId": 137,
-        "gasPrice": "0x26475238e1",
-        "gasLimit": "0x0e9a6b"
+        "routeType": "CALL_BRIDGE_CALL",
+        "targetAddress": "0xce16F69375520ab01377ce7B88f5BA8C48F8D666",
+        "data": "0x8ca3bf680000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a00000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000001800000000000000000000000000000000000000000000000000000000000000a20000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000007506f6c79676f6e00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000761786c555344430000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000024000000000000000000000000000000000000000000000000000000000000003c000000000000000000000000000000000000000000000000000000000000000020000000000000000000000001b02da8cb0d097eb8d57a175b88c7d8b47997506000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000e47ff36ab500000000000000000000000000000000000000000000000000000000000078ed00000000000000000000000000000000000000000000000000000000000000800000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd30000000000000000000000000000000000000000000000000000018872b9c80b000000000000000000000000000000000000000000000000000000000000000200000000000000000000000021be370d5312f44cb42ce377bc9b8a0cef1a4c8300000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000fd8c73d35e522648312a43e7ceb85fe12c8c1760000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b7500000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000fd8c73d35e522648312a43e7ceb85fe12c8c1760000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000046000000000000000000000000000000000000000000000000000000000000003840651cb3500000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b75000000000000000000000000261036923f4aaf1322a3173921fcbdae51352cae0000000000000000000000001b6382dbdea11d97f24495c9a90b7c88469134a4000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000799900000000000000000000000000000000000000000000000000000000000078770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ce16f69375520ab01377ce7b88f5ba8c48f8d66600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000000000000000000000000004068da6c83afcfa0e13ba15a6696662335d5b750000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000000700000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000001e000000000000000000000000000000000000000000000000000000000000003600000000000000000000000000000000000000000000000000000000000000580000000000000000000000000000000000000000000000000000000000000070000000000000000000000000000000000000000000000000000000000000009200000000000000000000000000000000000000000000000000000000000000a8000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed0000000000000000000000000000000000000000000000000000000000000001000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b3000000000000000000000000f5b509bb0909a69b1c207e495f687a596c168e120000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed00000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000001000000000000000000000000f5b509bb0909a69b1c207e495f687a596c168e12000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000e4bc651188000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed0000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd30000000000000000000000000000000000000000000000000000018872b9c82c000000000000000000000000000000000000000000000000000000000000796100000000000000000000000000000000000000000000000000000000000078470000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000040000000000000000000000000750e4c4984a9e0f12978ea6742bc1c5d248f40ed000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000010000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000044095ea7b300000000000000000000000068b3465833fb72a70ecdf485e0e4c7bd8665fc4500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000100000000000000000000000068b3465833fb72a70ecdf485e0e4c7bd8665fc45000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000001c000000000000000000000000000000000000000000000000000000000000000e404e45aaf0000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa841740000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf127000000000000000000000000000000000000000000000000000000000000001f40000000000000000000000004fd39c9e151e50580779bd04b1f7ecc310079fd30000000000000000000000000000000000000000000000000000000000007970000000000000000000000000000000000000000000000000007ac7b773f4439b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000002791bca1f2de4661ed88a30c99a7a9449aa84174000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000010000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf1270000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000242e1a7d4d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000d500b1d8e8ef31e21c99d1db9a6444d3adf127000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "value": "3218073377642669322",
+        "gasLimit": "665694",
+        "gasPrice": "242322129005",
+        "maxFeePerGas": "66441106280",
+        "maxPriorityFeePerGas": "66441106279"
     }
 }
