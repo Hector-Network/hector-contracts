@@ -16,7 +16,7 @@ error BRIDGE_FAILED();
 /**
  * @title HecBridgeSplitter
  */
-contract HecBridgeSplitterV2 is OwnableUpgradeable, PausableUpgradeable {
+contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
