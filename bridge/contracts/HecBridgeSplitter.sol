@@ -22,6 +22,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	address public BridgeContract;
 	uint256 public CountDest; // Count of the destination wallets
+	address public DAOW;
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
@@ -90,6 +91,8 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				if (!success) revert BRIDGE_FAILED();
 				emit MakeCallData(success, callData, msg.sender);
 			}
+
+			_sendFeeToDAO(sendingAssetInfos[i]);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
@@ -118,9 +121,45 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetBridge(oldBridge, _bridge, msg.sender);
 	}
 
+	function setDAO(address newDAO) external onlyOwner {
+		if (newDAO == address(0)) revert INVALID_ADDRESS();
+		address oldDAO = DAO;
+
+		DAO = newDAO;
+		emit SetDAO(oldDAO, newDAO, msg.sender);
+	}
+
+	///////////////////////////////////////////////////////
+	//               INTERNAL FUNCTIONS                  //
+	///////////////////////////////////////////////////////
+	
+	/*
+		@dev take fee from sending asset and transfer to DAO
+		@param sendingAssetInfo
+		@return address, uint256
+	*/
+	function _sendFeeToDAO(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
+		uint256 feeAmount = (sendingAssetInfo.totalAmount * sendingAssetInfo.feePercentage) / 1000;
+		if (sendingAssetInfo.sendingAssetId != address(0)) {
+			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
+			feeAmount = token.balanceOf(address(this)) < feeAmount
+				? token.balanceOf(address(this))
+				: feeAmount;
+			token.safeTransfer(DAO, feeAmount);
+			return (sendingAssetInfo.sendingAssetId, feeAmount);
+		} else {
+			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
+			(bool success, ) = payable(DAO).call{value: feeAmount}('');
+			require(success, 'Splitter: Fee has been taken successully');
+			return (address(0), feeAmount);
+		}
+	}
+
 	// All events
 	event SetCountDest(uint256 oldCountDest, uint256 newCountDest, address indexed user);
 	event SetBridge(address oldBridge, address newBridge, address indexed user);
+	event SetDAO(address oldDAO, address newDAO, address indexed user);
 	event MakeCallData(bool success, bytes callData, address indexed user);
 	event HectorBridge(address indexed user, SendingAssetInfo[] sendingAssetInfos);
+	event SendFeeToDAO(uint256 feeAmount , SendingAssetInfo[] sendingAssetInfos);
 }
