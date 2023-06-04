@@ -22,12 +22,14 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	address public BridgeContract;
 	uint256 public CountDest; // Count of the destination wallets
-	address public DAOW;
+	address public DAO;
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
 		address sendingAssetId;
 		uint256 sendingAmount;
+		uint256 totalAmount;
+		uint feePercentage;
 	}
 
 	/* ======== INITIALIZATION ======== */
@@ -54,11 +56,13 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	/// @notice Performs a swap before bridging via HECTOR Bridge Splitter
 	/// @param sendingAssetInfos Array Data used purely for sending assets
-	/// @param fees Amounts of native coin amounts for bridge
-	/// @param callDatas CallDatas from lifi sdk
+	/// @param bridgeFees Amounts of native coin amounts for bridge
+	/// @param DAOFee Amounts of fee for DAO
+	/// @param callDatas CallDatas from bridge sdk
 	function Bridge(
 		SendingAssetInfo[] memory sendingAssetInfos,
-		uint256[] memory fees,
+		uint256[] memory bridgeFees,
+		uint256 DAOFee,
 		bytes[] memory callDatas
 	) external payable {
 		if (
@@ -67,23 +71,31 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				sendingAssetInfos.length == callDatas.length)
 			revert INVALID_PARAM();		
 
-		bool isFeeEnabled = msg.value > 0 && fees.length > 0;
+		bool isFeeEnabled = msg.value > 0 && bridgeFees.length > 0;
+
+		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
+		if (srcToken.allowance(msg.sender, address(this)) == 0) revert INVALID_ALLOWANCE();
+		uint256 totalAmount = _getTotalAmount(sendingAssetInfos) + DAOFee;
+
+		if (srcToken.balanceOf(msg.sender) < totalAmount) revert INVALID_AMOUNT();
+
+		srcToken.safeTransferFrom(msg.sender, address(this), totalAmount);
+		srcToken.approve(BridgeContract, totalAmount);
+
+		// Send fee to DAO
+		if (DAOFee > 0) {
+			srcToken.safeTransfer(DAO, DAOFee);
+		}
 		
 		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
 			address sendingAssetId = sendingAssetInfos[i].sendingAssetId;
+
 			if (sendingAssetId == address(0)) revert INVALID_ADDRESS();
 			bytes memory callData = callDatas[i];
 			
-			IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetId);
-
-			if (srcToken.allowance(msg.sender, address(this)) == 0) revert INVALID_ALLOWANCE();
-
-			uint256 srcAmount = sendingAssetInfos[i].sendingAmount;
-			srcToken.safeTransferFrom(msg.sender, address(this), srcAmount);
-			srcToken.approve(BridgeContract, srcAmount);
-
-			if (isFeeEnabled && fees[i] > 0) {
-				(bool success, ) = payable(BridgeContract).call{value: fees[i]}(callData);
+			//Bridge the rest of the asset to the destination
+			if (isFeeEnabled && bridgeFees[i] > 0) {
+				(bool success, ) = payable(BridgeContract).call{value: bridgeFees[i]}(callData);
 				if (!success) revert BRIDGE_FAILED();
 				emit MakeCallData(success, callData, msg.sender);
 			} else {
@@ -92,7 +104,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				emit MakeCallData(success, callData, msg.sender);
 			}
 
-			_sendFeeToDAO(sendingAssetInfos[i]);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
@@ -132,27 +143,13 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	///////////////////////////////////////////////////////
 	//               INTERNAL FUNCTIONS                  //
 	///////////////////////////////////////////////////////
-	
-	/*
-		@dev take fee from sending asset and transfer to DAO
-		@param sendingAssetInfo
-		@return address, uint256
-	*/
-	function _sendFeeToDAO(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
-		uint256 feeAmount = (sendingAssetInfo.totalAmount * sendingAssetInfo.feePercentage) / 1000;
-		if (sendingAssetInfo.sendingAssetId != address(0)) {
-			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
-			feeAmount = token.balanceOf(address(this)) < feeAmount
-				? token.balanceOf(address(this))
-				: feeAmount;
-			token.safeTransfer(DAO, feeAmount);
-			return (sendingAssetInfo.sendingAssetId, feeAmount);
-		} else {
-			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
-			(bool success, ) = payable(DAO).call{value: feeAmount}('');
-			require(success, 'Splitter: Fee has been taken successully');
-			return (address(0), feeAmount);
+
+	function _getTotalAmount(SendingAssetInfo[] memory sendingAssetInfos) internal pure returns (uint256) {
+		uint256 totalAmount = 0;
+		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
+			totalAmount = totalAmount.add(sendingAssetInfos[i].sendingAmount);
 		}
+		return totalAmount;
 	}
 
 	// All events
