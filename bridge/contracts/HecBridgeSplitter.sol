@@ -180,7 +180,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			feeAmount = token.balanceOf(address(this)) < feeAmount
 				? token.balanceOf(address(this))
 				: feeAmount;
-			token.safeTransferFrom(address(this), DAO, feeAmount);
+			token.safeTransfer(DAO, feeAmount);
 			return (sendingAssetInfo.sendingAssetId, feeAmount);
 		} else {
 			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;

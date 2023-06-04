@@ -6,7 +6,7 @@ require("dotenv").config();
 // const UPGRADEABLE_PROXY = process.env.FTM_MAIN_SPLITTER_ADDRESS;
 const UPGRADEABLE_PROXY = "0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b";
 const feePercentage = 75;
-const DAO = "0x677d6EC74fA352D4Ef9B1886F6155384aCD70D90";
+const DAO = "0xd73c5521B4917aE6c7Fa42Df5c8578f7f7638d50";
 const version = "2.0";
 
 async function main() {
