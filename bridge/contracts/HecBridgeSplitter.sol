@@ -66,9 +66,11 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		bytes[] memory callDatas
 	) external payable {
 		if (
-			sendingAssetInfos.length > 0 &&
+				sendingAssetInfos.length > 0 &&
 				sendingAssetInfos.length <= CountDest &&
-				sendingAssetInfos.length == callDatas.length)
+				sendingAssetInfos.length == callDatas.length &&
+				sendingAssetInfos.length == bridgeFees.length
+			)
 			revert INVALID_PARAM();		
 
 		bool isFeeEnabled = msg.value > 0 && bridgeFees.length > 0;
@@ -86,16 +88,19 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		if (DAOFee > 0) {
 			srcToken.safeTransfer(DAO, DAOFee);
 		}
-		
-		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
+
+		uint256 length = sendingAssetInfos.length;
+		for (uint256 i = 0; i < length; i++) {
 			address sendingAssetId = sendingAssetInfos[i].sendingAssetId;
 
 			if (sendingAssetId == address(0)) revert INVALID_ADDRESS();
 			bytes memory callData = callDatas[i];
+
+			uint256 bridgeFee = bridgeFees[i];
 			
 			//Bridge the rest of the asset to the destination
-			if (isFeeEnabled && bridgeFees[i] > 0) {
-				(bool success, ) = payable(BridgeContract).call{value: bridgeFees[i]}(callData);
+			if (isFeeEnabled && bridgeFee > 0) {
+				(bool success, ) = payable(BridgeContract).call{value: bridgeFee}(callData);
 				if (!success) revert BRIDGE_FAILED();
 				emit MakeCallData(success, callData, msg.sender);
 			} else {
