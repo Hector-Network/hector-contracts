@@ -154,12 +154,12 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint256 sendAmounts = 0;
 		for (uint i = 0; i < sendingAssetInfos.length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
-			if (sendingAssetInfo.feeAmount < (sendingAssetInfo.totalAmount * minFeePercentage) / 1000)
-				revert INVALID_DAO_FEE();
 			require(
 				sendingAssetInfo.totalAmount == sendingAssetInfo.sendingAmount + sendingAssetInfo.feeAmount,
 				'Invalid asset info'
 			);
+			if (sendingAssetInfo.feeAmount < (sendingAssetInfo.totalAmount * minFeePercentage) / 1000)
+				revert INVALID_DAO_FEE();
 			if (sendingAssetInfo.sendingAssetId != address(0)) {
 				totalAmounts += sendingAssetInfo.totalAmount;
 				sendAmounts += sendingAssetInfo.sendingAmount;
