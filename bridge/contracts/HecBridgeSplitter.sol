@@ -98,13 +98,14 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		bytes[] calldata callDatas,
 		address callTargetAddress
 	) external payable {
-		if (
+		require(
 			sendingAssetInfos.length > 0 &&
-			sendingAssetInfos.length <= CountDest &&
-			sendingAssetInfos.length == callDatas.length &&
-			sendingAssetInfos.length == fees.length &&
-			isInWhiteList(callTargetAddress)
-		) revert INVALID_PARAM();
+				sendingAssetInfos.length <= CountDest &&
+				sendingAssetInfos.length == callDatas.length &&
+				sendingAssetInfos.length == fees.length &&
+				isInWhiteList(callTargetAddress),
+			"Bridge: Invalid parameters"
+		);
 
 		if (msg.value < sum(fees)) revert INVALID_FEES();
 
@@ -144,7 +145,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			uint256 sendingAmount = sendingAssetInfo.sendingAmount;
 			uint256 feeAmount = sendingAssetInfo.feeAmount;
 
-			require(totalAmount == sendingAmount + feeAmount, 'Invalid asset info');
+			require(totalAmount == sendingAmount + feeAmount, 'Bridge: Invalid asset info');
 
 			if (feeAmount < (totalAmount * minFeePercentage) / 1000) revert INVALID_DAO_FEE();
 

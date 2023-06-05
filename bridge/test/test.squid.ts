@@ -15,7 +15,7 @@ async function main() {
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0xC304995Dc0165651eb93aFB450ac4eCF415F9248";
+	const SPLITTER_ADDRESS = "0xF652C968d35E0BFa17003829B5200ECDE920b64e";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
@@ -44,8 +44,8 @@ async function main() {
 			? ZERO_ADDRESS
 			: tempStepData.params.fromToken.address,
 		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
-		totalAmount: BigNumber.from(tempStepData.params.fromAmount).mul(100000).div(100000 - 75), // Mock Total Amount
-		feeAmount: BigNumber.from(tempStepData.params.fromAmount).mul(100000).div(100000 - 75).sub(BigNumber.from(tempStepData.params.fromAmount)) // MockFee - 0.075%
+		totalAmount: BigNumber.from('11000000000000000'), // Mock Total Amount
+		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)) // MockFee - 0.075%
 	};
 
 	// CallData
@@ -122,9 +122,9 @@ async function main() {
 
 	console.log({ fee, fees });
 	console.log({ useSquid: true, targetAddress });
-	console.log('Start bridge...');
-
 	const isInWhiteList = await testHecBridgeSplitterContract.isInWhiteList(targetAddress);
+	console.log("isWhiteList:", isInWhiteList);
+	console.log('Start bridge...');
 
 	try {
 		const result = await testHecBridgeSplitterContract.bridge(
