@@ -1,50 +1,50 @@
-import { HardhatRuntimeEnvironment } from 'hardhat/types';
-import { DeployFunction } from 'hardhat-deploy/types';
-import { waitSeconds } from '../helper/helpers';
-import { ethers } from 'hardhat';
-import { constants } from 'ethers';
+import { BigNumber } from 'ethers';
+import { waitSeconds } from '../helper';
+const hre = require("hardhat");
 
-async function getImplementationAddress(proxyAddress: string) {
-	const implHex = await ethers.provider.getStorageAt(proxyAddress, '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc');
-	return ethers.utils.hexStripZeros(implHex);
+async function main() {
+	const [deployer] = await hre.ethers.getSigners();
+	const _countDest = 2; // Count of the destination wallets, default: 2
+	const lifiBridge = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
+	const squidRouter = "0xce16f69375520ab01377ce7b88f5ba8c48f8d666";
+
+	const feePercentage = 75;
+	const DAO = "0x677d6EC74fA352D4Ef9B1886F6155384aCD70D90";
+	const version = "2.0";
+
+	console.log("Deploying contracts with the account:", deployer.address);
+	console.log("Account balance:", (await deployer.getBalance()).toString());
+
+	const gas = await ethers.provider.getGasPrice();
+	console.log("Gas Price: ", gas);
+
+	const hecBridgeSplitterFactory = await ethers.getContractFactory("HecBridgeSplitter");
+	console.log("Deploying HecBridgeSplitter Contract...");
+
+	const hecBridgeSplitterContract = await hre.upgrades.deployProxy(
+		hecBridgeSplitterFactory,
+		[_countDest],
+		{
+			gas: gas,
+			initializer: "initialize",
+		}
+	);
+	console.log("HecBridgeSplitter contract deployed to:", hecBridgeSplitterContract.address);
+
+	// Set Parameter
+	console.log("Setting parameters...");
+	await hecBridgeSplitterContract.connect(deployer).setMinFeePercentage(feePercentage);
+	await waitSeconds(3);
+	await hecBridgeSplitterContract.connect(deployer).setDAO(DAO);
+	await waitSeconds(3);
+	await hecBridgeSplitterContract.connect(deployer).setVersion(version);
+	await waitSeconds(3);
+	await hecBridgeSplitterContract.connect(deployer).setBridge(lifiBridge, true);
+	await waitSeconds(3);
+	await hecBridgeSplitterContract.connect(deployer).setBridge(squidRouter, true);
 }
 
-const deployHecBridgeSplitter: DeployFunction = async (hre: HardhatRuntimeEnvironment) => {
-	const { deployments, ethers } = hre;
-	const { deploy } = deployments;
-	const [deployer] = await ethers.getSigners();
-
-	const squidRouter = '0xce16f69375520ab01377ce7b88f5ba8c48f8d666';
-	const CountDest = 2;
-
-	const HecBridgeSplitter = await deploy('HecBridgeSplitter', {
-		from: deployer.address,
-		args: [],
-		log: true,
-		proxy: {
-			proxyContract: 'OpenZeppelinTransparentProxy',
-			execute: {
-				methodName: 'initialize',
-				args: [CountDest, squidRouter],
-			},
-		},
-	});
-	const HecBridgeSplitterImplementation = await getImplementationAddress(HecBridgeSplitter.address);
-
-	if (hre.network.name !== 'localhost' && hre.network.name !== 'hardhat') {
-		await waitSeconds(10);
-		console.log('=====> Verifing ....');
-		try {
-			await hre.run('verify:verify', {
-				address: HecBridgeSplitterImplementation,
-				contract: 'contracts/HecBridgeSplitter.sol:HecBridgeSplitter',
-				constructorArguments: [],
-			});
-		} catch (_) {}
-		await waitSeconds(10);
-	}
-};
-
-export default deployHecBridgeSplitter;
-deployHecBridgeSplitter.tags = ['HecBridgeSplitter'];
-deployHecBridgeSplitter.dependencies = [];
+main().catch((error) => {
+	console.error(error);
+	process.exitCode = 1;
+});

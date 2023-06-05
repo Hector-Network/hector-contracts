@@ -12,6 +12,8 @@ error INVALID_ADDRESS();
 error INVALID_AMOUNT();
 error INVALID_ALLOWANCE();
 error BRIDGE_FAILED();
+error INVALID_PERCENTAGE();
+error DAO_FEE_FAILED();
 
 /**
  * @title HecBridgeSplitter
@@ -20,9 +22,11 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 
-	address public BridgeContract;
 	uint256 public CountDest; // Count of the destination wallets
-	address public DAO;
+	uint public minFeePercentage;
+	address public DAO; // DAO wallet for taking fee
+	string public version;
+	mapping(address => bool) public isCallAddress; // Return status of callTargetAddress is registered
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
@@ -42,12 +46,11 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	/**
 	 * @dev sets initials
 	 */
-	function initialize(uint256 _CountDest, address _bridge) external initializer {
-		if (_bridge == address(0)) revert INVALID_ADDRESS();
+	function initialize(uint256 _CountDest) external initializer {
 		if (_CountDest == 0) revert INVALID_PARAM();
-		BridgeContract = _bridge;
 		CountDest = _CountDest;
 		__Pausable_init();
+		__Ownable_init();
 	}
 
 	///////////////////////////////////////////////////////
@@ -56,62 +59,71 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	/// @notice Performs a swap before bridging via HECTOR Bridge Splitter
 	/// @param sendingAssetInfos Array Data used purely for sending assets
-	/// @param bridgeFees Amounts of native coin amounts for bridge
-	/// @param DAOFee Amounts of fee for DAO
-	/// @param callDatas CallDatas from bridge sdk
+	/// @param fees Amounts of native coin amounts for bridge
+	/// @param callDatas CallDatas from lifi sdk
+	/// @param callTargetAddress use in executing squid bridge contract
 	function Bridge(
 		SendingAssetInfo[] memory sendingAssetInfos,
-		uint256[] memory bridgeFees,
-		uint256 DAOFee,
-		bytes[] memory callDatas
+		uint256[] memory fees,
+		bytes[] memory callDatas,
+		address callTargetAddress
 	) external payable {
 		if (
-				sendingAssetInfos.length > 0 &&
-				sendingAssetInfos.length <= CountDest &&
-				sendingAssetInfos.length == callDatas.length &&
-				sendingAssetInfos.length == bridgeFees.length
-			)
-			revert INVALID_PARAM();		
-
-		bool isFeeEnabled = msg.value > 0 && bridgeFees.length > 0;
-
-		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
-		if (srcToken.allowance(msg.sender, address(this)) == 0) revert INVALID_ALLOWANCE();
-		uint256 totalAmount = _getTotalAmount(sendingAssetInfos) + DAOFee;
-
-		if (srcToken.balanceOf(msg.sender) < totalAmount) revert INVALID_AMOUNT();
-
-		srcToken.safeTransferFrom(msg.sender, address(this), totalAmount);
-		srcToken.approve(BridgeContract, totalAmount);
-
-		// Send fee to DAO
-		if (DAOFee > 0) {
-			srcToken.safeTransfer(DAO, DAOFee);
-		}
+			sendingAssetInfos.length > 0 &&
+			sendingAssetInfos.length <= CountDest &&
+			sendingAssetInfos.length == callDatas.length &&
+			sendingAssetInfos.length == fees.length &&
+			isCallAddress[callTargetAddress]
+		) revert INVALID_PARAM();
 
 		uint256 length = sendingAssetInfos.length;
 		for (uint256 i = 0; i < length; i++) {
-			address sendingAssetId = sendingAssetInfos[i].sendingAssetId;
+			if (sendingAssetInfos[i].feePercentage >= minFeePercentage) revert INVALID_PERCENTAGE();
+			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
+				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
 
-			if (sendingAssetId == address(0)) revert INVALID_ADDRESS();
+				if (srcToken.allowance(msg.sender, address(this)) == 0) revert INVALID_ALLOWANCE();
+				if (srcToken.balanceOf(msg.sender) < sendingAssetInfos[i].totalAmount)
+					revert INVALID_AMOUNT();
+
+				uint256 calcBridgeAmount = sendingAssetInfos[i].sendingAmount;
+
+				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].totalAmount);
+				srcToken.approve(callTargetAddress, calcBridgeAmount);
+			}
 			bytes memory callData = callDatas[i];
 
-			uint256 bridgeFee = bridgeFees[i];
-			
-			//Bridge the rest of the asset to the destination
-			if (isFeeEnabled && bridgeFee > 0) {
-				(bool success, ) = payable(BridgeContract).call{value: bridgeFee}(callData);
+			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
+				(bool success, ) = payable(callTargetAddress).call{value: fees[i]}(callData);
 				if (!success) revert BRIDGE_FAILED();
 				emit MakeCallData(success, callData, msg.sender);
 			} else {
-				(bool success, ) = payable(BridgeContract).call(callData);
+				(bool success, ) = payable(callTargetAddress).call(callDatas[i]);
 				if (!success) revert BRIDGE_FAILED();
 				emit MakeCallData(success, callData, msg.sender);
 			}
-
+			_takeFee(sendingAssetInfos[i]);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
+	}
+
+	// Send Fee to DAO wallet
+	function _takeFee(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
+		uint256 feeAmount = (sendingAssetInfo.totalAmount * sendingAssetInfo.feePercentage) / 1000;
+		if (sendingAssetInfo.sendingAssetId != address(0)) {
+			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
+			feeAmount = token.balanceOf(address(this)) < feeAmount
+				? token.balanceOf(address(this))
+				: feeAmount;
+			token.safeTransfer(DAO, feeAmount);
+			return (sendingAssetInfo.sendingAssetId, feeAmount);
+		} else {
+			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
+			(bool success, ) = payable(DAO).call{value: feeAmount}('');
+			if (!success) revert DAO_FEE_FAILED();
+			return (address(0), feeAmount);
+		}
 	}
 
 	// Custom counts of detinations
@@ -122,7 +134,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetCountDest(oldCountDest, _countDest, msg.sender);
 	}
 
-	function setBridge(address _bridge) external onlyOwner {
+	function setBridge(address _bridge, bool status) external onlyOwner {
 		if (_bridge == address(0)) revert INVALID_ADDRESS();
 		//check if _bridge is a contract not wallet
 		uint256 size;
@@ -130,11 +142,9 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			size := extcodesize(_bridge)
 		}
 		if (size == 0) revert INVALID_ADDRESS();
+		isCallAddress[_bridge] = status;
 
-		address oldBridge = BridgeContract;
-
-		BridgeContract = _bridge;
-		emit SetBridge(oldBridge, _bridge, msg.sender);
+		emit SetBridge(_bridge, status, msg.sender);
 	}
 
 	function setDAO(address newDAO) external onlyOwner {
@@ -145,23 +155,25 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetDAO(oldDAO, newDAO, msg.sender);
 	}
 
-	///////////////////////////////////////////////////////
-	//               INTERNAL FUNCTIONS                  //
-	///////////////////////////////////////////////////////
+	// Set Version
+	function setVersion(string memory _version) external onlyOwner {
+		version = _version;
+		emit SetVersion(_version);
+	}
 
-	function _getTotalAmount(SendingAssetInfo[] memory sendingAssetInfos) internal pure returns (uint256) {
-		uint256 totalAmount = 0;
-		for (uint256 i = 0; i < sendingAssetInfos.length; i++) {
-			totalAmount = totalAmount.add(sendingAssetInfos[i].sendingAmount);
-		}
-		return totalAmount;
+	// Set Minimum Fee Percentage
+	function setMinFeePercentage(uint _feePercentage) external onlyOwner {
+		minFeePercentage = _feePercentage;
+		emit SetMinFeePercentage(_feePercentage);
 	}
 
 	// All events
 	event SetCountDest(uint256 oldCountDest, uint256 newCountDest, address indexed user);
-	event SetBridge(address oldBridge, address newBridge, address indexed user);
+	event SetBridge(address newBridge, bool status, address indexed user);
 	event SetDAO(address oldDAO, address newDAO, address indexed user);
 	event MakeCallData(bool success, bytes callData, address indexed user);
 	event HectorBridge(address indexed user, SendingAssetInfo[] sendingAssetInfos);
-	event SendFeeToDAO(uint256 feeAmount , SendingAssetInfo[] sendingAssetInfos);
+	event SendFeeToDAO(uint256 feeAmount, SendingAssetInfo[] sendingAssetInfos);
+	event SetVersion(string _version);
+	event SetMinFeePercentage(uint256 feePercentage);
 }
