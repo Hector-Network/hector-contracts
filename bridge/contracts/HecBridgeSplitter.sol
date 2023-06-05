@@ -197,24 +197,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		return abi.decode(_returnData, (string)); // All that remains is the revert string
 	}
 
-	// Send Fee to DAO wallet
-	function _takeFee(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
-		uint256 feeAmount = sendingAssetInfo.feeAmount;
-		if (sendingAssetInfo.sendingAssetId != address(0)) {
-			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
-			feeAmount = token.balanceOf(address(this)) < feeAmount
-				? token.balanceOf(address(this))
-				: feeAmount;
-			token.safeTransfer(DAO, feeAmount);
-			return (sendingAssetInfo.sendingAssetId, feeAmount);
-		} else {
-			feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
-			(bool success, ) = payable(DAO).call{value: feeAmount}('');
-			if (!success) revert DAO_FEE_FAILED();
-			return (address(0), feeAmount);
-		}
-	}
-
 	// Custom counts of detinations
 	function setCountDest(uint256 _countDest) external onlyOwner {
 		if (_countDest == 0) revert INVALID_PARAM();
