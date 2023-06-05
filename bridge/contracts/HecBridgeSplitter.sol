@@ -162,6 +162,8 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			}
 		}
 
+		require(totalAmounts > sendAmounts, "Invalid asset info");
+
 		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
 		uint256 beforeBalance = srcToken.balanceOf(address(this));
 		srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
