@@ -114,7 +114,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint length = sendingAssetInfos.length;
 		for (uint i = 0; i < length; i++) {
 			bytes memory callData = callDatas[i];
-			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
+			if (fees[i] > 0) {
 				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fees[i]}(
 					callData
 				);
@@ -126,7 +126,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				emit MakeCallData(success, callData, msg.sender);
 			}
 		}
-
 		emit HectorBridge(msg.sender, sendingAssetInfos);
 	}
 
@@ -149,13 +148,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			require(totalAmount == sendingAmount + feeAmount, 'Invalid asset info');
 
 			if (feeAmount < (totalAmount * minFeePercentage) / 1000) revert INVALID_DAO_FEE();
-			if (address(srcToken) != address(0)) {
-				feeAmount = srcToken.balanceOf(address(this)) < feeAmount
-					? srcToken.balanceOf(address(this))
-					: feeAmount;
-			} else {
-				feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
-			}
+
 			totalAmounts += totalAmount;
 			sendAmounts += sendingAmount;
 			feeAmounts += feeAmount;
