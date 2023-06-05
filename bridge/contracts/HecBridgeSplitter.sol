@@ -78,7 +78,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 		uint256 length = sendingAssetInfos.length;
 		for (uint256 i = 0; i < length; i++) {
-			if (sendingAssetInfos[i].feePercentage >= minFeePercentage) revert INVALID_PERCENTAGE();
+			if (sendingAssetInfos[i].feePercentage < minFeePercentage) revert INVALID_PERCENTAGE();
 			if (sendingAssetInfos[i].sendingAssetId != address(0)) {
 				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[i].sendingAssetId);
 
