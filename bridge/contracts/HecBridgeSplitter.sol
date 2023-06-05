@@ -6,6 +6,7 @@ import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
+import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
 error INVALID_PARAM();
 error INVALID_ADDRESS();
@@ -21,12 +22,53 @@ error DAO_FEE_FAILED();
 contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
+	using EnumerableSet for EnumerableSet.AddressSet;
+
+	mapping(address => bool) private isCallAddress;
+	EnumerableSet.AddressSet private _callAddresses;
+
+	function addToWhiteList(address _callAddress) external onlyOwner {
+		require(!isCallAddress[_callAddress], 'Address already exists');
+
+		isCallAddress[_callAddress] = true;
+		_callAddresses.add(_callAddress);
+	}
+
+	function removeFromWhiteList(address _callAddress) external onlyOwner {
+		require(isCallAddress[_callAddress], 'Address does not exist');
+
+		delete isCallAddress[_callAddress];
+		_callAddresses.remove(_callAddress);
+	}
+
+	function getWhiteListSize() public view returns (uint256) {
+		return _callAddresses.length();
+	}
+
+	function isInWhiteList(address _callAddress) public view returns (bool) {
+		return isCallAddress[_callAddress];
+	}
+
+	function getWhiteListAtIndex(uint256 index) public view returns (address) {
+		require(index < _callAddresses.length(), 'Invalid index');
+		return _callAddresses.at(index);
+	}
+
+	function getAllWhiteList() public view returns (address[] memory) {
+		uint256 length = _callAddresses.length();
+		address[] memory addresses = new address[](length);
+
+		for (uint256 i = 0; i < length; i++) {
+			addresses[i] = _callAddresses.at(i);
+		}
+
+		return addresses;
+	}
 
 	uint256 public CountDest; // Count of the destination wallets
 	uint public minFeePercentage;
 	address public DAO; // DAO wallet for taking fee
 	string public version;
-	mapping(address => bool) public isCallAddress; // Return status of callTargetAddress is registered
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
@@ -62,7 +104,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	/// @param fees Amounts of native coin amounts for bridge
 	/// @param callDatas CallDatas from lifi sdk
 	/// @param callTargetAddress use in executing squid bridge contract
-	function Bridge(
+	function bridge(
 		SendingAssetInfo[] memory sendingAssetInfos,
 		uint256[] memory fees,
 		bytes[] memory callDatas,
@@ -73,30 +115,19 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			sendingAssetInfos.length <= CountDest &&
 			sendingAssetInfos.length == callDatas.length &&
 			sendingAssetInfos.length == fees.length &&
-			isCallAddress[callTargetAddress]
+			isInWhiteList(callTargetAddress)
 		) revert INVALID_PARAM();
 
 		if (msg.value < sum(fees)) revert INVALID_FEES();
 
-		uint256 length = sendingAssetInfos.length;
-		for (uint256 i = 0; i < length; i++) {
+		// Receive asset
+		_receiveAssets(sendingAssetInfos, callTargetAddress);
+
+		uint length = sendingAssetInfos.length;
+		for (uint i = 0; i < length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
 
-			if (sendingAssetInfo.feePercentage < minFeePercentage) revert INVALID_PERCENTAGE();
-			if (sendingAssetInfo.sendingAssetId != address(0)) {
-				IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
-
-				uint256 beforeBalance = srcToken.balanceOf(address(this));
-				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfo.totalAmount);
-				uint256 afterBalance = srcToken.balanceOf(address(this));
-				if (afterBalance - beforeBalance != sendingAssetInfo.totalAmount)
-					revert INVALID_AMOUNT();
-
-				uint256 calcBridgeAmount = sendingAssetInfo.sendingAmount;
-				srcToken.approve(callTargetAddress, calcBridgeAmount);
-			}
 			bytes memory callData = callDatas[i];
-
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
 				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fees[i]}(
 					callData
@@ -112,6 +143,32 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
+	}
+
+	// Receive asset
+	function _receiveAssets(
+		SendingAssetInfo[] memory sendingAssetInfos,
+		address callTargetAddress
+	) internal {
+		uint256 totalAmounts = 0;
+		uint256 sendAmounts = 0;
+		for (uint i = 0; i < sendingAssetInfos.length; i++) {
+			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
+			if (sendingAssetInfo.feePercentage < minFeePercentage) revert INVALID_PERCENTAGE();
+			require(sendingAssetInfo.totalAmount > sendingAssetInfo.sendingAmount, 'Invalid asset info');
+			if (sendingAssetInfo.sendingAssetId != address(0)) {
+				totalAmounts += sendingAssetInfo.totalAmount;
+				sendAmounts += sendingAssetInfo.sendingAmount;
+			}
+		}
+
+		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
+		uint256 beforeBalance = srcToken.balanceOf(address(this));
+		srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
+		uint256 afterBalance = srcToken.balanceOf(address(this));
+		if (afterBalance - beforeBalance != totalAmounts) revert INVALID_AMOUNT();
+
+		srcToken.approve(callTargetAddress, sendAmounts);
 	}
 
 	// Sum
