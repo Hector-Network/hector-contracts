@@ -12,7 +12,7 @@ error INVALID_PARAM();
 error INVALID_ADDRESS();
 error INVALID_AMOUNT();
 error INVALID_ALLOWANCE();
-error INVALID_PERCENTAGE();
+error INVALID_DAO_FEE();
 error INVALID_FEES();
 error DAO_FEE_FAILED();
 
@@ -75,7 +75,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		address sendingAssetId;
 		uint256 sendingAmount;
 		uint256 totalAmount;
-		uint feePercentage;
+		uint256 feeAmount;
 	}
 
 	/* ======== INITIALIZATION ======== */
@@ -154,8 +154,12 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint256 sendAmounts = 0;
 		for (uint i = 0; i < sendingAssetInfos.length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
-			if (sendingAssetInfo.feePercentage < minFeePercentage) revert INVALID_PERCENTAGE();
-			require(sendingAssetInfo.totalAmount > sendingAssetInfo.sendingAmount, 'Invalid asset info');
+			if (sendingAssetInfo.feeAmount < (sendingAssetInfo.totalAmount * minFeePercentage) / 1000)
+				revert INVALID_DAO_FEE();
+			require(
+				sendingAssetInfo.totalAmount == sendingAssetInfo.sendingAmount + sendingAssetInfo.feeAmount,
+				'Invalid asset info'
+			);
 			if (sendingAssetInfo.sendingAssetId != address(0)) {
 				totalAmounts += sendingAssetInfo.totalAmount;
 				sendAmounts += sendingAssetInfo.sendingAmount;
@@ -194,7 +198,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Send Fee to DAO wallet
 	function _takeFee(SendingAssetInfo memory sendingAssetInfo) internal returns (address, uint256) {
-		uint256 feeAmount = (sendingAssetInfo.totalAmount * sendingAssetInfo.feePercentage) / 1000;
+		uint256 feeAmount = sendingAssetInfo.feeAmount;
 		if (sendingAssetInfo.sendingAssetId != address(0)) {
 			IERC20Upgradeable token = IERC20Upgradeable(sendingAssetInfo.sendingAssetId);
 			feeAmount = token.balanceOf(address(this)) < feeAmount
