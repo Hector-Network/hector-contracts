@@ -137,8 +137,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint256 totalAmounts = 0;
 		uint256 sendAmounts = 0;
 		uint256 feeAmounts = 0;
-		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
-
+		address sendingAsset = sendingAssetInfos[0].sendingAssetId;
 		for (uint i = 0; i < sendingAssetInfos.length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
 			uint256 totalAmount = sendingAssetInfo.totalAmount;
@@ -154,7 +153,8 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			feeAmounts += feeAmount;
 		}
 
-		if (address(srcToken) != address(0)) {
+		if (sendingAsset != address(0)) {
+			IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAsset);
 			uint256 beforeBalance = srcToken.balanceOf(address(this));
 			srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
 			uint256 afterBalance = srcToken.balanceOf(address(this));
