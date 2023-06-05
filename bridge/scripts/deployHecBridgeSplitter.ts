@@ -39,9 +39,9 @@ async function main() {
 	await waitSeconds(3);
 	await hecBridgeSplitterContract.connect(deployer).setVersion(version);
 	await waitSeconds(3);
-	await hecBridgeSplitterContract.connect(deployer).setBridge(lifiBridge, true);
+	await hecBridgeSplitterContract.connect(deployer).addToWhiteList(lifiBridge);
 	await waitSeconds(3);
-	await hecBridgeSplitterContract.connect(deployer).setBridge(squidRouter, true);
+	await hecBridgeSplitterContract.connect(deployer).addToWhiteList(squidRouter);
 }
 
 main().catch((error) => {

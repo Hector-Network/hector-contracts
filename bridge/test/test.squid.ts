@@ -6,12 +6,16 @@ const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token
 const tempStepData = require('./tempStepData.json');
 require('dotenv').config();
 
+const calcFee = () => {
+
+}
+
 async function main() {
 	let mode = 'single'; // mode: single, multi
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0x33239FE64E6CECb364e6A42f66bbdB714Fe89d7b";
+	const SPLITTER_ADDRESS = "0xC304995Dc0165651eb93aFB450ac4eCF415F9248";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
@@ -39,7 +43,9 @@ async function main() {
 		sendingAssetId: isNativeFrom
 			? ZERO_ADDRESS
 			: tempStepData.params.fromToken.address,
-		sendingAmount: tempStepData.params.fromAmount
+		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
+		totalAmount: BigNumber.from(tempStepData.params.fromAmount).mul(100000).div(100000 - 75), // Mock Total Amount
+		feeAmount: BigNumber.from(tempStepData.params.fromAmount).mul(100000).div(100000 - 75).sub(BigNumber.from(tempStepData.params.fromAmount)) // MockFee - 0.075%
 	};
 
 	// CallData
@@ -58,11 +64,22 @@ async function main() {
 			BigNumber.from(tempStepData.transactionRequest.value)
 		);
 
+	let feesForNative: Array<BigNumber> = [];
+	if (isNativeFrom) {
+		feesForNative.push(mockSendingAssetInfo1.feeAmount);
+		mode == 'multi' &&
+			feesForNative.push(mockSendingAssetInfo1.feeAmount);
+	}
+
 	let fee = BigNumber.from(0);
 
 	fees.map((item) => {
 		fee = fee.add(item);
 	});
+
+	feesForNative.map((item) => {
+		fee = fee.add(item);
+	})
 
 	mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	mockCallDatas.push(mockCallData1);
@@ -79,12 +96,12 @@ async function main() {
 		let approveAmount;
 
 		if (mode == 'single') {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount);
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount);
 		}
 
 		if (mode == 'multi') {
-			approveAmount = BigNumber.from(mockSendingAssetInfo1.sendingAmount).add(
-				BigNumber.from(mockSendingAssetInfo1.sendingAmount)
+			approveAmount = BigNumber.from(mockSendingAssetInfo1.totalAmount).add(
+				BigNumber.from(mockSendingAssetInfo1.totalAmount)
 			);
 		}
 
@@ -104,14 +121,16 @@ async function main() {
 	}
 
 	console.log({ fee, fees });
+	console.log({ useSquid: true, targetAddress });
 	console.log('Start bridge...');
 
+	const isInWhiteList = await testHecBridgeSplitterContract.isInWhiteList(targetAddress);
+
 	try {
-		const result = await testHecBridgeSplitterContract.Bridge(
+		const result = await testHecBridgeSplitterContract.bridge(
 			mockSendingAssetInfos,
 			fees,
 			mockCallDatas,
-			true,
 			targetAddress,
 			{
 				value: fee,

@@ -24,20 +24,15 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 	using EnumerableSet for EnumerableSet.AddressSet;
 
-	mapping(address => bool) private isCallAddress;
 	EnumerableSet.AddressSet private _callAddresses;
 
 	function addToWhiteList(address _callAddress) external onlyOwner {
-		require(!isCallAddress[_callAddress], 'Address already exists');
-
-		isCallAddress[_callAddress] = true;
+		require(!_callAddresses.contains(_callAddress), 'Address already exists');
 		_callAddresses.add(_callAddress);
 	}
 
 	function removeFromWhiteList(address _callAddress) external onlyOwner {
-		require(isCallAddress[_callAddress], 'Address does not exist');
-
-		delete isCallAddress[_callAddress];
+		require(_callAddresses.contains(_callAddress), 'Address does not exist');
 		_callAddresses.remove(_callAddress);
 	}
 
@@ -46,7 +41,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	}
 
 	function isInWhiteList(address _callAddress) public view returns (bool) {
-		return isCallAddress[_callAddress];
+		return _callAddresses.contains(_callAddress);
 	}
 
 	function getWhiteListAtIndex(uint256 index) public view returns (address) {
@@ -55,14 +50,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	}
 
 	function getAllWhiteList() public view returns (address[] memory) {
-		uint256 length = _callAddresses.length();
-		address[] memory addresses = new address[](length);
-
-		for (uint256 i = 0; i < length; i++) {
-			addresses[i] = _callAddresses.at(i);
-		}
-
-		return addresses;
+		return _callAddresses.values();
 	}
 
 	uint256 public CountDest; // Count of the destination wallets
@@ -105,9 +93,9 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	/// @param callDatas CallDatas from lifi sdk
 	/// @param callTargetAddress use in executing squid bridge contract
 	function bridge(
-		SendingAssetInfo[] memory sendingAssetInfos,
+		SendingAssetInfo[] calldata sendingAssetInfos,
 		uint256[] memory fees,
-		bytes[] memory callDatas,
+		bytes[] calldata callDatas,
 		address callTargetAddress
 	) external payable {
 		if (
@@ -125,8 +113,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 		uint length = sendingAssetInfos.length;
 		for (uint i = 0; i < length; i++) {
-			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
-
 			bytes memory callData = callDatas[i];
 			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
 				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fees[i]}(
@@ -139,7 +125,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 				if (!success) revert(_getRevertMsg(result));
 				emit MakeCallData(success, callData, msg.sender);
 			}
-			_takeFee(sendingAssetInfo);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
@@ -147,32 +132,48 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Receive asset
 	function _receiveAssets(
-		SendingAssetInfo[] memory sendingAssetInfos,
+		SendingAssetInfo[] calldata sendingAssetInfos,
 		address callTargetAddress
 	) internal {
 		uint256 totalAmounts = 0;
 		uint256 sendAmounts = 0;
+		uint256 feeAmounts = 0;
+		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
+
 		for (uint i = 0; i < sendingAssetInfos.length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
-			require(
-				sendingAssetInfo.totalAmount == sendingAssetInfo.sendingAmount + sendingAssetInfo.feeAmount,
-				'Invalid asset info'
-			);
-			if (sendingAssetInfo.feeAmount < (sendingAssetInfo.totalAmount * minFeePercentage) / 1000)
-				revert INVALID_DAO_FEE();
-			if (sendingAssetInfo.sendingAssetId != address(0)) {
-				totalAmounts += sendingAssetInfo.totalAmount;
-				sendAmounts += sendingAssetInfo.sendingAmount;
+			uint256 totalAmount = sendingAssetInfo.totalAmount;
+			uint256 sendingAmount = sendingAssetInfo.sendingAmount;
+			uint256 feeAmount = sendingAssetInfo.feeAmount;
+
+			require(totalAmount == sendingAmount + feeAmount, 'Invalid asset info');
+
+			if (feeAmount < (totalAmount * minFeePercentage) / 1000) revert INVALID_DAO_FEE();
+			if (address(srcToken) != address(0)) {
+				feeAmount = srcToken.balanceOf(address(this)) < feeAmount
+					? srcToken.balanceOf(address(this))
+					: feeAmount;
+			} else {
+				feeAmount = address(this).balance < feeAmount ? address(this).balance : feeAmount;
 			}
+			totalAmounts += totalAmount;
+			sendAmounts += sendingAmount;
+			feeAmounts += feeAmount;
 		}
 
-		IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAssetInfos[0].sendingAssetId);
-		uint256 beforeBalance = srcToken.balanceOf(address(this));
-		srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
-		uint256 afterBalance = srcToken.balanceOf(address(this));
-		if (afterBalance - beforeBalance != totalAmounts) revert INVALID_AMOUNT();
-
-		srcToken.approve(callTargetAddress, sendAmounts);
+		if (address(srcToken) != address(0)) {
+			uint256 beforeBalance = srcToken.balanceOf(address(this));
+			srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
+			uint256 afterBalance = srcToken.balanceOf(address(this));
+			if (afterBalance - beforeBalance != totalAmounts) revert INVALID_AMOUNT();
+			// Approve targetAddress
+			srcToken.approve(callTargetAddress, sendAmounts);
+			// Take Fee
+			srcToken.safeTransfer(DAO, feeAmounts);
+		} else {
+			(bool success, ) = payable(DAO).call{value: feeAmounts}('');
+			if (!success) revert DAO_FEE_FAILED();
+		}
 	}
 
 	// Sum
@@ -220,20 +221,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint256 oldCountDest = CountDest;
 		CountDest = _countDest;
 		emit SetCountDest(oldCountDest, _countDest, msg.sender);
-	}
-
-	// Set Bridge
-	function setBridge(address _bridge, bool status) external onlyOwner {
-		if (_bridge == address(0)) revert INVALID_ADDRESS();
-		//check if _bridge is a contract not wallet
-		uint256 size;
-		assembly {
-			size := extcodesize(_bridge)
-		}
-		if (size == 0) revert INVALID_ADDRESS();
-		isCallAddress[_bridge] = status;
-
-		emit SetBridge(_bridge, status, msg.sender);
 	}
 
 	// Set DAO wallet
