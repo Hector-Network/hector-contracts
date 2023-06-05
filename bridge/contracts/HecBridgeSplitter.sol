@@ -11,7 +11,6 @@ error INVALID_PARAM();
 error INVALID_ADDRESS();
 error INVALID_AMOUNT();
 error INVALID_ALLOWANCE();
-error BRIDGE_FAILED();
 error INVALID_PERCENTAGE();
 error DAO_FEE_FAILED();
 
@@ -88,24 +87,52 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 				uint256 calcBridgeAmount = sendingAssetInfos[i].sendingAmount;
 
+				uint256 beforeBalance = srcToken.balanceOf(address(this));
 				srcToken.safeTransferFrom(msg.sender, address(this), sendingAssetInfos[i].totalAmount);
+				uint256 afterBalance = srcToken.balanceOf(address(this));
+				if (afterBalance - beforeBalance != sendingAssetInfos[i].totalAmount)
+					revert INVALID_AMOUNT();
+
 				srcToken.approve(callTargetAddress, calcBridgeAmount);
 			}
 			bytes memory callData = callDatas[i];
 
-			if (msg.value > 0 && fees.length > 0 && fees[i] > 0) {
-				(bool success, ) = payable(callTargetAddress).call{value: fees[i]}(callData);
-				if (!success) revert BRIDGE_FAILED();
+			if (msg.value > sum(fees) && msg.value > 0 && fees.length > 0 && fees[i] > 0) {
+				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fees[i]}(
+					callData
+				);
+				if (!success) revert(_getRevertMsg(result));
 				emit MakeCallData(success, callData, msg.sender);
 			} else {
-				(bool success, ) = payable(callTargetAddress).call(callDatas[i]);
-				if (!success) revert BRIDGE_FAILED();
+				(bool success, bytes memory result) = payable(callTargetAddress).call(callData);
+				if (!success) revert(_getRevertMsg(result));
 				emit MakeCallData(success, callData, msg.sender);
 			}
 			_takeFee(sendingAssetInfos[i]);
 		}
 
 		emit HectorBridge(msg.sender, sendingAssetInfos);
+	}
+
+	// Sum
+	function sum(uint256[] memory numbers) public pure returns (uint256) {
+        uint256 total = 0;
+        for (uint i = 0; i < numbers.length; i++) {
+            total += numbers[i];
+        }
+        return total;
+    }
+
+	// Return revert msg of failed Bridge transaction
+	function _getRevertMsg(bytes memory _returnData) internal pure returns (string memory) {
+		// If the _res length is less than 68, then the transaction failed silently (without a revert message)
+		if (_returnData.length < 68) return 'Transaction reverted silently';
+
+		assembly {
+			// Slice the sighash.
+			_returnData := add(_returnData, 0x04)
+		}
+		return abi.decode(_returnData, (string)); // All that remains is the revert string
 	}
 
 	// Send Fee to DAO wallet
@@ -134,6 +161,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetCountDest(oldCountDest, _countDest, msg.sender);
 	}
 
+	// Set Bridge
 	function setBridge(address _bridge, bool status) external onlyOwner {
 		if (_bridge == address(0)) revert INVALID_ADDRESS();
 		//check if _bridge is a contract not wallet
@@ -147,6 +175,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		emit SetBridge(_bridge, status, msg.sender);
 	}
 
+	// Set DAO wallet
 	function setDAO(address newDAO) external onlyOwner {
 		if (newDAO == address(0)) revert INVALID_ADDRESS();
 		address oldDAO = DAO;
