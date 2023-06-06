@@ -37,9 +37,9 @@ async function main() {
 	const mockSendingAssetInfo1 = {
 		callData: tempStepData.transactionRequest.data,
 		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
-		totalAmount: BigNumber.from('11000000000000000'), // Mock Total Amount
-		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)), // MockFee - 0.075%
-		bridgeFee: BigNumber.from(tempStepData.transactionRequest.value),
+		totalAmount: BigNumber.from('11000000000000000').toString(), // Mock Total Amount
+		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)).toString(), // MockFee - 0.075%
+		bridgeFee: BigNumber.from(tempStepData.transactionRequest.value).toString(),
 	};
 
 	// CallData
@@ -82,10 +82,10 @@ async function main() {
 	if (mode == 'multi') {
 		mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	}
-	
-	console.log({ sendingAsset });
+
+	console.log("sendingAsset:", sendingAsset);
 	console.log('mockSendingAssetInfos:', mockSendingAssetInfos);
-	console.log({ callTargetAddress: targetAddress });
+	console.log("callTargetAddress:", targetAddress);
 
 	if (!isNativeFrom) {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
@@ -122,20 +122,20 @@ async function main() {
 	console.log("isWhiteList:", isInWhiteList);
 	console.log('Start bridge...');
 
-	try {
-		const result = await testHecBridgeSplitterContract.bridge(
-			sendingAsset,
-			mockSendingAssetInfos,
-			targetAddress,
-			{
-				value: fee,
-			}
-		);
-		const resultWait = await result.wait();
-		console.log('Done bridge Tx:', resultWait.transactionHash);
-	} catch (e) {
-		console.log(e);
-	}
+	// try {
+	// 	const result = await testHecBridgeSplitterContract.bridge(
+	// 		sendingAsset,
+	// 		mockSendingAssetInfos,
+	// 		targetAddress,
+	// 		{
+	// 			value: fee,
+	// 		}
+	// 	);
+	// 	const resultWait = await result.wait();
+	// 	console.log('Done bridge Tx:', resultWait.transactionHash);
+	// } catch (e) {
+	// 	console.log(e);
+	// }
 }
 
 main().catch((error) => {
