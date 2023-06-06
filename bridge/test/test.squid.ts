@@ -15,7 +15,7 @@ async function main() {
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0xF652C968d35E0BFa17003829B5200ECDE920b64e";
+	const SPLITTER_ADDRESS = "0x0d70adDCAD814641271FDe109723f45D21D2D782";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
@@ -29,7 +29,6 @@ async function main() {
 	const ETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
 	const mockSendingAssetInfos = [];
-	const mockCallDatas = [];
 
 	console.log('HecBridgeSplitter:', HecBridgeSplitterAddress);
 
@@ -40,16 +39,17 @@ async function main() {
 
 	// Sending Asset Data
 	const mockSendingAssetInfo1 = {
-		sendingAssetId: isNativeFrom
-			? ZERO_ADDRESS
-			: tempStepData.params.fromToken.address,
+		callData: tempStepData.transactionRequest.data,
 		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
 		totalAmount: BigNumber.from('11000000000000000'), // Mock Total Amount
-		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)) // MockFee - 0.075%
+		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)), // MockFee - 0.075%
+		bridgeFee: BigNumber.from(tempStepData.transactionRequest.value),
 	};
 
 	// CallData
-	const mockCallData1 = tempStepData.transactionRequest.data;
+	const sendingAsset = isNativeFrom
+		? ZERO_ADDRESS
+		: tempStepData.params.fromToken.address;
 	const targetAddress = tempStepData.transactionRequest.targetAddress;
 
 	// Set Fees
@@ -66,12 +66,12 @@ async function main() {
 
 	let feesForNative: Array<BigNumber> = [];
 	if (isNativeFrom) {
-		feesForNative.push(mockSendingAssetInfo1.feeAmount);
+		feesForNative.push(BigNumber.from(mockSendingAssetInfo1.feeAmount));
 		mode == 'multi' &&
-			feesForNative.push(mockSendingAssetInfo1.feeAmount);
+			feesForNative.push(BigNumber.from(mockSendingAssetInfo1.feeAmount));
 	}
 
-	let fee = BigNumber.from(0);
+	let fee: BigNumber = BigNumber.from(0);
 
 	fees.map((item) => {
 		fee = fee.add(item);
@@ -82,14 +82,13 @@ async function main() {
 	})
 
 	mockSendingAssetInfos.push(mockSendingAssetInfo1);
-	mockCallDatas.push(mockCallData1);
 
 	if (mode == 'multi') {
 		mockSendingAssetInfos.push(mockSendingAssetInfo1);
-		mockCallDatas.push(mockCallData1);
 	}
-
+	console.log({ sendingAsset });
 	console.log('mockSendingAssetInfos:', mockSendingAssetInfos);
+	console.log({ callTargetAddress: targetAddress });
 
 	if (!isNativeFrom) {
 		console.log('Approve the ERC20 token to HecBridgeSplitter...');
@@ -106,7 +105,7 @@ async function main() {
 		}
 
 		const ERC20Contract = new ethers.Contract(
-			mockSendingAssetInfo1.sendingAssetId,
+			sendingAsset,
 			erc20Abi.abi,
 			deployer
 		);
@@ -120,7 +119,7 @@ async function main() {
 		console.log('Done token allowance setting');
 	}
 
-	console.log({ fee, fees });
+	console.log({ fee: fee.toString(), fees });
 	console.log({ useSquid: true, targetAddress });
 	const isInWhiteList = await testHecBridgeSplitterContract.isInWhiteList(targetAddress);
 	console.log("isWhiteList:", isInWhiteList);
@@ -128,9 +127,8 @@ async function main() {
 
 	try {
 		const result = await testHecBridgeSplitterContract.bridge(
+			sendingAsset,
 			mockSendingAssetInfos,
-			fees,
-			mockCallDatas,
 			targetAddress,
 			{
 				value: fee,
