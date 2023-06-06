@@ -60,10 +60,11 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Struct Asset Info
 	struct SendingAssetInfo {
-		address sendingAssetId;
+		bytes callData;
 		uint256 sendingAmount;
 		uint256 totalAmount;
 		uint256 feeAmount;
+		uint256 bridgeFee;
 	}
 
 	/* ======== INITIALIZATION ======== */
@@ -88,37 +89,30 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	///////////////////////////////////////////////////////
 
 	/// @notice Performs a swap before bridging via HECTOR Bridge Splitter
+	/// @param sendingAsset Asset that is used for bridge
 	/// @param sendingAssetInfos Array Data used purely for sending assets
-	/// @param fees Amounts of native coin amounts for bridge
-	/// @param callDatas CallDatas from lifi sdk
 	/// @param callTargetAddress use in executing squid bridge contract
 	function bridge(
+		address sendingAsset,
 		SendingAssetInfo[] calldata sendingAssetInfos,
-		uint256[] memory fees,
-		bytes[] calldata callDatas,
 		address callTargetAddress
 	) external payable {
 		require(
 			sendingAssetInfos.length > 0 &&
 				sendingAssetInfos.length <= CountDest &&
-				sendingAssetInfos.length == callDatas.length &&
-				sendingAssetInfos.length == fees.length &&
 				isInWhiteList(callTargetAddress),
-			"Bridge: Invalid parameters"
+			'Bridge: Invalid parameters'
 		);
 
-		if (msg.value < sum(fees)) revert INVALID_FEES();
-
 		// Receive asset
-		_receiveAssets(sendingAssetInfos, callTargetAddress);
+		_receiveAssets(sendingAsset, sendingAssetInfos, callTargetAddress);
 
 		uint length = sendingAssetInfos.length;
 		for (uint i = 0; i < length; i++) {
-			bytes memory callData = callDatas[i];
-			if (fees[i] > 0) {
-				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fees[i]}(
-					callData
-				);
+			bytes memory callData = sendingAssetInfos[i].callData;
+			uint256 fee = sendingAssetInfos[i].bridgeFee;
+			if (fee > 0) {
+				(bool success, bytes memory result) = payable(callTargetAddress).call{value: fee}(callData);
 				if (!success) revert(_getRevertMsg(result));
 				emit MakeCallData(success, callData, msg.sender);
 			} else {
@@ -132,18 +126,20 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Receive asset
 	function _receiveAssets(
+		address sendingAsset,
 		SendingAssetInfo[] calldata sendingAssetInfos,
 		address callTargetAddress
 	) internal {
 		uint256 totalAmounts = 0;
 		uint256 sendAmounts = 0;
 		uint256 feeAmounts = 0;
-		address sendingAsset = sendingAssetInfos[0].sendingAssetId;
+		uint256 bridgeFees = 0;
 		for (uint i = 0; i < sendingAssetInfos.length; i++) {
 			SendingAssetInfo memory sendingAssetInfo = sendingAssetInfos[i];
 			uint256 totalAmount = sendingAssetInfo.totalAmount;
 			uint256 sendingAmount = sendingAssetInfo.sendingAmount;
 			uint256 feeAmount = sendingAssetInfo.feeAmount;
+			uint256 bridgeFee = sendingAssetInfo.bridgeFee;
 
 			require(totalAmount == sendingAmount + feeAmount, 'Bridge: Invalid asset info');
 
@@ -152,7 +148,10 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			totalAmounts += totalAmount;
 			sendAmounts += sendingAmount;
 			feeAmounts += feeAmount;
+			bridgeFees += bridgeFee;
 		}
+
+		if (msg.value < bridgeFees) revert INVALID_FEES();
 
 		if (sendingAsset != address(0)) {
 			IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAsset);
@@ -168,15 +167,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			(bool success, ) = payable(DAO).call{value: feeAmounts}('');
 			if (!success) revert DAO_FEE_FAILED();
 		}
-	}
-
-	// Sum
-	function sum(uint256[] memory numbers) internal pure returns (uint256) {
-		uint256 total = 0;
-		for (uint i = 0; i < numbers.length; i++) {
-			total += numbers[i];
-		}
-		return total;
 	}
 
 	// Return revert msg of failed Bridge transaction
