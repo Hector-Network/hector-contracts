@@ -6,10 +6,6 @@ const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token
 const tempStepData = require('./tempStepData.json');
 require('dotenv').config();
 
-const calcFee = () => {
-
-}
-
 async function main() {
 	let mode = 'single'; // mode: single, multi
 	const [deployer] = await hre.ethers.getSigners();
@@ -86,6 +82,7 @@ async function main() {
 	if (mode == 'multi') {
 		mockSendingAssetInfos.push(mockSendingAssetInfo1);
 	}
+	
 	console.log({ sendingAsset });
 	console.log('mockSendingAssetInfos:', mockSendingAssetInfos);
 	console.log({ callTargetAddress: targetAddress });
