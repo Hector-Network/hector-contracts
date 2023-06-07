@@ -3,7 +3,7 @@ const hre = require('hardhat');
 const { ethers } = require('hardhat');
 const abi = require('../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json');
 const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
-const tempStepData = require('./tempStepData.json');
+const tempStepData = require('./tempStepDataForSquid.json');
 require('dotenv').config();
 
 async function main() {
@@ -11,7 +11,7 @@ async function main() {
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0x0d70adDCAD814641271FDe109723f45D21D2D782";
+	const SPLITTER_ADDRESS = "0xc4eFf79E53975f03738EAfE3A54a60d05c401A5E";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
@@ -33,16 +33,16 @@ async function main() {
 	console.log('Mode:', mode);
 	console.log('isNativeFrom:', isNativeFrom);
 
-	// Sending Asset Data
+	// Sending Asset Info
 	const mockSendingAssetInfo1 = {
 		callData: tempStepData.transactionRequest.data,
 		sendingAmount: tempStepData.params.fromAmount, // This is calculated amount except fee for using Bridge 
-		totalAmount: BigNumber.from('11000000000000000').toString(), // Mock Total Amount
-		feeAmount: BigNumber.from('11000000000000000').sub(BigNumber.from(tempStepData.params.fromAmount)).toString(), // MockFee - 0.075%
+		totalAmount: BigNumber.from('11000').toString(), // Mock Total Amount
+		feeAmount: BigNumber.from('11000').sub(BigNumber.from(tempStepData.params.fromAmount)).toString(), // MockFee - 0.075%
 		bridgeFee: BigNumber.from(tempStepData.transactionRequest.value).toString(),
 	};
 
-	// CallData
+	// Sending Asset Id
 	const sendingAsset = isNativeFrom
 		? ZERO_ADDRESS
 		: tempStepData.params.fromToken.address;
@@ -122,20 +122,20 @@ async function main() {
 	console.log("isWhiteList:", isInWhiteList);
 	console.log('Start bridge...');
 
-	// try {
-	// 	const result = await testHecBridgeSplitterContract.bridge(
-	// 		sendingAsset,
-	// 		mockSendingAssetInfos,
-	// 		targetAddress,
-	// 		{
-	// 			value: fee,
-	// 		}
-	// 	);
-	// 	const resultWait = await result.wait();
-	// 	console.log('Done bridge Tx:', resultWait.transactionHash);
-	// } catch (e) {
-	// 	console.log(e);
-	// }
+	try {
+		const result = await testHecBridgeSplitterContract.bridge(
+			sendingAsset,
+			mockSendingAssetInfos,
+			targetAddress,
+			{
+				value: fee,
+			}
+		);
+		const resultWait = await result.wait();
+		console.log('Done bridge Tx:', resultWait.transactionHash);
+	} catch (e) {
+		console.log(e);
+	}
 }
 
 main().catch((error) => {

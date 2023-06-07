@@ -1,0 +1,461 @@
+{
+    "type": "lifi",
+    "id": "90a4cf1f-9e6d-41a2-a0e4-9acd6cf571c2",
+    "tool": "amarok",
+    "toolDetails": {
+        "key": "amarok",
+        "name": "Connext",
+        "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/bridges/connext.png"
+    },
+    "action": {
+        "fromToken": {
+            "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+            "chainId": 137,
+            "symbol": "USDT",
+            "decimals": 6,
+            "name": "(PoS) Tether USD",
+            "priceUSD": "1.000275",
+            "logoURI": "https://static.debank.com/image/coin/logo_url/usdt/23af7472292cb41dc39b3f1146ead0fe.png",
+            "coinKey": "USDT"
+        },
+        "fromAmount": "100000",
+        "toToken": {
+            "address": "0x0000000000000000000000000000000000000000",
+            "chainId": 56,
+            "symbol": "BNB",
+            "decimals": 18,
+            "name": "BNB",
+            "priceUSD": "277.2",
+            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
+            "coinKey": "BNB"
+        },
+        "fromChainId": 137,
+        "toChainId": 56,
+        "slippage": 0.005,
+        "fromAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
+        "toAddress": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba"
+    },
+    "estimate": {
+        "tool": "amarok",
+        "approvalAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+        "toAmountMin": "363893038091900",
+        "toAmount": "365721646323518",
+        "fromAmount": "100000",
+        "feeCosts": [
+            {
+                "name": "LP Fee",
+                "description": "Fee paid to the Liquidity Provider",
+                "percentage": "0.003",
+                "token": {
+                    "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+                    "chainId": 137,
+                    "symbol": "USDT",
+                    "decimals": 6,
+                    "name": "(PoS) Tether USD",
+                    "priceUSD": "1.000275",
+                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdt/23af7472292cb41dc39b3f1146ead0fe.png",
+                    "coinKey": "USDT"
+                },
+                "amount": "300",
+                "amountUSD": "0.01",
+                "included": true
+            },
+            {
+                "name": "Router Fee",
+                "description": "Fee charged by routers for providing liquidity",
+                "percentage": "0.0005",
+                "token": {
+                    "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                    "chainId": 56,
+                    "symbol": "ETH",
+                    "decimals": 18,
+                    "name": "Ethereum Token",
+                    "priceUSD": "1874.94",
+                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0x2170ed0880ac9a755fd29b2688956bd959f933f8/80dd95753396b5619cf84b0df135eae5.png",
+                    "coinKey": "WETH"
+                },
+                "amount": "26868892654",
+                "amountUSD": "0.01",
+                "included": true
+            },
+            {
+                "name": "Relayer Fee",
+                "description": "Fee charged by relayers for executing transactions on destination chain",
+                "percentage": "29135.9970",
+                "token": {
+                    "address": "0x0000000000000000000000000000000000000000",
+                    "chainId": 137,
+                    "symbol": "MATIC",
+                    "decimals": 18,
+                    "name": "MATIC",
+                    "priceUSD": "0.804351",
+                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                    "coinKey": "MATIC"
+                },
+                "amount": "1566532423504231018",
+                "amountUSD": "1.26",
+                "included": false
+            }
+        ],
+        "gasCosts": [
+            {
+                "type": "SEND",
+                "price": "153617702456",
+                "estimate": "707258",
+                "limit": "1060887",
+                "amount": "108647349003625648",
+                "amountUSD": "0.09",
+                "token": {
+                    "address": "0x0000000000000000000000000000000000000000",
+                    "chainId": 137,
+                    "symbol": "MATIC",
+                    "decimals": 18,
+                    "name": "MATIC",
+                    "priceUSD": "0.804351",
+                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                    "coinKey": "MATIC"
+                }
+            }
+        ],
+        "executionDuration": 299,
+        "fromAmountUSD": "0.10",
+        "toAmountUSD": "0.10"
+    },
+    "includedSteps": [
+        {
+            "id": "8cf7d3ab-fbcb-4a15-969c-e3afbede76b0",
+            "type": "swap",
+            "action": {
+                "fromChainId": 137,
+                "fromAmount": "100000",
+                "fromToken": {
+                    "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+                    "chainId": 137,
+                    "symbol": "USDT",
+                    "decimals": 6,
+                    "name": "(PoS) Tether USD",
+                    "priceUSD": "1.000275",
+                    "logoURI": "https://static.debank.com/image/coin/logo_url/usdt/23af7472292cb41dc39b3f1146ead0fe.png",
+                    "coinKey": "USDT"
+                },
+                "toChainId": 137,
+                "toToken": {
+                    "address": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+                    "chainId": 137,
+                    "symbol": "WETH",
+                    "decimals": 18,
+                    "name": "Wrapped Ether",
+                    "priceUSD": "1869.19",
+                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619/61844453e63cf81301f845d7864236f6.png",
+                    "coinKey": "WETH"
+                },
+                "slippage": 0.005,
+                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                "toAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE"
+            },
+            "estimate": {
+                "tool": "sushiswap-pol",
+                "fromAmount": "100000",
+                "toAmount": "54036401890610",
+                "toAmountMin": "53766219881157",
+                "approvalAddress": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
+                "executionDuration": 30,
+                "feeCosts": [
+                    {
+                        "name": "LP Fee",
+                        "description": "Fee paid to the Liquidity Provider",
+                        "percentage": "0.003",
+                        "token": {
+                            "address": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+                            "chainId": 137,
+                            "symbol": "USDT",
+                            "decimals": 6,
+                            "name": "(PoS) Tether USD",
+                            "priceUSD": "1.000275",
+                            "logoURI": "https://static.debank.com/image/coin/logo_url/usdt/23af7472292cb41dc39b3f1146ead0fe.png",
+                            "coinKey": "USDT"
+                        },
+                        "amount": "300",
+                        "amountUSD": "0.01",
+                        "included": true
+                    }
+                ],
+                "gasCosts": [
+                    {
+                        "type": "SEND",
+                        "price": "153617702456",
+                        "estimate": "350000",
+                        "limit": "525000",
+                        "amount": "53766195859600000",
+                        "amountUSD": "0.04",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 137,
+                            "symbol": "MATIC",
+                            "decimals": 18,
+                            "name": "MATIC",
+                            "priceUSD": "0.804351",
+                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                            "coinKey": "MATIC"
+                        }
+                    }
+                ],
+                "toolData": {
+                    "path": [
+                        "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+                        "0x0b3f868e0be5597d5db7feb59e1cadbb0fdda50a",
+                        "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+                        "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619"
+                    ],
+                    "routerAddress": "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
+                }
+            },
+            "tool": "sushiswap-pol",
+            "toolDetails": {
+                "key": "sushiswap-pol",
+                "name": "SushiSwap",
+                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/sushi.png"
+            }
+        },
+        {
+            "id": "26251702-fa3b-4ffb-bce0-9db1794371da",
+            "type": "cross",
+            "action": {
+                "fromChainId": 137,
+                "fromAmount": "53766219881157",
+                "fromToken": {
+                    "address": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619",
+                    "chainId": 137,
+                    "symbol": "WETH",
+                    "decimals": 18,
+                    "name": "Wrapped Ether",
+                    "priceUSD": "1869.19",
+                    "logoURI": "https://static.debank.com/image/matic_token/logo_url/0x7ceb23fd6bc0add59e62ac25578270cff1b9f619/61844453e63cf81301f845d7864236f6.png",
+                    "coinKey": "WETH"
+                },
+                "toChainId": 56,
+                "toToken": {
+                    "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                    "chainId": 56,
+                    "symbol": "ETH",
+                    "decimals": 18,
+                    "name": "Ethereum Token",
+                    "priceUSD": "1874.94",
+                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0x2170ed0880ac9a755fd29b2688956bd959f933f8/80dd95753396b5619cf84b0df135eae5.png",
+                    "coinKey": "WETH"
+                },
+                "slippage": 0.005,
+                "destinationGasConsumption": "667500",
+                "fromAddress": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+                "toAddress": "0x74674DAFd6f4495e7F63F7637E94b8B89B2f01dB"
+            },
+            "estimate": {
+                "tool": "amarok",
+                "fromAmount": "53766219881157",
+                "toAmount": "53809782444743",
+                "toAmountMin": "53540733532519",
+                "approvalAddress": "0xc4ae07f276768a3b74ae8c47bc108a2af0e40eba",
+                "executionDuration": 239,
+                "feeCosts": [
+                    {
+                        "name": "Router Fee",
+                        "description": "Fee charged by routers for providing liquidity",
+                        "percentage": "0.0005",
+                        "token": {
+                            "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                            "chainId": 56,
+                            "symbol": "ETH",
+                            "decimals": 18,
+                            "name": "Ethereum Token",
+                            "priceUSD": "1874.94",
+                            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0x2170ed0880ac9a755fd29b2688956bd959f933f8/80dd95753396b5619cf84b0df135eae5.png",
+                            "coinKey": "WETH"
+                        },
+                        "amount": "26868892654",
+                        "amountUSD": "0.01",
+                        "included": true
+                    },
+                    {
+                        "name": "Relayer Fee",
+                        "description": "Fee charged by relayers for executing transactions on destination chain",
+                        "percentage": "29135.9970",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 137,
+                            "symbol": "MATIC",
+                            "decimals": 18,
+                            "name": "MATIC",
+                            "priceUSD": "0.804351",
+                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                            "coinKey": "MATIC"
+                        },
+                        "amount": "1566532423504231018",
+                        "amountUSD": "1.26",
+                        "included": false
+                    }
+                ],
+                "gasCosts": [
+                    {
+                        "type": "SEND",
+                        "price": "153617702456",
+                        "estimate": "340000",
+                        "limit": "510000",
+                        "amount": "52230018835040000",
+                        "amountUSD": "0.04",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 137,
+                            "symbol": "MATIC",
+                            "decimals": 18,
+                            "name": "MATIC",
+                            "priceUSD": "0.804351",
+                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                            "coinKey": "MATIC"
+                        }
+                    }
+                ],
+                "toolData": {
+                    "relayerFeeCost": {
+                        "name": "Relayer Fee",
+                        "description": "Fee charged by relayers for executing transactions on destination chain",
+                        "percentage": "29135.9970",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 137,
+                            "symbol": "MATIC",
+                            "decimals": 18,
+                            "name": "MATIC",
+                            "priceUSD": "0.804351",
+                            "logoURI": "https://static.debank.com/image/matic_token/logo_url/matic/6f5a6b6f0732a7a235131bd7804d357c.png",
+                            "coinKey": "MATIC"
+                        },
+                        "amount": "1566532423504231018",
+                        "amountUSD": "1.26",
+                        "included": false
+                    }
+                }
+            },
+            "tool": "amarok",
+            "toolDetails": {
+                "key": "amarok",
+                "name": "Connext",
+                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/bridges/connext.png"
+            }
+        },
+        {
+            "id": "6c51b136-f737-4afb-a8d1-89a188ac8e04",
+            "type": "swap",
+            "action": {
+                "fromChainId": 56,
+                "fromAmount": "53540733532519",
+                "fromToken": {
+                    "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                    "chainId": 56,
+                    "symbol": "ETH",
+                    "decimals": 18,
+                    "name": "Ethereum Token",
+                    "priceUSD": "1874.94",
+                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/0x2170ed0880ac9a755fd29b2688956bd959f933f8/80dd95753396b5619cf84b0df135eae5.png",
+                    "coinKey": "WETH"
+                },
+                "toChainId": 56,
+                "toToken": {
+                    "address": "0x0000000000000000000000000000000000000000",
+                    "chainId": 56,
+                    "symbol": "BNB",
+                    "decimals": 18,
+                    "name": "BNB",
+                    "priceUSD": "277.2",
+                    "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
+                    "coinKey": "BNB"
+                },
+                "slippage": 0.005,
+                "fromAddress": "0xDD1305150D27aecc60C066630105DB419977e367",
+                "toAddress": "0xDD1305150D27aecc60C066630105DB419977e367"
+            },
+            "estimate": {
+                "tool": "1inch",
+                "fromAmount": "53540733532519",
+                "toAmount": "365721646323518",
+                "toAmountMin": "363893038091900",
+                "approvalAddress": "0x1111111254eeb25477b68fb85ed929f73a960582",
+                "executionDuration": 30,
+                "feeCosts": [],
+                "gasCosts": [
+                    {
+                        "type": "SEND",
+                        "price": "3000000000",
+                        "estimate": "245000",
+                        "limit": "367500",
+                        "amount": "735000000000000",
+                        "amountUSD": "0.20",
+                        "token": {
+                            "address": "0x0000000000000000000000000000000000000000",
+                            "chainId": 56,
+                            "symbol": "BNB",
+                            "decimals": 18,
+                            "name": "BNB",
+                            "priceUSD": "276.9",
+                            "logoURI": "https://static.debank.com/image/bsc_token/logo_url/bsc/8bfdeaa46fe9be8f5cd43a53b8d1eea1.png",
+                            "coinKey": "BNB"
+                        }
+                    }
+                ],
+                "toolData": {
+                    "fromToken": {
+                        "symbol": "ETH",
+                        "name": "Ethereum Token",
+                        "decimals": 18,
+                        "address": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                        "logoURI": "https://tokens.1inch.io/0x2170ed0880ac9a755fd29b2688956bd959f933f8.png",
+                        "tags": [
+                            "tokens",
+                            "PEG:ETH"
+                        ]
+                    },
+                    "toToken": {
+                        "symbol": "BNB",
+                        "name": "BNB",
+                        "decimals": 18,
+                        "address": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                        "logoURI": "https://tokens.1inch.io/0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c_1.png",
+                        "tags": [
+                            "native"
+                        ]
+                    },
+                    "toTokenAmount": "365721646323518",
+                    "fromTokenAmount": "53540733532519",
+                    "protocols": [
+                        [
+                            [
+                                {
+                                    "name": "BSC_UNISWAP_V3",
+                                    "part": 100,
+                                    "fromTokenAddress": "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+                                    "toTokenAddress": "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+                                }
+                            ]
+                        ]
+                    ],
+                    "estimatedGas": 245000
+                }
+            },
+            "tool": "1inch",
+            "toolDetails": {
+                "key": "1inch",
+                "name": "1inch",
+                "logoURI": "https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/exchanges/oneinch.png"
+            }
+        }
+    ],
+    "integrator": "jumper.exchange",
+    "transactionRequest": {
+        "data": "0x123cc1170000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000022000000000000000000000000000000000000000000000000000000000000004c0b6733f50253d0e63fe75bb941fd2739b20c26b1f98727c21d3c281a359f17d190000000000000000000000000000000000000000000000000000000000000140000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f619000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000030e66c6fdac50000000000000000000000000000000000000000000000000000000000000038000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000006616d61726f6b0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f6a756d7065722e65786368616e67650000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000001b02da8cb0d097eb8d57a175b88c7d8b479975060000000000000000000000001b02da8cb0d097eb8d57a175b88c7d8b47997506000000000000000000000000c2132d05d31c914a87c6611c10748aeb04b58e8f0000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f61900000000000000000000000000000000000000000000000000000000000186a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000014438ed173900000000000000000000000000000000000000000000000000000000000186a0000000000000000000000000000000000000000000000000000030e66c6fdac500000000000000000000000000000000000000000000000000000000000000a00000000000000000000000001231deb6f5749ef6ce6943a275a1d3e7486f4eae0000000000000000000000000000000000000000000000000000000064806be10000000000000000000000000000000000000000000000000000000000000004000000000000000000000000c2132d05d31c914a87c6611c10748aeb04b58e8f0000000000000000000000000b3f868e0be5597d5db7feb59e1cadbb0fdda50a0000000000000000000000008f3cf7ad23cd3cadbd9735aff958023239c6a0630000000000000000000000007ceb23fd6bc0add59e62ac25578270cff1b9f6190000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000074674dafd6f4495e7f63f7637e94b8b89b2f01db00000000000000000000000000000000000000000000000015bd70f07819fa6a0000000000000000000000000000000000000000000000000000000000000032000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba0000000000000000000000000000000000000000000000000000000000626e6200000000000000000000000000000000000000000000000000000000000003e00000000000000000000000000000000000000000000000000000000000000040000000000000000000000000bf014a15198edcfcb2921de7099bf256db31c4ba000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000001111111254eeb25477b68fb85ed929f73a9605820000000000000000000000001111111254eeb25477b68fb85ed929f73a9605820000000000000000000000002170ed0880ac9a755fd29b2688956bd959f933f80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030b1ec67396700000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000024812aa3caf00000000000000000000000014831f12fccc86c4f3dae41c769593df766e43530000000000000000000000002170ed0880ac9a755fd29b2688956bd959f933f8000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee00000000000000000000000014831f12fccc86c4f3dae41c769593df766e4353000000000000000000000000dd1305150d27aecc60c066630105db419977e367000000000000000000000000000000000000000000000000000030b1ec67396700000000000000000000000000000000000000000000000000014af573458e7c000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000000160000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000bf0000000000000000000000000000000000000000000000a100008b00004f02a00000000000000000000000000000000000000000000000000001494bb1ba45baee63c1e5010f338ec12d3f7c3d77a4b9fcc1f95f3fb6ad0ea62170ed0880ac9a755fd29b2688956bd959f933f84101bb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c00042e1a7d4d0000000000000000000000000000000000000000000000000000000000000000c0611111111254eeb25477b68fb85ed929f73a960582002e9b3012000000000000000000000000000000000000000000000000",
+        "to": "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE",
+        "value": "0x15bd70f07819fa6a",
+        "from": "0xBF014a15198EDcFcb2921dE7099BF256DB31c4ba",
+        "chainId": 137,
+        "gasPrice": "0x23c4541e38",
+        "gasLimit": "0x103017"
+    }
+}

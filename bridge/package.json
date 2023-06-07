@@ -10,9 +10,8 @@
     "deploy": "hardhat run ./scripts/deployHecBridgeSplitter.ts --network",
     "update": "hardhat run ./scripts/upgradeHecBridgeSplitter.ts --network",
     "verify": "hardhat run  ./scripts/verify.ts",
-    "test-lifi": "hardhat run  ./test/test.ts --network",
-    "test": "hardhat run  ./test/test.squid.ts --network",
-    "test:generic": "hardhat run  ./test/test_generic.ts --network"
+    "test-lifi": "hardhat run  ./test/test.lifi.ts --network",
+    "test-squid": "hardhat run  ./test/test.squid.ts --network"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.12",
