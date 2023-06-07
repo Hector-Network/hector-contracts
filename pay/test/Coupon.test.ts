@@ -590,9 +590,9 @@ describe('HectorSubscriptionV2 + Coupon', function () {
     });
 
     it('to create subscription with coupon', async function () {
-      const amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscritpionWithCoupon(
+      const amountToDeposit =
+        await hectorSubscription.toCreateSubscriptionWithCoupon(
+          owner.address,
           planId,
           couponInfo,
           signature
@@ -664,9 +664,9 @@ describe('HectorSubscriptionV2 + Coupon', function () {
     });
 
     it('to create subscription with coupon', async function () {
-      const amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscritpionWithCoupon(
+      const amountToDeposit =
+        await hectorSubscription.toCreateSubscriptionWithCoupon(
+          owner.address,
           planId,
           couponInfo,
           signature

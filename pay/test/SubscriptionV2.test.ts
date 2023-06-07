@@ -410,17 +410,19 @@ describe('HectorSubscriptionV2', function () {
     });
 
     it('to create subscription for existing deposit', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(1);
+      let amountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        1
+      );
 
       expect(amountToDeposit).equal(0);
     });
 
     it('to create subscription for no deposit', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(2);
+      let amountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        2
+      );
 
       expect(amountToDeposit).equal(torAmount);
     });
@@ -901,9 +903,10 @@ describe('HectorSubscriptionV2', function () {
     });
 
     it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne;
       let torDepositAmount = ethers.utils.parseEther(
@@ -916,9 +919,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(2);
       let torDepositAmount = ethers.utils.parseEther(
@@ -931,9 +935,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(10);
       let torDepositAmount = ethers.utils.parseEther(
@@ -946,9 +951,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let torDepositAmount = ethers.utils.parseEther(
@@ -971,9 +977,10 @@ describe('HectorSubscriptionV2', function () {
         ]
       );
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne;
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -998,9 +1005,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(2);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -1025,9 +1033,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(10);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -1052,9 +1061,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -1449,9 +1459,10 @@ describe('HectorSubscriptionV2', function () {
     });
 
     it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
@@ -1461,9 +1472,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(2);
       let torDepositAmount = ethers.utils.parseEther(
@@ -1476,9 +1488,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(10);
       let torDepositAmount = ethers.utils.parseEther(
@@ -1491,9 +1504,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let torDepositAmount = ethers.utils.parseEther(
@@ -1516,9 +1530,10 @@ describe('HectorSubscriptionV2', function () {
         ]
       );
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
@@ -1540,9 +1555,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(2);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -1567,9 +1583,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(10);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -1594,9 +1611,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2236,9 +2254,10 @@ describe('HectorSubscriptionV2', function () {
     });
 
     it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne;
       let torDepositAmount = ethers.utils.parseEther(
@@ -2251,9 +2270,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(2);
       let torDepositAmount = ethers.utils.parseEther(
@@ -2266,9 +2286,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(10);
       let torDepositAmount = ethers.utils.parseEther(
@@ -2281,9 +2302,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let torDepositAmount = ethers.utils.parseEther(
@@ -2306,9 +2328,10 @@ describe('HectorSubscriptionV2', function () {
         ]
       );
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne;
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2333,9 +2356,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(2);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2360,9 +2384,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceOne.div(10);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2387,9 +2412,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2810,9 +2836,10 @@ describe('HectorSubscriptionV2', function () {
     });
 
     it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
@@ -2822,9 +2849,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(2);
       let torDepositAmount = ethers.utils.parseEther(
@@ -2837,9 +2865,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(10);
       let torDepositAmount = ethers.utils.parseEther(
@@ -2852,9 +2881,10 @@ describe('HectorSubscriptionV2', function () {
     it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let torDepositAmount = ethers.utils.parseEther(
@@ -2877,9 +2907,10 @@ describe('HectorSubscriptionV2', function () {
         ]
       );
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
@@ -2901,9 +2932,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(2);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2928,9 +2960,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = priceTwo.div(10);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -2955,9 +2988,10 @@ describe('HectorSubscriptionV2', function () {
 
       await increaseTime((oneHour * 3) / 4);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = ethers.constants.Zero;
       let hectorDepositAmount = ethers.utils.parseEther(

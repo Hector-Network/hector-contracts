@@ -78,6 +78,67 @@ contract HectorCoupon is IHectorCoupon, OwnableUpgradeable, EIP712Upgradeable {
         return moderators[signer];
     }
 
+    /* ======== VIEW FUNCTIONS ======== */
+
+    function tryApplyCoupon(
+        Pay calldata pay,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) external view returns (bool isValid, uint256 id, uint256 newAmount) {
+        string memory product = pay.product;
+        address payer = pay.payer;
+        uint256 discount;
+        bool isFixed;
+
+        (id, discount, isFixed) = abi.decode(
+            couponInfo,
+            (uint256, uint256, bool)
+        );
+        newAmount = pay.amount;
+
+        // Verify signature
+        {
+            address token = pay.token;
+            uint256 nonce = nonces[payer];
+            bytes32 structHash = keccak256(
+                abi.encode(
+                    COUPON_HASH,
+                    nonce,
+                    payer,
+                    id,
+                    bytes32(bytes(product)),
+                    token,
+                    discount,
+                    isFixed
+                )
+            );
+            if (!_verifySignature(structHash, signature)) {
+                return (false, 0, newAmount);
+            }
+        }
+
+        // if fixed amount discount
+        if (isFixed) {
+            if (discount >= pay.amount) {
+                newAmount = 0;
+            } else {
+                unchecked {
+                    newAmount = pay.amount - discount;
+                }
+            }
+        }
+        // if % discount
+        else {
+            if (discount >= MULTIPLIER) {
+                newAmount = 0;
+            } else {
+                newAmount = pay.amount - (pay.amount * discount) / MULTIPLIER;
+            }
+        }
+
+        return (true, id, newAmount);
+    }
+
     /* ======== PUBLIC FUNCTIONS ======== */
 
     function applyCoupon(

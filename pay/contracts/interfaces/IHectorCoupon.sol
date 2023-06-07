@@ -13,6 +13,12 @@ interface IHectorCoupon {
         uint256 amount;
     }
 
+    function tryApplyCoupon(
+        Pay calldata pay,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) external view returns (bool isValid, uint256 id, uint256 newAmount);
+
     function applyCoupon(
         Pay calldata pay,
         bytes calldata couponInfo,
