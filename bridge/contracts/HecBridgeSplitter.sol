@@ -22,40 +22,6 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 	using EnumerableSet for EnumerableSet.AddressSet;
 
-	EnumerableSet.AddressSet private _callAddresses;
-
-	function addToWhiteList(address _callAddress) external onlyOwner {
-		require(!_callAddresses.contains(_callAddress), 'Address already exists');
-		_callAddresses.add(_callAddress);
-	}
-
-	function removeFromWhiteList(address _callAddress) external onlyOwner {
-		require(_callAddresses.contains(_callAddress), 'Address does not exist');
-		_callAddresses.remove(_callAddress);
-	}
-
-	function getWhiteListSize() external view returns (uint256) {
-		return _callAddresses.length();
-	}
-
-	function isInWhiteList(address _callAddress) public view returns (bool) {
-		return _callAddresses.contains(_callAddress);
-	}
-
-	function getWhiteListAtIndex(uint256 index) external view returns (address) {
-		require(index < _callAddresses.length(), 'Invalid index');
-		return _callAddresses.at(index);
-	}
-
-	function getAllWhiteList() external view returns (address[] memory) {
-		return _callAddresses.values();
-	}
-
-	uint256 public CountDest; // Count of the destination wallets
-	uint public minFeePercentage;
-	address public DAO; // DAO wallet for taking fee
-	string public version;
-
 	// Struct Asset Info
 	struct SendingAssetInfo {
 		bytes callData;
@@ -64,6 +30,23 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		uint256 feeAmount;
 		uint256 bridgeFee;
 	}
+
+	// State variables
+	uint256 public CountDest; // Count of the destination wallets
+	uint public minFeePercentage;
+	address public DAO; // DAO wallet for taking fee
+	string public version;
+	EnumerableSet.AddressSet private _callAddresses;
+	
+	// Events
+	event SetCountDest(uint256 oldCountDest, uint256 newCountDest, address indexed user);
+	event SetBridge(address newBridge, bool status, address indexed user);
+	event SetDAO(address oldDAO, address newDAO, address indexed user);
+	event MakeCallData(bool success, bytes callData, address indexed user);
+	event HectorBridge(address indexed user, SendingAssetInfo[] sendingAssetInfos);
+	event SendFeeToDAO(uint256 feeAmount, SendingAssetInfo[] sendingAssetInfos);
+	event SetVersion(string _version);
+	event SetMinFeePercentage(uint256 feePercentage);
 
 	/* ======== INITIALIZATION ======== */
 
@@ -90,6 +73,34 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	function unpause() external onlyOwner {
 		_unpause();
+	}
+
+	// Functions
+	function addToWhiteList(address _callAddress) external onlyOwner {
+		require(!_callAddresses.contains(_callAddress), 'Address already exists');
+		_callAddresses.add(_callAddress);
+	}
+
+	function removeFromWhiteList(address _callAddress) external onlyOwner {
+		require(_callAddresses.contains(_callAddress), 'Address does not exist');
+		_callAddresses.remove(_callAddress);
+	}
+
+	function getWhiteListSize() external view returns (uint256) {
+		return _callAddresses.length();
+	}
+
+	function isInWhiteList(address _callAddress) public view returns (bool) {
+		return _callAddresses.contains(_callAddress);
+	}
+
+	function getWhiteListAtIndex(uint256 index) external view returns (address) {
+		require(index < _callAddresses.length(), 'Invalid index');
+		return _callAddresses.at(index);
+	}
+
+	function getAllWhiteList() external view returns (address[] memory) {
+		return _callAddresses.values();
 	}
 
 	///////////////////////////////////////////////////////
@@ -218,7 +229,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		minFeePercentage = _feePercentage;
 		emit SetMinFeePercentage(_feePercentage);
 	}
-	
+
 	// Withdraw dummy token
 	function withdrawTokens(address[] memory _tokens) external onlyOwner {
 		uint256 length = _tokens.length;
@@ -233,14 +244,4 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			}
 		}
 	}
-
-	// All events
-	event SetCountDest(uint256 oldCountDest, uint256 newCountDest, address indexed user);
-	event SetBridge(address newBridge, bool status, address indexed user);
-	event SetDAO(address oldDAO, address newDAO, address indexed user);
-	event MakeCallData(bool success, bytes callData, address indexed user);
-	event HectorBridge(address indexed user, SendingAssetInfo[] sendingAssetInfos);
-	event SendFeeToDAO(uint256 feeAmount, SendingAssetInfo[] sendingAssetInfos);
-	event SetVersion(string _version);
-	event SetMinFeePercentage(uint256 feePercentage);
 }
