@@ -51,8 +51,8 @@ async function main() {
 
 	let callData = tempStepData.transactionRequest.data;
 	let sendingAmount = enableSwap ? originSwapData.action.fromAmount : tempStepData.action.fromAmount; // This is calculated amount except fee for using Bridge
-	let totalAmount = BigNumber.from('110000').toString(); // Mock Total Amount
-	let feeAmount = BigNumber.from('110000').sub(BigNumber.from(sendingAmount)).toString(); // MockFee - 0.075% 
+	let totalAmount = BigNumber.from('110000000000000000').toString(); // Mock Total Amount
+	let feeAmount = BigNumber.from('110000000000000000').sub(BigNumber.from(sendingAmount)).toString(); // MockFee - 0.075% 
 	let bridgeFee = BigNumber.from(tempStepData.transactionRequest.value).toString();
 
 	// Sending Asset Data

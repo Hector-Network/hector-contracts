@@ -9,9 +9,12 @@
     "size": "hardhat size-contracts",
     "deploy": "hardhat run ./scripts/deployHecBridgeSplitter.ts --network",
     "update": "hardhat run ./scripts/upgradeHecBridgeSplitter.ts --network",
-    "verify": "hardhat run  ./scripts/verify.ts",
-    "test-lifi": "hardhat run  ./test/test.lifi.ts --network",
-    "test-squid": "hardhat run  ./test/test.squid.ts --network"
+    "verify": "hardhat run ./scripts/verify.ts",
+    "test-lifi": "hardhat run ./scripts/test/test.lifi.ts --network",
+    "test-squid": "hardhat run ./scripts/test/test.squid.ts --network",
+    "unit-test-lifi": "hardhat test ./test/bridge.lifi.test.ts --network polygon",
+    "unit-test-squid": "hardhat test ./test/bridge.squid.test.ts --network ftm",
+    "test": "hardhat test --network ftm"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.12",

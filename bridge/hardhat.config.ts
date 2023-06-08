@@ -43,7 +43,7 @@ export default {
 		},
 		ftm: {
 			url: process.env.FTMMAIN_NET_API_URL,
-			accounts: [process.env.PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY, process.env.PRIVATE_KEY_ALICE],
 			chainId: 250,
 			saveDeployments: true,
 		},
@@ -55,7 +55,7 @@ export default {
 		},
 		polygon: {
 			url: process.env.POLYGONMAIN_NET_API_URL,
-			accounts: [process.env.PRIVATE_KEY],
+			accounts: [process.env.PRIVATE_KEY, process.env.PRIVATE_KEY_ALICE],
 			saveDeployments: true,
 		},
 		mumbai: {
@@ -166,6 +166,6 @@ export default {
 		},
 	},
 	mocha: {
-		timeout: 100000000,
+		timeout: 1000000000,
 	},
 };
