@@ -225,7 +225,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 
 	// Set Minimum Fee Percentage
 	function setMinFeePercentage(uint _feePercentage) external onlyOwner {
-		require(minFeePercentage > 0 && minFeePercentage < 1000, 'Invalid percentage');
+		require(_feePercentage > 0 && _feePercentage < 1000, 'Invalid percentage');
 		minFeePercentage = _feePercentage;
 		emit SetMinFeePercentage(_feePercentage);
 	}
