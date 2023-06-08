@@ -170,9 +170,9 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			bridgeFees += bridgeFee;
 		}
 
-		if (sendingAsset != address(0)) {
-			if (msg.value < bridgeFees) revert INVALID_FEES();
+		if (msg.value < bridgeFees) revert INVALID_FEES();
 
+		if (sendingAsset != address(0)) {
 			IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAsset);
 			uint256 beforeBalance = srcToken.balanceOf(address(this));
 			srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
