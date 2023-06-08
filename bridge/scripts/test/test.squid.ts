@@ -1,8 +1,8 @@
 import { BigNumber } from '@ethersproject/bignumber';
 const hre = require('hardhat');
 const { ethers } = require('hardhat');
-const abi = require('../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json');
-const erc20Abi = require('../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
+const abi = require('../../artifacts/contracts/HecBridgeSplitter.sol/HecBridgeSplitter.json');
+const erc20Abi = require('../../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json');
 const tempStepData = require('./tempStepDataForSquid.json');
 require('dotenv').config();
 
@@ -11,7 +11,7 @@ async function main() {
 	const [deployer] = await hre.ethers.getSigners();
 	console.log('Testing account:', deployer.address);
 	console.log('Account balance:', (await deployer.getBalance()).toString());
-	const SPLITTER_ADDRESS = "0xc4eFf79E53975f03738EAfE3A54a60d05c401A5E";
+	const SPLITTER_ADDRESS = "0xAC09461FAfe048440324a905924eF9e101f3EFE4";
 
 	const HecBridgeSplitterAddress = SPLITTER_ADDRESS;
 
