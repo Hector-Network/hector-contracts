@@ -245,7 +245,7 @@ describe('Hector Bridge', function () {
 			const result = await hectorBridge.connect(deployer).bridge(
 				sendingAsset,
 				[{
-					callData: "0x123123132",
+					callData: "0xadde0800",
 					sendingAmount: sendingAmount,
 					totalAmount: totalAmount, // Mock Total Amount
 					feeAmount: feeAmount,
