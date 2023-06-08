@@ -4,7 +4,6 @@ pragma solidity ^0.8.7;
 import '@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol';
 import '@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol';
-import '@openzeppelin/contracts-upgradeable/utils/math/SafeMathUpgradeable.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 import '@openzeppelin/contracts/utils/structs/EnumerableSet.sol';
 
@@ -20,7 +19,6 @@ error DAO_FEE_FAILED();
  * @title HecBridgeSplitter
  */
 contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
-	using SafeMathUpgradeable for uint256;
 	using SafeERC20Upgradeable for IERC20Upgradeable;
 	using EnumerableSet for EnumerableSet.AddressSet;
 
