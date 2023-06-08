@@ -37,7 +37,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	address public DAO; // DAO wallet for taking fee
 	string public version;
 	EnumerableSet.AddressSet private _callAddresses;
-	
+
 	// Events
 	event SetCountDest(uint256 oldCountDest, uint256 newCountDest, address indexed user);
 	event SetBridge(address newBridge, bool status, address indexed user);
@@ -170,9 +170,8 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			bridgeFees += bridgeFee;
 		}
 
-		if (msg.value < bridgeFees) revert INVALID_FEES();
-
 		if (sendingAsset != address(0)) {
+			if (msg.value < bridgeFees) revert INVALID_FEES();
 			IERC20Upgradeable srcToken = IERC20Upgradeable(sendingAsset);
 			uint256 beforeBalance = srcToken.balanceOf(address(this));
 			srcToken.safeTransferFrom(msg.sender, address(this), totalAmounts);
@@ -183,6 +182,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 			// Take Fee
 			srcToken.safeTransfer(DAO, feeAmounts);
 		} else {
+			if (msg.value < bridgeFees + feeAmounts) revert INVALID_FEES();
 			(bool success, ) = payable(DAO).call{value: feeAmounts}('');
 			if (!success) revert DAO_FEE_FAILED();
 		}
