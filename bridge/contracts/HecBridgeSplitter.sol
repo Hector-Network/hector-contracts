@@ -36,7 +36,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		_callAddresses.remove(_callAddress);
 	}
 
-	function getWhiteListSize() public view returns (uint256) {
+	function getWhiteListSize() external view returns (uint256) {
 		return _callAddresses.length();
 	}
 
@@ -44,12 +44,12 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		return _callAddresses.contains(_callAddress);
 	}
 
-	function getWhiteListAtIndex(uint256 index) public view returns (address) {
+	function getWhiteListAtIndex(uint256 index) external view returns (address) {
 		require(index < _callAddresses.length(), 'Invalid index');
 		return _callAddresses.at(index);
 	}
 
-	function getAllWhiteList() public view returns (address[] memory) {
+	function getAllWhiteList() external view returns (address[] memory) {
 		return _callAddresses.values();
 	}
 
@@ -84,6 +84,16 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		__Ownable_init();
 	}
 
+	/* ======== POLICY FUNCTIONS ======== */
+
+	function pause() external onlyOwner {
+		_pause();
+	}
+
+	function unpause() external onlyOwner {
+		_unpause();
+	}
+
 	///////////////////////////////////////////////////////
 	//               USER CALLED FUNCTIONS               //
 	///////////////////////////////////////////////////////
@@ -96,7 +106,7 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 		address sendingAsset,
 		SendingAssetInfo[] calldata sendingAssetInfos,
 		address callTargetAddress
-	) external payable {
+	) external payable whenNotPaused {
 		require(
 			sendingAssetInfos.length > 0 &&
 				sendingAssetInfos.length <= CountDest &&
@@ -199,15 +209,31 @@ contract HecBridgeSplitter is OwnableUpgradeable, PausableUpgradeable {
 	}
 
 	// Set Version
-	function setVersion(string memory _version) external onlyOwner {
+	function setVersion(string calldata _version) external onlyOwner {
 		version = _version;
 		emit SetVersion(_version);
 	}
 
 	// Set Minimum Fee Percentage
 	function setMinFeePercentage(uint _feePercentage) external onlyOwner {
+		require(minFeePercentage > 0 && minFeePercentage < 1000, 'Invalid percentage');
 		minFeePercentage = _feePercentage;
 		emit SetMinFeePercentage(_feePercentage);
+	}
+	
+	// Withdraw dummy token
+	function withdrawTokens(address[] memory _tokens) external onlyOwner {
+		uint256 length = _tokens.length;
+
+		for (uint256 i = 0; i < length; i++) {
+			address token = _tokens[i];
+			if (token == address(0)) revert INVALID_ADDRESS();
+
+			uint256 balance = IERC20Upgradeable(token).balanceOf(address(this));
+			if (balance > 0) {
+				IERC20Upgradeable(token).safeTransfer(DAO, balance);
+			}
+		}
 	}
 
 	// All events
