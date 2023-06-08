@@ -122,7 +122,6 @@ describe('Hector Bridge', function () {
 			mockSendingAssetInfos.push(mockSendingAssetInfo1);
 
 			if (!isNativeFrom) {
-				console.log('Approve the ERC20 token to HecBridgeSplitter...');
 				let approveAmount = BigNumber.from(totalAmount);
 
 				const ERC20Contract = new ethers.Contract(
@@ -139,18 +138,15 @@ describe('Hector Bridge', function () {
 				);
 
 				await txApprove.wait();
-				console.log("Done token allowance setting");
 			}
 
 		});
 
 		it('Success Tx For LiFi Bridge', async function () {
-			console.log('Setting Params...');
 			await hectorBridge.connect(deployer).addToWhiteList(lifiBridge);
 			await waitSeconds(3);
 			await hectorBridge.connect(deployer).setDAO(dao);
 			await waitSeconds(3);
-			console.log('Start bridge...');
 			const result = await hectorBridge.bridge(
 				sendingAsset,
 				mockSendingAssetInfos,

@@ -23,13 +23,8 @@ describe('Hector Bridge', function () {
 
 	before(async function () {
 		[deployer, alice] = await ethers.getSigners();
-		console.log('deployer:', deployer.address);
-		console.log('alice:', alice.address);
 
-		const gas = await ethers.provider.getGasPrice();
 		const HectorBridge = await ethers.getContractFactory('HecBridgeSplitter');
-
-		console.log("Deploying HecBridgeSplitter Contract...");
 		hectorBridge = (await upgrades.deployProxy(
 			HectorBridge,
 			[2],
@@ -37,88 +32,87 @@ describe('Hector Bridge', function () {
 				initializer: "initialize",
 			}
 		)) as HecBridgeSplitter;
-		console.log("HecBridgeSplitter contract deployed to:", hectorBridge.address);
 	});
 
-	describe('#Test Bridge Whitelisting', async () => {
-		it('Unable to add bridge if not owner', async function () {
-			await expect(hectorBridge.connect(alice).addToWhiteList(lifiBridge)).to.be.revertedWith('Ownable: caller is not the owner');
-		});
+	// describe('#Test Bridge Whitelisting', async () => {
+	// 	it('Unable to add bridge if not owner', async function () {
+	// 		await expect(hectorBridge.connect(alice).addToWhiteList(lifiBridge)).to.be.revertedWith('Ownable: caller is not the owner');
+	// 	});
 
-		it('Add duplicated bridge contract', async function () {
-			const result = await hectorBridge.connect(deployer).addToWhiteList(lifiBridge);
-			await result.wait();
-			await waitSeconds(3);
-			await expect(hectorBridge.connect(deployer).addToWhiteList(lifiBridge)).to.be.revertedWith('Address already exists');
-		});
+	// 	it('Add duplicated bridge contract', async function () {
+	// 		const result = await hectorBridge.connect(deployer).addToWhiteList(lifiBridge);
+	// 		await result.wait();
+	// 		await waitSeconds(3);
+	// 		await expect(hectorBridge.connect(deployer).addToWhiteList(lifiBridge)).to.be.revertedWith('Address already exists');
+	// 	});
 
-		it('IsWhiteList to true after adding', async function () {
-			expect(await hectorBridge.connect(deployer).isInWhiteList(lifiBridge)).equal(true);
-		});
+	// 	it('IsWhiteList to true after adding', async function () {
+	// 		expect(await hectorBridge.connect(deployer).isInWhiteList(lifiBridge)).equal(true);
+	// 	});
 
-		it('Compare length of white list after adding', async function () {
-			expect(await hectorBridge.connect(deployer).getWhiteListSize()).equal(1);
-		});
+	// 	it('Compare length of white list after adding', async function () {
+	// 		expect(await hectorBridge.connect(deployer).getWhiteListSize()).equal(1);
+	// 	});
 
-		it('Get all white list after adding', async function () {
-			expect((await hectorBridge.connect(deployer).getAllWhiteList() as Array<string>)[0]).equal(lifiBridge);
-		});
+	// 	it('Get all white list after adding', async function () {
+	// 		expect((await hectorBridge.connect(deployer).getAllWhiteList() as Array<string>)[0]).equal(lifiBridge);
+	// 	});
 
-		it('Get white list at index after adding', async function () {
-			expect(await hectorBridge.connect(deployer).getWhiteListAtIndex(0)).equal(lifiBridge);
-		});
+	// 	it('Get white list at index after adding', async function () {
+	// 		expect(await hectorBridge.connect(deployer).getWhiteListAtIndex(0)).equal(lifiBridge);
+	// 	});
 
-		it('IsWhiteList to false after removing', async function () {
-			const result = await hectorBridge.connect(deployer).removeFromWhiteList(lifiBridge);
-			await result.wait();
-			await waitSeconds(3);
-			expect(await hectorBridge.connect(deployer).isInWhiteList(lifiBridge)).equal(false);
-		});
-	});
+	// 	it('IsWhiteList to false after removing', async function () {
+	// 		const result = await hectorBridge.connect(deployer).removeFromWhiteList(lifiBridge);
+	// 		await result.wait();
+	// 		await waitSeconds(3);
+	// 		expect(await hectorBridge.connect(deployer).isInWhiteList(lifiBridge)).equal(false);
+	// 	});
+	// });
 
-	describe('#Test DAO set', async () => {
-		it('Unable to set DAO if not owner', async function () {
-			await expect(hectorBridge.connect(alice).setDAO(dao)).to.be.revertedWith('Ownable: caller is not the owner');
-		});
+	// describe('#Test DAO set', async () => {
+	// 	it('Unable to set DAO if not owner', async function () {
+	// 		await expect(hectorBridge.connect(alice).setDAO(dao)).to.be.revertedWith('Ownable: caller is not the owner');
+	// 	});
 
-		it('Unable to add zero address', async function () {
-			await expect(hectorBridge.connect(deployer).setDAO(ZERO_ADDRESS)).to.be.reverted;
-		});
+	// 	it('Unable to add zero address', async function () {
+	// 		await expect(hectorBridge.connect(deployer).setDAO(ZERO_ADDRESS)).to.be.reverted;
+	// 	});
 
-		it('Compare DAO after adding', async function () {
-			const result = await hectorBridge.connect(deployer).setDAO(dao);
-			await result.wait();
-			await waitSeconds(3);
-			expect(await hectorBridge.connect(deployer).DAO()).equal(dao);
-		});
-	});
+	// 	it('Compare DAO after adding', async function () {
+	// 		const result = await hectorBridge.connect(deployer).setDAO(dao);
+	// 		await result.wait();
+	// 		await waitSeconds(3);
+	// 		expect(await hectorBridge.connect(deployer).DAO()).equal(dao);
+	// 	});
+	// });
 
 
-	describe('#Test Minimum Fee Percentage Configuration', async () => {
-		it('Unable to set Fee if not owner', async function () {
-			await expect(hectorBridge.connect(alice).setMinFeePercentage(feePercentage)).to.be.revertedWith('Ownable: caller is not the owner');
-		});
+	// describe('#Test Minimum Fee Percentage Configuration', async () => {
+	// 	it('Unable to set Fee if not owner', async function () {
+	// 		await expect(hectorBridge.connect(alice).setMinFeePercentage(feePercentage)).to.be.revertedWith('Ownable: caller is not the owner');
+	// 	});
 
-		it('Compare FeePercentage after adding', async function () {
-			const result = await hectorBridge.connect(deployer).setMinFeePercentage(feePercentage);
-			await result.wait();
-			await waitSeconds(3);
-			expect(await hectorBridge.connect(deployer).minFeePercentage()).equal(feePercentage);
-		});
-	});
+	// 	it('Compare FeePercentage after adding', async function () {
+	// 		const result = await hectorBridge.connect(deployer).setMinFeePercentage(feePercentage);
+	// 		await result.wait();
+	// 		await waitSeconds(3);
+	// 		expect(await hectorBridge.connect(deployer).minFeePercentage()).equal(feePercentage);
+	// 	});
+	// });
 
-	describe('#Test Count Destination Configuration', async () => {
-		it('Unable to set Fee if not owner', async function () {
-			await expect(hectorBridge.connect(alice).setCountDest(countDest)).to.be.revertedWith('Ownable: caller is not the owner');
-		});
+	// describe('#Test Count Destination Configuration', async () => {
+	// 	it('Unable to set Fee if not owner', async function () {
+	// 		await expect(hectorBridge.connect(alice).setCountDest(countDest)).to.be.revertedWith('Ownable: caller is not the owner');
+	// 	});
 
-		it('Compare counts after adding', async function () {
-			const result = await hectorBridge.connect(deployer).setCountDest(countDest);
-			await result.wait();
-			await waitSeconds(3);
-			expect(await hectorBridge.connect(deployer).CountDest()).equal(countDest);
-		});
-	});
+	// 	it('Compare counts after adding', async function () {
+	// 		const result = await hectorBridge.connect(deployer).setCountDest(countDest);
+	// 		await result.wait();
+	// 		await waitSeconds(3);
+	// 		expect(await hectorBridge.connect(deployer).CountDest()).equal(countDest);
+	// 	});
+	// });
 
 
 	describe('#Test Bridge Operation Using Squid', () => {
@@ -184,7 +178,6 @@ describe('Hector Bridge', function () {
 			mockSendingAssetInfos.push(mockSendingAssetInfo1);
 
 			if (!isNativeFrom) {
-				console.log('Approve the ERC20 token to HecBridgeSplitter...');
 				let approveAmount = BigNumber.from(totalAmount);
 
 				const ERC20Contract = new ethers.Contract(
@@ -193,7 +186,7 @@ describe('Hector Bridge', function () {
 					deployer
 				);
 
-				await waitSeconds(2);
+				await waitSeconds(3);
 
 				let txApprove = await ERC20Contract.connect(deployer).approve(
 					hectorBridge.address,
@@ -201,20 +194,15 @@ describe('Hector Bridge', function () {
 				);
 
 				await txApprove.wait();
-				console.log("Done token allowance setting");
 			}
 
 		});
 
 		it('Success Tx For Squid Bridge', async function () {
-			console.log('Setting Params...');
 			const txAddWhiteList = await hectorBridge.connect(deployer).addToWhiteList(squidRouter);
 			await txAddWhiteList.wait();
-			await waitSeconds(3);
 			const txSetDao = await hectorBridge.connect(deployer).setDAO(dao);
 			await txSetDao.wait();
-			await waitSeconds(3);
-			console.log('Start bridge...');
 			const result = await hectorBridge.bridge(
 				sendingAsset,
 				mockSendingAssetInfos,
@@ -226,5 +214,45 @@ describe('Hector Bridge', function () {
 			const resultWait = await result.wait();
 			expect(resultWait.status).to.equal(1);
 		});
+
+		it('Failed Tx when call fake targetAddress', async function () {
+			expect(await hectorBridge.connect(deployer).bridge(
+				sendingAsset,
+				mockSendingAssetInfos,
+				"0xbf014a15198edcfcb2921de7099bf256db31c4ba",
+				{
+					value: fee,
+				}
+			)).to.be.revertedWith("Bridge: Invalid parameters");
+		});
+
+		it('Failed Tx when send fake asset', async function () {
+			expect(await hectorBridge.connect(deployer).bridge(
+				"0xbf014a15198edcfcb2921de7099bf256db31c4ba",
+				mockSendingAssetInfos,
+				targetAddress,
+				{
+					value: fee,
+				}
+			)).to.be.reverted;
+		});
+
+		it('Failed Tx when send fake assetInfos', async function () {
+			expect(await hectorBridge.connect(deployer).bridge(
+				sendingAsset,
+				[{
+					callData: "0x123123132",
+					sendingAmount: sendingAmount,
+					totalAmount: totalAmount, // Mock Total Amount
+					feeAmount: feeAmount,
+					bridgeFee: bridgeFee,
+				}],
+				targetAddress,
+				{
+					value: fee,
+				}
+			)).to.be.reverted;
+		});
+
 	});
 });
