@@ -209,6 +209,7 @@ describe('Hector Bridge', function () {
 				targetAddress,
 				{
 					value: fee,
+					gasLimit: 1000000
 				}
 			);
 			await expect(result.wait()).not.to.be.reverted;
@@ -277,6 +278,24 @@ describe('Hector Bridge', function () {
 			it('Success Tx when unpause', async function () {
 				const unpauseTx = await hectorBridge.unpause();
 				await unpauseTx.wait();
+				if (!isNativeFrom) {
+					let approveAmount = BigNumber.from(totalAmount);
+	
+					const ERC20Contract = new ethers.Contract(
+						sendingAsset,
+						erc20Abi.abi,
+						deployer
+					);
+	
+					await waitSeconds(3);
+	
+					let txApprove = await ERC20Contract.connect(deployer).approve(
+						hectorBridge.address,
+						approveAmount
+					);
+	
+					await txApprove.wait();
+				}
 				const result = await hectorBridge.bridge(
 					sendingAsset,
 					mockSendingAssetInfos,
