@@ -209,7 +209,6 @@ describe('Hector Bridge', function () {
 				targetAddress,
 				{
 					value: fee,
-					gasLimit: 1000000
 				}
 			);
 			await expect(result.wait()).not.to.be.reverted;
