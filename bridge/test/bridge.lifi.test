@@ -1,0 +1,162 @@
+import { SignerWithAddress } from '@nomiclabs/hardhat-ethers/dist/src/signers';
+import { expect } from 'chai';
+import { ethers, upgrades } from 'hardhat';
+import { BigNumber, utils } from 'ethers';
+import { increaseTime, getTimeStamp, waitSeconds } from '../helper';
+import { HecBridgeSplitter } from '../types';
+import tempStepDataForLiFi from '../scripts/test/tempStepDataForLiFi.json';
+import erc20Abi from '../artifacts/@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol/IERC20Upgradeable.json';
+
+describe('Hector Bridge', function () {
+	let deployer: SignerWithAddress;
+	let alice: SignerWithAddress;
+
+	let lifiBridge: string = "0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE";
+	let squidRouter: string = "0xce16f69375520ab01377ce7b88f5ba8c48f8d666";
+	let dao: string = "0x9F0B6e7027Fb565b7d41257FEe832B179275A88c";
+	let feePercentage: number = 1000;
+	let countDest: number = 2;
+
+	let ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+
+	let hectorBridge: HecBridgeSplitter;
+
+	before(async function () {
+		[deployer, alice] = await ethers.getSigners();
+		console.log('deployer:', deployer.address);
+		console.log('alice:', alice.address);
+
+		const gas = await ethers.provider.getGasPrice();
+		const HectorBridge = await ethers.getContractFactory('HecBridgeSplitter');
+
+		console.log("Deploying HecBridgeSplitter Contract...");
+		hectorBridge = (await upgrades.deployProxy(
+			HectorBridge,
+			[2],
+			{
+				initializer: "initialize",
+			}
+		)) as HecBridgeSplitter;
+		console.log("HecBridgeSplitter contract deployed to:", hectorBridge.address);
+	});
+
+	describe('#Test Bridge Operation Using LiFi', () => {
+
+		const ETH_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+
+		let mockSendingAssetInfos: any[] = [];
+		let fees: Array<BigNumber> = [];
+		let feesForNative: Array<BigNumber> = [];
+		let fee: BigNumber = BigNumber.from(0);
+
+		let mockSendingAssetInfo1: {
+			callData: string,
+			sendingAmount: string,
+			totalAmount: string, // Mock Total Amount
+			feeAmount: string,
+			bridgeFee: string,
+		};
+
+		let sendingAsset: string;
+		let targetAddress: string;
+
+		const isNativeFrom = tempStepDataForLiFi.action.fromToken.address == ZERO_ADDRESS;
+		const enableSwap = tempStepDataForLiFi.includedSteps[0].type == 'swap' ? true : false;
+		// Step Data
+		const originSwapData =
+			enableSwap && tempStepDataForLiFi.includedSteps.find((element: any) => element.type == 'swap');
+
+		// Special Data
+		let bridgeTool = tempStepDataForLiFi.tool;
+		let specialData: any;
+
+		console.log('Bridge:', bridgeTool);
+
+		if (bridgeTool == 'stargate') {
+			specialData = tempStepDataForLiFi.estimate.feeCosts.find((element: any) => element.name == 'LayerZero fees');
+		}
+
+		let callData = tempStepDataForLiFi.transactionRequest.data;
+		// @ts-ignore
+		let sendingAmount = enableSwap ? originSwapData.action.fromAmount : tempStepDataForLiFi.action.fromAmount; // This is calculated amount except fee for using Bridge
+		let totalAmount = BigNumber.from('110000000000000000').toString(); // Mock Total Amount
+		let feeAmount = BigNumber.from('110000000000000000').sub(BigNumber.from(sendingAmount)).toString(); // MockFee - 0.075% 
+		let bridgeFee = BigNumber.from(tempStepDataForLiFi.transactionRequest.value).toString();
+
+
+		before(async function () {
+
+			mockSendingAssetInfo1 = {
+				callData: callData,
+				sendingAmount: sendingAmount,
+				totalAmount: totalAmount, // Mock Total Amount
+				feeAmount: feeAmount,
+				bridgeFee: bridgeFee,
+			};
+			// Sending Asset Id
+			sendingAsset = enableSwap
+				// @ts-ignore
+				? originSwapData.action.fromToken.address == ETH_ADDRESS || isNativeFrom
+					? ZERO_ADDRESS
+					// @ts-ignore
+					: originSwapData.action.fromToken.address
+				: tempStepDataForLiFi.action.fromToken.address;
+			targetAddress = lifiBridge; // CallData
+
+			fees.push(
+				BigNumber.from(bridgeFee)
+			);
+
+			if (isNativeFrom) {
+				feesForNative.push(BigNumber.from(feeAmount));
+			}
+
+			fees.map((item) => {
+				fee = fee.add(item);
+			});
+
+			feesForNative.map((item) => {
+				fee = fee.add(item);
+			})
+
+			mockSendingAssetInfos.push(mockSendingAssetInfo1);
+
+			if (!isNativeFrom) {
+				let approveAmount = BigNumber.from(totalAmount);
+
+				const ERC20Contract = new ethers.Contract(
+					sendingAsset,
+					erc20Abi.abi,
+					deployer
+				);
+
+				await waitSeconds(2);
+
+				let txApprove = await ERC20Contract.connect(deployer).approve(
+					hectorBridge.address,
+					approveAmount
+				);
+
+				await txApprove.wait();
+			}
+
+		});
+
+		it('Success Tx For LiFi Bridge', async function () {
+			await hectorBridge.connect(deployer).addToWhiteList(lifiBridge);
+			await waitSeconds(3);
+			await hectorBridge.connect(deployer).setDAO(dao);
+			await waitSeconds(3);
+			const result = await hectorBridge.bridge(
+				sendingAsset,
+				mockSendingAssetInfos,
+				targetAddress,
+				{
+					value: fee,
+				}
+			);
+			const resultWait = await result.wait();
+			expect(resultWait.status).to.equal(1);
+		});
+	});
+});

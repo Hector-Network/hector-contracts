@@ -9,15 +9,17 @@
     "size": "hardhat size-contracts",
     "deploy": "hardhat run ./scripts/deployHecBridgeSplitter.ts --network",
     "update": "hardhat run ./scripts/upgradeHecBridgeSplitter.ts --network",
-    "verify": "hardhat run  ./scripts/verify.ts",
-    "test-lifi": "hardhat run  ./test/test.ts --network",
-    "test": "hardhat run  ./test/test.squid.ts --network",
-    "test:generic": "hardhat run  ./test/test_generic.ts --network"
+    "verify": "hardhat run ./scripts/verify.ts",
+    "test-lifi": "hardhat run ./scripts/test/test.lifi.ts --network",
+    "test-squid": "hardhat run ./scripts/test/test.squid.ts --network",
+    "unit-test-lifi": "hardhat test ./test/bridge.lifi.test.ts --network polygon",
+    "unit-test-squid": "hardhat test ./test/bridge.squid.test.ts --network ftm",
+    "test": "hardhat test --network ftm"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@0.3.0-beta.12",
     "@nomiclabs/hardhat-waffle": "^2.0.1",
-    "@openzeppelin/hardhat-upgrades": "^1.8.2",
+    "@openzeppelin/hardhat-upgrades": "^1.27.0",
     "@openzeppelin/test-helpers": "^0.5.11",
     "@typechain/ethers-v5": "^10.0.0",
     "@typechain/hardhat": "^6.0.0",
@@ -42,8 +44,8 @@
   },
   "dependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
-    "@openzeppelin/contracts": "4.1.0",
-    "@openzeppelin/contracts-upgradeable": "^4.1.0",
+    "@openzeppelin/contracts": "^4.4.0",
+    "@openzeppelin/contracts-upgradeable": "^4.4.0",
     "@uniswap/lib": "4.0.1-alpha",
     "@uniswap/v2-core": "1.0.1",
     "abi-decoder": "^2.4.0"
