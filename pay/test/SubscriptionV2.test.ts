@@ -891,1097 +891,1116 @@ describe('HectorSubscriptionV2', function () {
     });
   });
 
-  describe('#subscription - modify for upgrade', () => {
-    let planId = 1;
-    let newPlanId = 2;
-
-    beforeEach(async function () {
-      await hectorSubscription
-        .connect(owner)
-        .deposit(hectorToken.address, hectorAmount);
-      await hectorSubscription.connect(owner).createSubscription(planId);
-    });
-
-    it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(2);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(10);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(2);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(10);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne;
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne.div(2);
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne.div(10);
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne;
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 4);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne.div(2);
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 2);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceOne.div(10);
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-
-    it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime((oneHour * 3) / 4);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
-        );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-  });
-
-  describe('#subscription - modify for downgrade', () => {
-    let planId = 1;
-    let newPlanId = 2;
-    let hectorAmount: BigNumber;
-    let torAmount: BigNumber;
-
-    beforeEach(async function () {
-      await hectorSubscription.updatePlan(
-        [1, 2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-          {
-            token: torToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-      hectorAmount = ethers.utils.parseEther(
-        priceTwo.div(hectorPrice).toString()
-      );
-      torAmount = ethers.utils.parseEther(priceOne.div(torPrice).toString());
+  describe('#subscription - modify', () => {
+    it('invalid plan', async function () {
+      let planId = 1;
 
       await hectorSubscription
         .connect(owner)
         .deposit(hectorToken.address, hectorAmount);
       await hectorSubscription.connect(owner).createSubscription(planId);
+
+      await expect(
+        hectorSubscription.connect(owner).modifySubscription(3)
+      ).to.be.revertedWith('INVALID_PLAN()');
+
+      await expect(
+        hectorSubscription.connect(owner).modifySubscription(planId)
+      ).to.be.revertedWith('INVALID_PLAN()');
     });
 
-    it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
+    describe('for upgrade', () => {
+      let planId = 1;
+      let newPlanId = 2;
 
-      let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
+      beforeEach(async function () {
+        await hectorSubscription
+          .connect(owner)
+          .deposit(hectorToken.address, hectorAmount);
+        await hectorSubscription.connect(owner).createSubscription(planId);
+      });
 
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(2);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(10);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(2);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(10);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceTwo;
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = ethers.constants.Zero; // refund is enough so no need to deposit more
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+      it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx)
-        .emit(hectorSubscription, 'Refunded')
-        .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+
+        let refundPrice = priceOne;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(2);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(10);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(2);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(10);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne;
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne.div(2);
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne.div(10);
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne;
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne.div(2);
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceOne.div(10);
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
     });
 
-    it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
+    describe('for downgrade', () => {
+      let planId = 1;
+      let newPlanId = 2;
+      let hectorAmount: BigNumber;
+      let torAmount: BigNumber;
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceTwo.div(2);
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+      beforeEach(async function () {
+        await hectorSubscription.updatePlan(
+          [1, 2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+            {
+              token: torToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
-
-    it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = priceTwo.div(10);
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
-          owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+        hectorAmount = ethers.utils.parseEther(
+          priceTwo.div(hectorPrice).toString()
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        torAmount = ethers.utils.parseEther(priceOne.div(torPrice).toString());
 
-    it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
+        await hectorSubscription
+          .connect(owner)
+          .deposit(hectorToken.address, hectorAmount);
+        await hectorSubscription.connect(owner).createSubscription(planId);
+      });
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+      it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
 
-    it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let refundPrice = priceTwo;
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+      it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx)
-        .emit(hectorSubscription, 'Refunded')
-        .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
 
-    it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = priceTwo.div(2);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      await increaseTime(oneHour / 4);
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
 
-      let refundPrice = priceTwo.div(2);
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
 
-    it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = priceTwo.div(10);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      await increaseTime(oneHour / 2);
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
 
-      let refundPrice = priceTwo.div(10);
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
 
-    it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = ethers.constants.Zero;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      await increaseTime((oneHour * 3) / 4);
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription
-        .connect(owner)
-        .modifySubscription(newPlanId);
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let refundPrice = ethers.constants.Zero;
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'Funded')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+
+        let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceTwo.div(2);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceTwo.div(10);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo;
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = ethers.constants.Zero; // refund is enough so no need to deposit more
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx)
+          .emit(hectorSubscription, 'Refunded')
+          .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo.div(2);
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo.div(10);
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo;
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx)
+          .emit(hectorSubscription, 'Refunded')
+          .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo.div(2);
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = priceTwo.div(10);
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let tx = await hectorSubscription
+          .connect(owner)
+          .modifySubscription(newPlanId);
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'Refunded'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'Funded')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
     });
   });
 
@@ -2216,1173 +2235,1204 @@ describe('HectorSubscriptionV2', function () {
     });
   });
 
-  describe('#subscription - modify by mod for upgrade', () => {
-    let planId = 1;
-    let newPlanId = 2;
+  describe('#subscription - modify by mod', () => {
+    it('invalid plan', async function () {
+      let planId = 1;
 
-    beforeEach(async function () {
       await hectorSubscription.createSubscriptionByMod(
         owner.address,
         planId,
         hectorToken.address,
         hectorAmount
       );
-    });
 
-    it('invalid moderator', async function () {
-      await expect(
-        hectorSubscription
-          .connect(owner)
-          .modifySubscriptionByMod(
-            owner.address,
-            newPlanId,
-            torToken.address,
-            torAmount
-          )
-      ).to.be.revertedWith('INVALID_MODERATOR()');
-    });
-
-    it('insufficient fund', async function () {
       await expect(
         hectorSubscription.modifySubscriptionByMod(
           owner.address,
+          3,
+          hectorToken.address,
+          hectorAmount
+        )
+      ).to.be.revertedWith('INVALID_PLAN()');
+
+      await expect(
+        hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          planId,
+          hectorToken.address,
+          hectorAmount
+        )
+      ).to.be.revertedWith('INVALID_PLAN()');
+    });
+
+    describe('for upgrade', () => {
+      let planId = 1;
+      let newPlanId = 2;
+
+      beforeEach(async function () {
+        await hectorSubscription.createSubscriptionByMod(
+          owner.address,
+          planId,
+          hectorToken.address,
+          hectorAmount
+        );
+      });
+
+      it('invalid moderator', async function () {
+        await expect(
+          hectorSubscription
+            .connect(owner)
+            .modifySubscriptionByMod(
+              owner.address,
+              newPlanId,
+              torToken.address,
+              torAmount
+            )
+        ).to.be.revertedWith('INVALID_MODERATOR()');
+      });
+
+      it('insufficient fund', async function () {
+        await expect(
+          hectorSubscription.modifySubscriptionByMod(
+            owner.address,
+            newPlanId,
+            torToken.address,
+            0
+          )
+        ).to.be.revertedWith('INSUFFICIENT_FUND()');
+      });
+
+      it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(2);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(10);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(torPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
+
+      it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(2);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = priceOne.div(10);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
+          owner.address,
+          newPlanId
+        );
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceTwo.sub(refundPrice).div(hectorPrice).toString()
+        );
+
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
+
+      it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let refundPrice = priceOne;
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
           newPlanId,
           torToken.address,
-          0
-        )
-      ).to.be.revertedWith('INSUFFICIENT_FUND()');
+          torDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
+
+        let refundPrice = priceOne.div(2);
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          torToken.address,
+          torDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
+
+        let refundPrice = priceOne.div(10);
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          torToken.address,
+          torDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
+
+        let refundPrice = ethers.constants.Zero;
+        let payPrice = priceTwo.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          torToken.address,
+          torDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        let refundPrice = priceOne;
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          hectorToken.address,
+          hectorDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 4);
+
+        let refundPrice = priceOne.div(2);
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          hectorToken.address,
+          hectorDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime(oneHour / 2);
+
+        let refundPrice = priceOne.div(10);
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          hectorToken.address,
+          hectorDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
+
+      it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let refundPrice = ethers.constants.Zero;
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          hectorToken.address,
+          hectorDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + twoHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount);
+      });
     });
 
-    it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
+    describe('for downgrade', () => {
+      let planId = 1;
+      let newPlanId = 2;
+      let hectorAmount: BigNumber;
+      let torAmount: BigNumber;
 
-      let refundPrice = priceOne;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
+      beforeEach(async function () {
+        await hectorSubscription.updatePlan(
+          [1, 2],
+          [
+            {
+              token: hectorToken.address,
+              period: twoHour,
+              price: priceTwo,
+              data: '0x00',
+            },
+            {
+              token: torToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+        hectorAmount = ethers.utils.parseEther(
+          priceTwo.div(hectorPrice).toString()
+        );
+        torAmount = ethers.utils.parseEther(priceOne.div(torPrice).toString());
 
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(2);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(10);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(2);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceOne.div(10);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceTwo.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let refundPrice = priceOne;
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        await hectorSubscription.createSubscriptionByMod(
           owner.address,
           planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
+          hectorToken.address,
+          hectorAmount
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
+      });
 
-    it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let refundPrice = priceOne.div(2);
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+      it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
+        let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
-      let refundPrice = priceOne.div(10);
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
+        let refundPrice = priceTwo.div(2);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      let refundPrice = ethers.constants.Zero;
-      let payPrice = priceTwo.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = priceTwo.div(10);
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      let refundPrice = priceOne;
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = ethers.constants.Zero;
+        let torDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(torPrice).toString()
+        );
 
-      await increaseTime(oneHour / 4);
+        expect(amountToDeposit).equal(torDepositAmount);
+      });
 
-      let refundPrice = priceOne.div(2);
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+      it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
+        let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
 
-      await increaseTime(oneHour / 2);
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
 
-      let refundPrice = priceOne.div(10);
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+      it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        await increaseTime(oneHour / 4);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
 
-    it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-        ]
-      );
+        let refundPrice = priceTwo.div(2);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
 
-      await increaseTime((oneHour * 3) / 4);
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
 
-      let refundPrice = ethers.constants.Zero;
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+      it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        await increaseTime(oneHour / 2);
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + twoHour
+          newPlanId
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // need to pay more so no token for refund
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount);
-    });
-  });
 
-  describe('#subscription - modify by mod for downgrade', () => {
-    let planId = 1;
-    let newPlanId = 2;
-    let hectorAmount: BigNumber;
-    let torAmount: BigNumber;
+        let refundPrice = priceTwo.div(10);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
 
-    beforeEach(async function () {
-      await hectorSubscription.updatePlan(
-        [1, 2],
-        [
-          {
-            token: hectorToken.address,
-            period: twoHour,
-            price: priceTwo,
-            data: '0x00',
-          },
-          {
-            token: torToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-      hectorAmount = ethers.utils.parseEther(
-        priceTwo.div(hectorPrice).toString()
-      );
-      torAmount = ethers.utils.parseEther(priceOne.div(torPrice).toString());
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
 
-      await hectorSubscription.createSubscriptionByMod(
-        owner.address,
-        planId,
-        hectorToken.address,
-        hectorAmount
-      );
-    });
+      it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-    it('to modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
+        await increaseTime((oneHour * 3) / 4);
 
-      let torDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(2);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(10);
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let torDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(torPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(torDepositAmount);
-    });
-
-    it('to modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let hectorDepositAmount = ethers.constants.Zero; // refund is enough so no need to deposit more
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(2);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime(oneHour / 2);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = priceTwo.div(10);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('to modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
-
-      await increaseTime((oneHour * 3) / 4);
-
-      let amountToDeposit = await hectorSubscription.toModifySubscription(
-        owner.address,
-        newPlanId
-      );
-
-      let refundPrice = ethers.constants.Zero;
-      let hectorDepositAmount = ethers.utils.parseEther(
-        priceOne.sub(refundPrice).div(hectorPrice).toString()
-      );
-
-      expect(amountToDeposit).equal(hectorDepositAmount);
-    });
-
-    it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
-      let refundPrice = priceTwo;
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = ethers.constants.Zero; // refund is enough so no need to deposit more
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
-
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let amountToDeposit = await hectorSubscription.toModifySubscription(
           owner.address,
-          planId,
-          newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          newPlanId
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx)
-        .emit(hectorSubscription, 'RefundedByMod')
-        .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
 
-    it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
-      await increaseTime(oneHour / 4);
+        let refundPrice = ethers.constants.Zero;
+        let hectorDepositAmount = ethers.utils.parseEther(
+          priceOne.sub(refundPrice).div(hectorPrice).toString()
+        );
 
-      let refundPrice = priceTwo.div(2);
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
+        expect(amountToDeposit).equal(hectorDepositAmount);
+      });
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+      it('modify subscription for different token in 0 ~ 15 mins (100% refund)', async function () {
+        let refundPrice = priceTwo;
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = ethers.constants.Zero; // refund is enough so no need to deposit more
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          torToken.address,
+          torDepositAmount
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
-      await increaseTime(oneHour / 2);
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx)
+          .emit(hectorSubscription, 'RefundedByMod')
+          .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      let refundPrice = priceTwo.div(10);
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
+      it('modify subscription for different token in 15 ~ 30 mins (50% refund)', async function () {
+        await increaseTime(oneHour / 4);
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        let refundPrice = priceTwo.div(2);
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          torToken.address,
+          torDepositAmount
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
-      await increaseTime((oneHour * 3) / 4);
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      let refundPrice = ethers.constants.Zero;
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let torDepositAmount = ethers.utils.parseEther(
-        payPrice.div(torPrice).toString()
-      );
+      it('modify subscription for different token in 30 ~ 45 mins (10% refund)', async function () {
+        await increaseTime(oneHour / 2);
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        torToken.address,
-        torDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        let refundPrice = priceTwo.div(10);
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          torDepositAmount,
-          block.timestamp + oneHour
+          torToken.address,
+          torDepositAmount
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, torToken.address, torDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      let refundPrice = priceTwo;
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceTwo.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+      it('modify subscription for different token in 45 ~ 60 mins (0% refund)', async function () {
+        await increaseTime((oneHour * 3) / 4);
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        let refundPrice = ethers.constants.Zero;
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let torDepositAmount = ethers.utils.parseEther(
+          payPrice.div(torPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          torToken.address,
+          torDepositAmount
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx)
-        .emit(hectorSubscription, 'RefundedByMod')
-        .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            torDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, torToken.address, torDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      await increaseTime(oneHour / 4);
+      it('modify subscription for same token in 0 ~ 15 mins (100% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let refundPrice = priceTwo.div(2);
-      let hectorRefundAmount = ethers.utils.parseEther(
-        refundPrice.sub(priceOne).div(hectorPrice).toString()
-      );
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+        let refundPrice = priceTwo;
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceTwo.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
-
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          hectorToken.address,
+          hectorDepositAmount
         );
-      await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx)
+          .emit(hectorSubscription, 'RefundedByMod')
+          .withArgs(owner.address, hectorToken.address, hectorRefundAmount);
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      await increaseTime(oneHour / 2);
+      it('modify subscription for same token in 15 ~ 30 mins (50% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let refundPrice = priceTwo.div(10);
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+        await increaseTime(oneHour / 4);
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        let refundPrice = priceTwo.div(2);
+        let hectorRefundAmount = ethers.utils.parseEther(
+          refundPrice.sub(priceOne).div(hectorPrice).toString()
+        );
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          hectorToken.address,
+          hectorDepositAmount
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
-    });
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
 
-    it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
-      await hectorSubscription.updatePlan(
-        [2],
-        [
-          {
-            token: hectorToken.address,
-            period: oneHour,
-            price: priceOne,
-            data: '0x00',
-          },
-        ]
-      );
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx).not.emit(hectorSubscription, 'PayerDeposit'); // refund is enough so no need to deposit more
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
 
-      await increaseTime((oneHour * 3) / 4);
+      it('modify subscription for same token in 30 ~ 45 mins (10% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
 
-      let refundPrice = ethers.constants.Zero;
-      let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
-      let payPrice = priceOne.sub(refundPrice);
-      let hectorDepositAmount = ethers.utils.parseEther(
-        payPrice.div(hectorPrice).toString()
-      );
+        await increaseTime(oneHour / 2);
 
-      let tx = await hectorSubscription.modifySubscriptionByMod(
-        owner.address,
-        newPlanId,
-        hectorToken.address,
-        hectorDepositAmount
-      );
-      let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
-        tx.hash
-      );
-      let block = await hectorSubscription.provider.getBlock(
-        txReceipt.blockNumber
-      );
+        let refundPrice = priceTwo.div(10);
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
 
-      await expect(tx)
-        .emit(hectorSubscription, 'SubscriptionModified')
-        .withArgs(
+        let tx = await hectorSubscription.modifySubscriptionByMod(
           owner.address,
-          planId,
           newPlanId,
-          payPrice,
-          hectorDepositAmount,
-          block.timestamp + oneHour
+          hectorToken.address,
+          hectorDepositAmount
         );
-      await expect(tx)
-        .emit(hectorSubscription, 'PayerDeposit')
-        .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
-      await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
-      await expect(tx)
-        .emit(hectorSubscription, 'FundedByMod')
-        .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
+
+      it('modify subscription for same token in 45 ~ 60 mins (0% refund)', async function () {
+        await hectorSubscription.updatePlan(
+          [2],
+          [
+            {
+              token: hectorToken.address,
+              period: oneHour,
+              price: priceOne,
+              data: '0x00',
+            },
+          ]
+        );
+
+        await increaseTime((oneHour * 3) / 4);
+
+        let refundPrice = ethers.constants.Zero;
+        let hectorRefundAmount = ethers.constants.Zero; // refund is fully used to purchase a new subscription
+        let payPrice = priceOne.sub(refundPrice);
+        let hectorDepositAmount = ethers.utils.parseEther(
+          payPrice.div(hectorPrice).toString()
+        );
+
+        let tx = await hectorSubscription.modifySubscriptionByMod(
+          owner.address,
+          newPlanId,
+          hectorToken.address,
+          hectorDepositAmount
+        );
+        let txReceipt = await hectorSubscription.provider.getTransactionReceipt(
+          tx.hash
+        );
+        let block = await hectorSubscription.provider.getBlock(
+          txReceipt.blockNumber
+        );
+
+        await expect(tx)
+          .emit(hectorSubscription, 'SubscriptionModified')
+          .withArgs(
+            owner.address,
+            planId,
+            newPlanId,
+            payPrice,
+            hectorDepositAmount,
+            block.timestamp + oneHour
+          );
+        await expect(tx)
+          .emit(hectorSubscription, 'PayerDeposit')
+          .withArgs(owner.address, hectorToken.address, hectorDepositAmount);
+        await expect(tx).not.emit(hectorSubscription, 'RefundedByMod'); // refund is fully used to purchase a new subscription
+        await expect(tx)
+          .emit(hectorSubscription, 'FundedByMod')
+          .withArgs(hectorToken.address, hectorAmount.sub(hectorRefundAmount));
+      });
     });
   });
 

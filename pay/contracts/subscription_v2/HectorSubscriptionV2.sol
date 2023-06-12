@@ -243,17 +243,17 @@ contract HectorSubscriptionV2 is
 
     /* ======== INTERNAL FUNCTIONS ======== */
 
-    function viewPriceInUSD(address token) internal view returns (uint256) {
+    function _viewPriceInUSD(address token) internal view returns (uint256) {
         return
             IPriceOracleAggregator(factory.priceOracleAggregator())
                 .viewPriceInUSD(token);
     }
 
-    function getTokenAmount(
+    function _getTokenAmount(
         uint256 price,
         address token
     ) internal view returns (uint256) {
-        uint256 tokenPrice = viewPriceInUSD(token);
+        uint256 tokenPrice = _viewPriceInUSD(token);
 
         return
             price.mulDiv(
@@ -263,7 +263,7 @@ contract HectorSubscriptionV2 is
             );
     }
 
-    function applyCoupon(
+    function _applyCoupon(
         address token,
         uint256 amount,
         bytes calldata couponInfo,
@@ -282,7 +282,7 @@ contract HectorSubscriptionV2 is
             );
     }
 
-    function tryApplyCoupon(
+    function _tryApplyCoupon(
         address from,
         address token,
         uint256 amount,
@@ -302,7 +302,7 @@ contract HectorSubscriptionV2 is
             );
     }
 
-    function getRefundAmount(
+    function _getRefundAmount(
         uint256 planId,
         uint48 lastPaidAt,
         uint256 lastAmountPaid
@@ -318,7 +318,7 @@ contract HectorSubscriptionV2 is
             );
     }
 
-    function getDiscountedPrice(
+    function _getDiscountedPrice(
         uint256 planId
     ) internal view returns (uint256) {
         return
@@ -332,7 +332,7 @@ contract HectorSubscriptionV2 is
             );
     }
 
-    function fund(address from, address token, uint256 amount) internal {
+    function _fund(address from, address token, uint256 amount) internal {
         if (amount == 0) return;
 
         if (subscriptionByMod[from]) {
@@ -344,7 +344,7 @@ contract HectorSubscriptionV2 is
         }
     }
 
-    function refund(address to, address token, uint256 amount) internal {
+    function _refund(address to, address token, uint256 amount) internal {
         if (amount == 0) return;
 
         if (subscriptionByMod[to]) {
@@ -356,7 +356,7 @@ contract HectorSubscriptionV2 is
         }
     }
 
-    function syncedSubscription(
+    function _syncedSubscription(
         address from
     )
         internal
@@ -379,8 +379,8 @@ contract HectorSubscriptionV2 is
 
         // after expiration
         Plan memory plan = plans[planId];
-        uint256 planDiscountedPrice = getDiscountedPrice(planId);
-        uint256 amount = getTokenAmount(planDiscountedPrice, plan.token);
+        uint256 planDiscountedPrice = _getDiscountedPrice(planId);
+        uint256 amount = _getTokenAmount(planDiscountedPrice, plan.token);
 
         uint256 count = (block.timestamp -
             subscription.expiredAt +
@@ -420,6 +420,149 @@ contract HectorSubscriptionV2 is
         }
     }
 
+    function _getSubscriptionStatus(address to) internal returns (bool) {
+        Subscription storage subscription = subscriptions[to];
+
+        if (subscription.planId > 0) {
+            syncSubscription(to);
+
+            if (subscription.expiredAt > block.timestamp) return true;
+        }
+
+        return false;
+    }
+
+    function _createSubscription(
+        address to,
+        uint256 planId,
+        uint256 planPrice,
+        bool byMod
+    ) internal {
+        Subscription storage subscription = subscriptions[to];
+
+        // Pay first plan
+        Plan memory plan = plans[planId];
+        uint256 amount = _getTokenAmount(planPrice, plan.token);
+        uint256 balance = balanceOf[to][plan.token];
+
+        if (byMod) {
+            if (balance < amount) revert INSUFFICIENT_FUND();
+        } else if (balance < amount) {
+            deposit(plan.token, amount - balance);
+        }
+
+        unchecked {
+            balanceOf[to][plan.token] -= amount;
+        }
+
+        // Set subscription
+        subscription.planId = planId;
+        subscription.expiredAt = uint48(block.timestamp) + plan.period;
+        subscription.lastPaidAt = uint48(block.timestamp);
+        subscription.lastAmountPaidInUsd = planPrice;
+        subscription.lastAmountPaid = amount;
+
+        // Set subscription by Mod
+        subscriptionByMod[to] = byMod;
+    }
+
+    function _modifySubscription(
+        address to,
+        uint256 newPlanId,
+        bool byMod
+    ) internal {
+        Subscription storage subscription = subscriptions[to];
+        uint256 oldPlanId = subscription.planId;
+        if (oldPlanId == newPlanId) revert INVALID_PLAN();
+
+        Plan memory newPlan = plans[newPlanId];
+        uint256 newPlanDiscountedPrice = _getDiscountedPrice(newPlanId);
+
+        uint256 refundPrice = _getRefundAmount(
+            oldPlanId,
+            subscription.lastPaidAt,
+            subscription.lastAmountPaidInUsd
+        );
+        uint256 refundAmount = _getRefundAmount(
+            oldPlanId,
+            subscription.lastPaidAt,
+            subscription.lastAmountPaid
+        );
+
+        // Pay for new plan
+        uint256 payForNewPlan;
+        uint256 priceForNewPlan;
+        if (refundPrice < newPlanDiscountedPrice) {
+            unchecked {
+                priceForNewPlan = newPlanDiscountedPrice - refundPrice;
+            }
+
+            refundAmount = 0;
+            payForNewPlan = _getTokenAmount(priceForNewPlan, newPlan.token);
+            uint256 balance = balanceOf[to][newPlan.token];
+
+            if (byMod) {
+                if (balance < payForNewPlan) revert INSUFFICIENT_FUND();
+            } else if (balance < payForNewPlan) {
+                deposit(newPlan.token, payForNewPlan - balance);
+            }
+
+            unchecked {
+                balanceOf[to][newPlan.token] -= payForNewPlan;
+            }
+        }
+        // Refund for old plan
+        else {
+            refundAmount =
+                (refundAmount * (refundPrice - newPlanDiscountedPrice)) /
+                refundPrice;
+            _refund(to, plans[oldPlanId].token, refundAmount);
+        }
+
+        // fund to Treasury
+        _fund(
+            to,
+            plans[oldPlanId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
+
+        // Set subscription
+        subscription.planId = newPlanId;
+        subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
+        subscription.lastPaidAt = uint48(block.timestamp);
+        subscription.lastAmountPaidInUsd = priceForNewPlan;
+        subscription.lastAmountPaid = payForNewPlan;
+
+        // Set subscription by Mod
+        subscriptionByMod[to] = byMod;
+    }
+
+    function _cancelSubscription(address to) internal returns (uint256 planId) {
+        Subscription storage subscription = subscriptions[to];
+        planId = subscription.planId;
+
+        // refund
+        uint256 refundAmount = _getRefundAmount(
+            planId,
+            subscription.lastPaidAt,
+            subscription.lastAmountPaid
+        );
+        _refund(to, plans[planId].token, refundAmount);
+
+        // fund to Treasury
+        _fund(
+            to,
+            plans[planId].token,
+            subscription.lastAmountPaid - refundAmount
+        );
+
+        // Set subscription
+        subscription.planId = 0;
+        subscription.expiredAt = uint48(block.timestamp);
+        subscription.lastAmountPaidInUsd = 0;
+        subscription.lastAmountPaid = 0;
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function allPlans() external view returns (Plan[] memory) {
@@ -443,11 +586,11 @@ contract HectorSubscriptionV2 is
 
         for (uint256 i = 1; i < length; i++) {
             Plan memory plan = plans[i];
-            uint256 planDiscountedPrice = getDiscountedPrice(i);
+            uint256 planDiscountedPrice = _getDiscountedPrice(i);
 
             planDiscountedPrices[i] = planDiscountedPrice;
-            tokenPrices[i] = viewPriceInUSD(plan.token);
-            tokenAmounts[i] = getTokenAmount(planDiscountedPrice, plan.token);
+            tokenPrices[i] = _viewPriceInUSD(plan.token);
+            tokenAmounts[i] = _getTokenAmount(planDiscountedPrice, plan.token);
         }
 
         return (plans, planDiscountedPrices, tokenPrices, tokenAmounts);
@@ -488,8 +631,8 @@ contract HectorSubscriptionV2 is
         }
 
         Plan memory plan = plans[planId];
-        uint256 discountedPrice = getDiscountedPrice(planId);
-        uint256 price = viewPriceInUSD(plan.token);
+        uint256 discountedPrice = _getDiscountedPrice(planId);
+        uint256 price = _viewPriceInUSD(plan.token);
 
         dueDate =
             expiredAt +
@@ -521,7 +664,7 @@ contract HectorSubscriptionV2 is
             Subscription memory subscription,
             address token,
             uint256 balance
-        ) = syncedSubscription(_from);
+        ) = _syncedSubscription(_from);
         uint256 oldPlanId = subscription.planId;
 
         // If it's cancelled or expired, then create a new subscription rather than modify
@@ -529,9 +672,9 @@ contract HectorSubscriptionV2 is
         if (subscription.expiredAt <= block.timestamp) return 0;
 
         Plan memory newPlan = plans[_newPlanId];
-        uint256 newPlanDiscountedPrice = getDiscountedPrice(_newPlanId);
+        uint256 newPlanDiscountedPrice = _getDiscountedPrice(_newPlanId);
 
-        uint256 refundPrice = getRefundAmount(
+        uint256 refundPrice = _getRefundAmount(
             oldPlanId,
             subscription.lastPaidAt,
             subscription.lastAmountPaidInUsd
@@ -540,7 +683,7 @@ contract HectorSubscriptionV2 is
         // Pay for new plan
         uint256 payForNewPlan;
         if (refundPrice < newPlanDiscountedPrice) {
-            payForNewPlan = getTokenAmount(
+            payForNewPlan = _getTokenAmount(
                 newPlanDiscountedPrice - refundPrice,
                 newPlan.token
             );
@@ -566,15 +709,15 @@ contract HectorSubscriptionV2 is
             Subscription memory subscription,
             address token,
             uint256 balance
-        ) = syncedSubscription(_from);
+        ) = _syncedSubscription(_from);
 
         // check if no or expired subscription
         if (subscription.planId > 0 && subscription.expiredAt > block.timestamp)
             return 0;
 
         Plan memory plan = plans[_planId];
-        uint256 amount = getTokenAmount(
-            getDiscountedPrice(_planId),
+        uint256 amount = _getTokenAmount(
+            _getDiscountedPrice(_planId),
             plan.token
         );
 
@@ -600,7 +743,7 @@ contract HectorSubscriptionV2 is
             Subscription memory subscription,
             address token,
             uint256 balance
-        ) = syncedSubscription(_from);
+        ) = _syncedSubscription(_from);
 
         // check if no or expired subscription
         if (subscription.planId > 0 && subscription.expiredAt > block.timestamp)
@@ -609,15 +752,15 @@ contract HectorSubscriptionV2 is
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (, , uint256 newPrice) = tryApplyCoupon(
+        (, , uint256 newPrice) = _tryApplyCoupon(
             _from,
             plan.token,
-            getDiscountedPrice(_planId),
+            _getDiscountedPrice(_planId),
             _couponInfo,
             _signature
         );
 
-        uint256 amount = getTokenAmount(newPrice, plan.token);
+        uint256 amount = _getTokenAmount(newPrice, plan.token);
 
         // Deposit more to pay for new plan
         if (token != plan.token) {
@@ -643,44 +786,24 @@ contract HectorSubscriptionV2 is
     }
 
     function createSubscription(uint256 _planId) public onlyValidPlan(_planId) {
+        if (_getSubscriptionStatus(msg.sender)) revert ACTIVE_SUBSCRIPTION();
+
+        // create subscription
+        _createSubscription(
+            msg.sender,
+            _planId,
+            _getDiscountedPrice(_planId),
+            false
+        );
+
+        // emit event
         Subscription storage subscription = subscriptions[msg.sender];
-
-        // check if no or expired subscription
-        if (subscription.planId > 0) {
-            syncSubscription(msg.sender);
-
-            if (subscription.expiredAt > block.timestamp)
-                revert ACTIVE_SUBSCRIPTION();
-        }
-
-        Plan memory plan = plans[_planId];
-        uint256 planDiscountedPrice = getDiscountedPrice(_planId);
-        uint256 amount = getTokenAmount(planDiscountedPrice, plan.token);
-
-        // Pay first plan
-        if (balanceOf[msg.sender][plan.token] < amount) {
-            deposit(plan.token, amount - balanceOf[msg.sender][plan.token]);
-        }
-
-        unchecked {
-            balanceOf[msg.sender][plan.token] -= amount;
-        }
-
-        // Set subscription
-        subscription.planId = _planId;
-        subscription.expiredAt = uint48(block.timestamp) + plan.period;
-        subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = planDiscountedPrice;
-        subscription.lastAmountPaid = amount;
-
-        // Set subscription by Mod
-        subscriptionByMod[msg.sender] = false;
 
         emit SubscriptionCreated(
             msg.sender,
             _planId,
-            planDiscountedPrice,
-            amount,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             subscription.expiredAt
         );
     }
@@ -690,21 +813,12 @@ contract HectorSubscriptionV2 is
         bytes calldata _couponInfo,
         bytes calldata _signature
     ) public onlyValidPlan(_planId) {
-        Subscription storage subscription = subscriptions[msg.sender];
-
-        // check if no or expired subscription
-        if (subscription.planId > 0) {
-            syncSubscription(msg.sender);
-
-            if (subscription.expiredAt > block.timestamp)
-                revert ACTIVE_SUBSCRIPTION();
-        }
-
-        Plan memory plan = plans[_planId];
-        uint256 planDiscountedPrice = getDiscountedPrice(_planId);
+        if (_getSubscriptionStatus(msg.sender)) revert ACTIVE_SUBSCRIPTION();
 
         // check if coupon is valid
-        (bool isValid, uint256 couponId, uint256 newPrice) = applyCoupon(
+        Plan memory plan = plans[_planId];
+        uint256 planDiscountedPrice = _getDiscountedPrice(_planId);
+        (bool isValid, uint256 couponId, uint256 newPrice) = _applyCoupon(
             plan.token,
             planDiscountedPrice,
             _couponInfo,
@@ -712,33 +826,18 @@ contract HectorSubscriptionV2 is
         );
         if (!isValid) revert INVALID_COUPON();
 
-        uint256 amount = getTokenAmount(newPrice, plan.token);
+        // create subscription
+        _createSubscription(msg.sender, _planId, newPrice, false);
 
-        // Pay first plan
-        if (balanceOf[msg.sender][plan.token] < amount) {
-            deposit(plan.token, amount - balanceOf[msg.sender][plan.token]);
-        }
-
-        unchecked {
-            balanceOf[msg.sender][plan.token] -= amount;
-        }
-
-        // Set subscription
-        subscription.planId = _planId;
-        subscription.expiredAt = uint48(block.timestamp) + plan.period;
-        subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = newPrice;
-        subscription.lastAmountPaid = amount;
-
-        // Set subscription by Mod
-        subscriptionByMod[msg.sender] = false;
+        // emit event
+        Subscription storage subscription = subscriptions[msg.sender];
 
         emit SubscriptionCreatedWithCoupon(
             msg.sender,
             _planId,
             couponId,
-            newPrice,
-            amount,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             subscription.expiredAt
         );
     }
@@ -755,8 +854,8 @@ contract HectorSubscriptionV2 is
 
         // after expiration
         Plan memory plan = plans[planId];
-        uint256 planDiscountedPrice = getDiscountedPrice(planId);
-        uint256 amount = getTokenAmount(planDiscountedPrice, plan.token);
+        uint256 planDiscountedPrice = _getDiscountedPrice(planId);
+        uint256 amount = _getTokenAmount(planDiscountedPrice, plan.token);
 
         uint256 count = (block.timestamp -
             subscription.expiredAt +
@@ -794,7 +893,7 @@ contract HectorSubscriptionV2 is
         }
 
         // fund to Treasury
-        fund(from, plans[planId].token, fundAmount);
+        _fund(from, plans[planId].token, fundAmount);
 
         // expired for a long time (deadline), then cancel it
         if (subscription.expiredAt + expireDeadline <= block.timestamp) {
@@ -820,118 +919,34 @@ contract HectorSubscriptionV2 is
     }
 
     function cancelSubscription() external {
-        syncSubscription(msg.sender);
+        if (!_getSubscriptionStatus(msg.sender)) revert INACTIVE_SUBSCRIPTION();
 
-        Subscription storage subscription = subscriptions[msg.sender];
-        uint256 planId = subscription.planId;
+        // cancel subscription
+        uint256 planId = _cancelSubscription(msg.sender);
 
-        // check if active subscription
-        if (planId == 0) revert INACTIVE_SUBSCRIPTION();
-
-        // refund
-        uint256 refundAmount = getRefundAmount(
-            planId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaid
-        );
-        refund(msg.sender, plans[planId].token, refundAmount);
-
-        // fund to Treasury
-        fund(
-            msg.sender,
-            plans[planId].token,
-            subscription.lastAmountPaid - refundAmount
-        );
-
-        // Set subscription
-        subscription.planId = 0;
-        subscription.expiredAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = 0;
-        subscription.lastAmountPaid = 0;
-
+        // emit event
         emit SubscriptionCancelled(msg.sender, planId);
     }
 
     function modifySubscription(
         uint256 _newPlanId
     ) external onlyValidPlan(_newPlanId) {
-        // Sync the subscription
-        syncSubscription(msg.sender);
+        if (!_getSubscriptionStatus(msg.sender)) revert INACTIVE_SUBSCRIPTION();
 
+        uint256 oldPlanId = subscriptions[msg.sender].planId;
+
+        // create subscription
+        _modifySubscription(msg.sender, _newPlanId, false);
+
+        // emit event
         Subscription storage subscription = subscriptions[msg.sender];
-        uint256 oldPlanId = subscription.planId;
-
-        // If it's cancelled or expired, then create a new subscription rather than modify
-        if (oldPlanId == 0 || subscription.expiredAt <= block.timestamp)
-            revert INACTIVE_SUBSCRIPTION();
-
-        Plan memory newPlan = plans[_newPlanId];
-        uint256 newPlanDiscountedPrice = getDiscountedPrice(_newPlanId);
-
-        uint256 refundPrice = getRefundAmount(
-            oldPlanId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaidInUsd
-        );
-        uint256 refundAmount = getRefundAmount(
-            oldPlanId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaid
-        );
-
-        // Pay for new plan
-        uint256 payForNewPlan;
-        uint256 priceForNewPlan;
-        if (refundPrice < newPlanDiscountedPrice) {
-            unchecked {
-                priceForNewPlan = newPlanDiscountedPrice - refundPrice;
-            }
-            refundAmount = 0;
-
-            payForNewPlan = getTokenAmount(priceForNewPlan, newPlan.token);
-
-            if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
-                deposit(
-                    newPlan.token,
-                    payForNewPlan - balanceOf[msg.sender][newPlan.token]
-                );
-            }
-
-            unchecked {
-                balanceOf[msg.sender][newPlan.token] -= payForNewPlan;
-            }
-        }
-        // Refund for old plan
-        else {
-            refundAmount =
-                (refundAmount * (refundPrice - newPlanDiscountedPrice)) /
-                refundPrice;
-            refund(msg.sender, plans[oldPlanId].token, refundAmount);
-        }
-
-        // fund to Treasury
-        fund(
-            msg.sender,
-            plans[oldPlanId].token,
-            subscription.lastAmountPaid - refundAmount
-        );
-
-        // Set subscription
-        subscription.planId = _newPlanId;
-        subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
-        subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = priceForNewPlan;
-        subscription.lastAmountPaid = payForNewPlan;
-
-        // Set subscription by Mod
-        subscriptionByMod[msg.sender] = false;
 
         emit SubscriptionModified(
             msg.sender,
             oldPlanId,
             _newPlanId,
-            priceForNewPlan,
-            payForNewPlan,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             subscription.expiredAt
         );
     }
@@ -973,15 +988,8 @@ contract HectorSubscriptionV2 is
         address _token,
         uint256 _amount
     ) external onlyValidPlan(_planId) onlyMod {
-        Subscription storage subscription = subscriptions[_to];
-
         // check if no or expired subscription
-        if (subscription.planId > 0) {
-            syncSubscription(_to);
-
-            if (subscription.expiredAt > block.timestamp)
-                revert ACTIVE_SUBSCRIPTION();
-        }
+        if (_getSubscriptionStatus(_to) == true) revert ACTIVE_SUBSCRIPTION();
 
         // deposit token
         if (_amount > 0) {
@@ -989,32 +997,17 @@ contract HectorSubscriptionV2 is
             emit PayerDeposit(_to, _token, _amount);
         }
 
-        // Pay first plan
-        Plan memory plan = plans[_planId];
-        uint256 planDiscountedPrice = getDiscountedPrice(_planId);
-        uint256 amount = getTokenAmount(planDiscountedPrice, plan.token);
+        // create subscription
+        _createSubscription(_to, _planId, _getDiscountedPrice(_planId), true);
 
-        if (balanceOf[_to][plan.token] < amount) revert INSUFFICIENT_FUND();
-
-        unchecked {
-            balanceOf[_to][plan.token] -= amount;
-        }
-
-        // Set subscription
-        subscription.planId = _planId;
-        subscription.expiredAt = uint48(block.timestamp) + plan.period;
-        subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = planDiscountedPrice;
-        subscription.lastAmountPaid = amount;
-
-        // Set subscription by Mod
-        subscriptionByMod[_to] = true;
+        // emit event
+        Subscription storage subscription = subscriptions[_to];
 
         emit SubscriptionCreated(
             _to,
             _planId,
-            planDiscountedPrice,
-            amount,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             subscription.expiredAt
         );
     }
@@ -1025,15 +1018,9 @@ contract HectorSubscriptionV2 is
         address _token,
         uint256 _amount
     ) external onlyValidPlan(_newPlanId) onlyMod {
-        // Sync the subscription
-        syncSubscription(_to);
+        if (!_getSubscriptionStatus(_to)) revert INACTIVE_SUBSCRIPTION();
 
-        Subscription storage subscription = subscriptions[_to];
-        uint256 oldPlanId = subscription.planId;
-
-        // If it's cancelled or expired, then create a new subscription rather than modify
-        if (oldPlanId == 0 || subscription.expiredAt <= block.timestamp)
-            revert INACTIVE_SUBSCRIPTION();
+        uint256 oldPlanId = subscriptions[_to].planId;
 
         // deposit token
         if (_amount > 0) {
@@ -1041,103 +1028,29 @@ contract HectorSubscriptionV2 is
             emit PayerDeposit(_to, _token, _amount);
         }
 
-        Plan memory newPlan = plans[_newPlanId];
-        uint256 newPlanDiscountedPrice = getDiscountedPrice(_newPlanId);
+        // create subscription
+        _modifySubscription(_to, _newPlanId, true);
 
-        uint256 refundPrice = getRefundAmount(
-            oldPlanId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaidInUsd
-        );
-        uint256 refundAmount = getRefundAmount(
-            oldPlanId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaid
-        );
-
-        // Pay for new plan
-        uint256 payForNewPlan;
-        uint256 priceForNewPlan;
-        if (refundPrice < newPlanDiscountedPrice) {
-            unchecked {
-                priceForNewPlan = newPlanDiscountedPrice - refundPrice;
-            }
-            refundAmount = 0;
-
-            payForNewPlan = getTokenAmount(priceForNewPlan, newPlan.token);
-
-            if (balanceOf[_to][newPlan.token] < payForNewPlan)
-                revert INSUFFICIENT_FUND();
-
-            unchecked {
-                balanceOf[_to][newPlan.token] -= payForNewPlan;
-            }
-        }
-        // Refund for old plan
-        else {
-            refundAmount =
-                (refundAmount * (refundPrice - newPlanDiscountedPrice)) /
-                refundPrice;
-            refund(_to, plans[oldPlanId].token, refundAmount);
-        }
-
-        // fund to Treasury
-        fund(
-            _to,
-            plans[oldPlanId].token,
-            subscription.lastAmountPaid - refundAmount
-        );
-
-        // Set subscription
-        subscription.planId = _newPlanId;
-        subscription.expiredAt = uint48(block.timestamp) + newPlan.period;
-        subscription.lastPaidAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = priceForNewPlan;
-        subscription.lastAmountPaid = payForNewPlan;
-
-        // Set subscription by Mod
-        subscriptionByMod[_to] = true;
+        // emit event
+        Subscription storage subscription = subscriptions[_to];
 
         emit SubscriptionModified(
             _to,
             oldPlanId,
             _newPlanId,
-            priceForNewPlan,
-            payForNewPlan,
+            subscription.lastAmountPaidInUsd,
+            subscription.lastAmountPaid,
             subscription.expiredAt
         );
     }
 
     function cancelSubscriptionByMod(address _to) external onlyMod {
-        syncSubscription(_to);
+        if (!_getSubscriptionStatus(_to)) revert INACTIVE_SUBSCRIPTION();
 
-        Subscription storage subscription = subscriptions[_to];
-        uint256 planId = subscription.planId;
+        // cancel subscription
+        uint256 planId = _cancelSubscription(_to);
 
-        // check if active subscription
-        if (planId == 0) revert INACTIVE_SUBSCRIPTION();
-
-        // refund
-        uint256 refundAmount = getRefundAmount(
-            planId,
-            subscription.lastPaidAt,
-            subscription.lastAmountPaid
-        );
-        refund(_to, plans[planId].token, refundAmount);
-
-        // fund to Treasury
-        fund(
-            _to,
-            plans[planId].token,
-            subscription.lastAmountPaid - refundAmount
-        );
-
-        // Set subscription
-        subscription.planId = 0;
-        subscription.expiredAt = uint48(block.timestamp);
-        subscription.lastAmountPaidInUsd = 0;
-        subscription.lastAmountPaid = 0;
-
+        // emit event
         emit SubscriptionCancelled(_to, planId);
     }
 }

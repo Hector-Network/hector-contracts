@@ -242,24 +242,28 @@ describe('HectorSubscriptionV2 + Discount', function () {
         .connect(owner)
         .deposit(torToken.address, discountedTorAmount);
 
-      let hectorAmountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(1);
-      let torAmountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(2);
+      let hectorAmountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        1
+      );
+      let torAmountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        2
+      );
 
       expect(hectorAmountToDeposit).equal(0);
       expect(torAmountToDeposit).equal(0);
     });
 
     it('to create subscription for no deposit', async function () {
-      let hectorAmountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(1);
-      let torAmountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(2);
+      let hectorAmountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        1
+      );
+      let torAmountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        2
+      );
 
       expect(hectorAmountToDeposit).equal(discountedHectorAmount);
       expect(torAmountToDeposit).equal(discountedTorAmount);
@@ -561,9 +565,10 @@ describe('HectorSubscriptionV2 + Discount', function () {
       let newPlanId = 2;
       await hectorSubscription.connect(owner).createSubscription(planId);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = discountedPriceOne;
       let torDepositAmount = ethers.utils.parseEther(
@@ -620,9 +625,10 @@ describe('HectorSubscriptionV2 + Discount', function () {
 
       await increaseTime(twoHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let refundPrice = discountedPriceTwo.div(10);
       let hectorDepositAmount = ethers.utils.parseEther(
@@ -679,9 +685,10 @@ describe('HectorSubscriptionV2 + Discount', function () {
       let newPlanId = 1;
       await hectorSubscription.connect(owner).createSubscription(planId);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       let hectorDepositAmount = ethers.constants.Zero;
 
