@@ -4,10 +4,14 @@ import { ethers, upgrades } from 'hardhat';
 import { BigNumber, BigNumberish, utils } from 'ethers';
 import { increaseTime, getTimeStamp } from './../helper';
 import {
-  HectorSubscriptionFactory,
-  HectorSubscription,
+  HectorSubscriptionV2Factory,
+  HectorSubscriptionV2,
   RewardToken,
+  HectorRefund,
+  PriceOracleAggregator,
+  MockOracle,
   HectorCoupon,
+  HectorDiscount,
 } from '../types';
 
 const encodeCouponInfo = (coupon: {
@@ -74,7 +78,7 @@ const signCouponMessage = async (
   return signature;
 };
 
-describe('HectorSubscription', function () {
+describe('HectorSubscriptionV2 + Coupon', function () {
   let deployer: SignerWithAddress;
   let upgradeableAdmin: SignerWithAddress;
   let owner: SignerWithAddress;
@@ -84,10 +88,15 @@ describe('HectorSubscription', function () {
 
   let hectorToken: RewardToken;
   let torToken: RewardToken;
-  let hectorSubscriptionFactory: HectorSubscriptionFactory;
-  let hectorSubscriptionLogic: HectorSubscription;
-  let hectorSubscription: HectorSubscription;
+
   let hectorCoupon: HectorCoupon;
+  let hectorRefund: HectorRefund;
+  let hectorDiscount: HectorDiscount;
+  let priceOracleAggregator: PriceOracleAggregator;
+
+  let hectorSubscriptionFactory: HectorSubscriptionV2Factory;
+  let hectorSubscriptionLogic: HectorSubscriptionV2;
+  let hectorSubscription: HectorSubscriptionV2;
 
   let product = 'TestProduct';
   let productBytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(product));
@@ -95,13 +104,17 @@ describe('HectorSubscription', function () {
   let oneHour = 3600 * 1;
   let twoHour = 3600 * 2;
 
-  let amount0 = ethers.utils.parseEther('100');
-  let amount1 = ethers.utils.parseEther('200');
+  let priceOne = ethers.utils.parseUnits('1000', 8); // 1000$
+  let priceTwo = ethers.utils.parseUnits('2000', 8); // 2000$
 
+  let hectorPrice = ethers.utils.parseUnits('10', 8); // 10$
+  let torPrice = ethers.utils.parseUnits('1', 8); // 1$
+
+  let prices = [hectorPrice, torPrice];
   let activePlans: {
     token: string;
     period: number;
-    amount: BigNumber;
+    price: BigNumber;
     data: string;
   }[] = [];
   let correctFixedCouponInfo: {
@@ -123,65 +136,136 @@ describe('HectorSubscription', function () {
     [deployer, upgradeableAdmin, owner, treasury, signer, notSigner] =
       await ethers.getSigners();
 
+    /// Token
     const TokenFactory = await ethers.getContractFactory('RewardToken');
     hectorToken = (await TokenFactory.deploy()) as RewardToken;
     torToken = (await TokenFactory.deploy()) as RewardToken;
 
-    // Subscription Factory
-    const HectorSubscription = await ethers.getContractFactory(
-      'HectorSubscription'
-    );
-    hectorSubscriptionLogic =
-      (await HectorSubscription.deploy()) as HectorSubscription;
-
-    const HectorSubscriptionFactory = await ethers.getContractFactory(
-      'HectorSubscriptionFactory'
-    );
-    await upgrades.silenceWarnings();
-    hectorSubscriptionFactory = (await upgrades.deployProxy(
-      HectorSubscriptionFactory,
-      [hectorSubscriptionLogic.address, upgradeableAdmin.address],
-      {
-        unsafeAllow: ['delegatecall'],
-      }
-    )) as HectorSubscriptionFactory;
-
-    // Product Subscription
-    await hectorSubscriptionFactory.createHectorSubscriptionContract(
-      product,
-      treasury.address
-    );
-    hectorSubscription = (await ethers.getContractAt(
-      'HectorSubscription',
-      await hectorSubscriptionFactory.getHectorSubscriptionContractByName(
-        productBytes
-      )
-    )) as HectorSubscription;
-
-    activePlans = [
-      {
-        token: hectorToken.address,
-        period: oneHour,
-        amount: amount0,
-        data: '0x00',
-      },
-      {
-        token: torToken.address,
-        period: twoHour,
-        amount: amount1,
-        data: '0x00',
-      },
-    ];
-    await hectorSubscription.appendPlan(activePlans);
-
-    // Coupon
+    /// Coupon
     const HectorCoupon = await ethers.getContractFactory('HectorCoupon');
     await upgrades.silenceWarnings();
     hectorCoupon = (await upgrades.deployProxy(HectorCoupon, [], {
       unsafeAllow: ['delegatecall'],
     })) as HectorCoupon;
     await hectorCoupon.setModerator(signer.address, true);
-    await hectorSubscriptionFactory.setCoupon(hectorCoupon.address);
+
+    /// Refund
+    const HectorRefund = await ethers.getContractFactory('HectorRefund');
+    await upgrades.silenceWarnings();
+    hectorRefund = (await upgrades.deployProxy(HectorRefund, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorRefund;
+    await hectorRefund.appendRefund(
+      product,
+      [1, 2],
+      [
+        [
+          { limitPeriod: oneHour / 4, percent: 10000 }, // 15 mins: 100%
+          { limitPeriod: oneHour / 2, percent: 5000 }, // 30 mins: 50%
+          { limitPeriod: (oneHour * 3) / 4, percent: 1000 }, // 45 mins: 10%
+        ],
+        [
+          { limitPeriod: twoHour / 4, percent: 10000 }, // 30 mins: 100%
+          { limitPeriod: twoHour / 2, percent: 5000 }, // 60 mins: 50%
+          { limitPeriod: (twoHour * 3) / 4, percent: 1000 }, // 90 mins: 10%
+        ],
+      ]
+    );
+
+    /// Discount
+    const HectorDiscount = await ethers.getContractFactory('HectorDiscount');
+    await upgrades.silenceWarnings();
+    hectorDiscount = (await upgrades.deployProxy(HectorDiscount, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorDiscount;
+
+    /// Oracle
+    const Oracle = await ethers.getContractFactory('MockOracle');
+    const hectorOracle = (await Oracle.deploy(
+      hectorToken.address,
+      hectorPrice
+    )) as MockOracle;
+    const torOracle = (await Oracle.deploy(
+      torToken.address,
+      torPrice
+    )) as MockOracle;
+
+    const PriceOracleAggregator = await ethers.getContractFactory(
+      'PriceOracleAggregator'
+    );
+    priceOracleAggregator =
+      (await PriceOracleAggregator.deploy()) as PriceOracleAggregator;
+    await priceOracleAggregator.updateOracleForAsset(
+      hectorToken.address,
+      hectorOracle.address
+    );
+    await priceOracleAggregator.updateOracleForAsset(
+      torToken.address,
+      torOracle.address
+    );
+
+    /// Subscription
+    const HectorSubscription = await ethers.getContractFactory(
+      'HectorSubscriptionV2'
+    );
+    hectorSubscriptionLogic =
+      (await HectorSubscription.deploy()) as HectorSubscriptionV2;
+
+    const HectorSubscriptionFactory = await ethers.getContractFactory(
+      'HectorSubscriptionV2Factory'
+    );
+    await upgrades.silenceWarnings();
+    hectorSubscriptionFactory = (await upgrades.deployProxy(
+      HectorSubscriptionFactory,
+      [
+        hectorSubscriptionLogic.address,
+        upgradeableAdmin.address,
+        hectorCoupon.address,
+        hectorRefund.address,
+        hectorDiscount.address,
+        priceOracleAggregator.address,
+      ],
+      {
+        unsafeAllow: ['delegatecall'],
+      }
+    )) as HectorSubscriptionV2Factory;
+
+    await hectorSubscriptionFactory.createHectorSubscriptionContract(
+      product,
+      treasury.address
+    );
+    hectorSubscription = (await ethers.getContractAt(
+      'HectorSubscriptionV2',
+      await hectorSubscriptionFactory.getHectorSubscriptionContractByName(
+        productBytes
+      )
+    )) as HectorSubscriptionV2;
+
+    activePlans = [
+      {
+        token: hectorToken.address,
+        period: oneHour,
+        price: priceOne,
+        data: '0x00',
+      },
+      {
+        token: torToken.address,
+        period: twoHour,
+        price: priceTwo,
+        data: '0x00',
+      },
+    ];
+    await hectorSubscription.appendPlan(activePlans);
+
+    await hectorToken.mint(owner.address, utils.parseEther('200000000000000'));
+    await hectorToken
+      .connect(owner)
+      .approve(hectorSubscription.address, utils.parseEther('200000000000000'));
+
+    await torToken.mint(owner.address, utils.parseEther('200000000000000'));
+    await torToken
+      .connect(owner)
+      .approve(hectorSubscription.address, utils.parseEther('200000000000000'));
 
     await hectorToken.mint(owner.address, utils.parseEther('200000000000000'));
     await hectorToken
@@ -198,7 +282,7 @@ describe('HectorSubscription', function () {
       id: 1,
       product: product,
       token: hectorToken.address,
-      discount: amount0.div(2), // half discount
+      discount: priceOne.div(2), // half discount
       isFixed: true,
     };
     correctPercentCouponInfo = {
@@ -223,7 +307,7 @@ describe('HectorSubscription', function () {
         product: product,
         payer: owner.address,
         token: hectorToken.address,
-        amount: amount0,
+        amount: priceOne,
       };
     });
 
@@ -486,6 +570,7 @@ describe('HectorSubscription', function () {
     const planId = 1;
     let couponInfo: string;
     let signature: string;
+    let price: BigNumber;
     let amount: BigNumber;
 
     beforeEach(async function () {
@@ -496,15 +581,18 @@ describe('HectorSubscription', function () {
         correctFixedCouponInfo,
         signer
       );
-      amount = activePlans[planId - 1].amount.sub(
+      price = activePlans[planId - 1].price.sub(
         correctFixedCouponInfo.discount
+      );
+      amount = ethers.utils.parseEther(
+        price.div(prices[planId - 1]).toString()
       );
     });
 
     it('to create subscription with coupon', async function () {
-      const amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscritpionWithCoupon(
+      const amountToDeposit =
+        await hectorSubscription.toCreateSubscriptionWithCoupon(
+          owner.address,
           planId,
           couponInfo,
           signature
@@ -533,6 +621,7 @@ describe('HectorSubscription', function () {
           owner.address,
           planId,
           correctFixedCouponInfo.id,
+          price,
           amount,
           expiredAt
         );
@@ -553,6 +642,7 @@ describe('HectorSubscription', function () {
     const planId = 1;
     let couponInfo: string;
     let signature: string;
+    let price: BigNumber;
     let amount: BigNumber;
 
     beforeEach(async function () {
@@ -563,17 +653,20 @@ describe('HectorSubscription', function () {
         correctPercentCouponInfo,
         signer
       );
-      amount = activePlans[planId - 1].amount.sub(
-        activePlans[planId - 1].amount
+      price = activePlans[planId - 1].price.sub(
+        activePlans[planId - 1].price
           .mul(correctPercentCouponInfo.discount)
           .div(await hectorCoupon.MULTIPLIER())
+      );
+      amount = ethers.utils.parseEther(
+        price.div(prices[planId - 1]).toString()
       );
     });
 
     it('to create subscription with coupon', async function () {
-      const amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscritpionWithCoupon(
+      const amountToDeposit =
+        await hectorSubscription.toCreateSubscriptionWithCoupon(
+          owner.address,
           planId,
           couponInfo,
           signature
@@ -602,6 +695,7 @@ describe('HectorSubscription', function () {
           owner.address,
           planId,
           correctPercentCouponInfo.id,
+          price,
           amount,
           expiredAt
         );

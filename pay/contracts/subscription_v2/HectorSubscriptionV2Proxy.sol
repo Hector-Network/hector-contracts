@@ -5,13 +5,17 @@ import {IERC20} from '@openzeppelin/contracts/token/ERC20/IERC20.sol';
 import {SafeERC20} from '@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol';
 import {OwnableUpgradeable} from '@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol';
 
-import {IHectorSubscriptionFactory} from '../interfaces/IHectorSubscriptionFactory.sol';
-import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
+import {IHectorSubscriptionV2Factory} from '../interfaces/IHectorSubscriptionV2Factory.sol';
+import {IHectorSubscriptionV2} from '../interfaces/IHectorSubscriptionV2.sol';
 
 error INVALID_ADDRESS();
+error INVALID_PARAM();
 error INVALID_MODERATOR();
 
-contract HectorSubscriptionProxy is IHectorSubscription, OwnableUpgradeable {
+contract HectorSubscriptionV2Proxy is
+    IHectorSubscriptionV2,
+    OwnableUpgradeable
+{
     /* ======== STORAGE ======== */
 
     /// @notice product
@@ -35,7 +39,7 @@ contract HectorSubscriptionProxy is IHectorSubscription, OwnableUpgradeable {
     }
 
     function initialize() external initializer {
-        IHectorSubscriptionFactory factory = IHectorSubscriptionFactory(
+        IHectorSubscriptionV2Factory factory = IHectorSubscriptionV2Factory(
             msg.sender
         );
 
@@ -72,15 +76,28 @@ contract HectorSubscriptionProxy is IHectorSubscription, OwnableUpgradeable {
         }
     }
 
-    function updatePlan(uint256 _planId, Plan calldata _plan) external onlyMod {
-        plans[_planId] = _plan;
+    function updatePlan(
+        uint256[] calldata _planIds,
+        Plan[] calldata _plans
+    ) external onlyMod {
+        uint256 length = _planIds.length;
+        if (length != _plans.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            plans[_planIds[i]] = _plans[i];
+        }
     }
 
     function updateSubscription(
-        address _to,
-        Subscription calldata _subscription
+        address[] calldata _tos,
+        Subscription[] calldata _subscriptions
     ) external onlyMod {
-        subscriptions[_to] = _subscription;
+        uint256 length = _tos.length;
+        if (length != _subscriptions.length) revert INVALID_PARAM();
+
+        for (uint256 i = 0; i < length; i++) {
+            subscriptions[_tos[i]] = _subscriptions[i];
+        }
     }
 
     /* ======== VIEW FUNCTIONS ======== */

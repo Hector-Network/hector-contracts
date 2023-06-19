@@ -42,11 +42,11 @@ export default {
       },
     ],
   },
-  // contractSizer: {
-  //   alphaSort: true,
-  //   runOnCompile: true,
-  //   disambiguatePaths: false,
-  // },
+  contractSizer: {
+    alphaSort: true,
+    runOnCompile: true,
+    disambiguatePaths: false,
+  },
   namedAccounts: {
     deployer: {
       default: 0,
@@ -82,8 +82,14 @@ export default {
     },
     ftmtest: {
       url: process.env.FTMTEST_NET_API_URL,
-      accounts: [process.env.PRIVATE_KEY],
+      accounts: [process.env.MAIN_PRIVATE_KEY],
       chainId: 4002,
+      saveDeployments: true,
+    },
+    bsctest: {
+      url: process.env.BSCTEST_NET_API_URL,
+      accounts: [process.env.MAIN_PRIVATE_KEY],
+      chainId: 97,
       saveDeployments: true,
     },
   },

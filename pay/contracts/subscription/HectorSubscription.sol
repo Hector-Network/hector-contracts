@@ -301,6 +301,77 @@ contract HectorSubscription is
         }
     }
 
+    /* ======== INTERNAL FUNCTIONS ======== */
+
+    function tryApplyCoupon(
+        address from,
+        address token,
+        uint256 amount,
+        bytes calldata couponInfo,
+        bytes calldata signature
+    ) internal view returns (bool, uint256, uint256) {
+        return
+            IHectorCoupon(factory.coupon()).tryApplyCoupon(
+                IHectorCoupon.Pay({
+                    product: product,
+                    payer: from,
+                    token: token,
+                    amount: amount
+                }),
+                couponInfo,
+                signature
+            );
+    }
+
+    function syncedSubscription(
+        address from
+    )
+        internal
+        view
+        returns (
+            Subscription memory subscription,
+            address token,
+            uint256 balance
+        )
+    {
+        subscription = subscriptions[from];
+        uint256 planId = subscription.planId;
+
+        // inactive subscription
+        if (planId == 0) return (subscription, token, balance);
+
+        // before expiration
+        if (block.timestamp < subscription.expiredAt)
+            return (subscription, token, balance);
+
+        // after expiration
+        Plan memory plan = plans[planId];
+        uint256 count = (block.timestamp -
+            subscription.expiredAt +
+            plan.period) / plan.period;
+        uint256 amount = plan.amount * count;
+        token = plan.token;
+        balance = balanceOf[from][plan.token];
+
+        // not active for now
+        if (balance < amount) {
+            count = balance / plan.amount;
+            amount = plan.amount * count;
+        }
+
+        if (count > 0) {
+            unchecked {
+                balance -= amount;
+                subscription.expiredAt += uint48(plan.period * count);
+            }
+        }
+
+        // expired for a long time (deadline), then cancel it
+        if (subscription.expiredAt + expireDeadline <= block.timestamp) {
+            subscription.planId = 0;
+        }
+    }
+
     /* ======== VIEW FUNCTIONS ======== */
 
     function allPlans() external view returns (Plan[] memory) {
@@ -309,6 +380,14 @@ contract HectorSubscription is
 
     function getPlan(uint256 _planId) external view returns (Plan memory) {
         return plans[_planId];
+    }
+
+    function getPlanToken(uint256 _planId) external view returns (address) {
+        return plans[_planId].token;
+    }
+
+    function getPlanData(uint256 _planId) external view returns (bytes memory) {
+        return plans[_planId].data;
     }
 
     function getSubscription(
@@ -346,12 +425,20 @@ contract HectorSubscription is
     }
 
     function toModifySubscription(
+        address _from,
         uint256 _newPlanId
-    ) public onlyValidPlan(_newPlanId) returns (uint256 amountToDeposit) {
+    )
+        external
+        view
+        onlyValidPlan(_newPlanId)
+        returns (uint256 amountToDeposit)
+    {
         // Sync the subscription
-        syncSubscription(msg.sender);
-
-        Subscription storage subscription = subscriptions[msg.sender];
+        (
+            Subscription memory subscription,
+            address token,
+            uint256 balance
+        ) = syncedSubscription(_from);
         uint256 oldPlanId = subscription.planId;
 
         // If it's cancelled or expired, then create a new subscription rather than modify
@@ -379,69 +466,80 @@ contract HectorSubscription is
         }
 
         // Deposit more to pay for new plan
-        if (balanceOf[msg.sender][newPlan.token] < payForNewPlan) {
-            amountToDeposit =
-                payForNewPlan -
-                balanceOf[msg.sender][newPlan.token];
+        if (token != newPlan.token) {
+            balance = balanceOf[_from][newPlan.token];
+        }
+        if (balance < payForNewPlan) {
+            amountToDeposit = payForNewPlan - balance;
         }
     }
 
     function toCreateSubscription(
+        address _from,
         uint256 _planId
-    ) public onlyValidPlan(_planId) returns (uint256 amountToDeposit) {
-        Subscription storage subscription = subscriptions[msg.sender];
+    ) external view onlyValidPlan(_planId) returns (uint256 amountToDeposit) {
+        // Sync the subscription
+        (
+            Subscription memory subscription,
+            address token,
+            uint256 balance
+        ) = syncedSubscription(_from);
 
         // check if no or expired subscription
-        if (subscription.planId > 0) {
-            syncSubscription(msg.sender);
-
-            if (subscription.expiredAt > block.timestamp) return 0;
-        }
+        if (subscription.planId > 0 && subscription.expiredAt > block.timestamp)
+            return 0;
 
         Plan memory plan = plans[_planId];
 
         // Deposit more to pay for new plan
-        if (balanceOf[msg.sender][plan.token] < plan.amount) {
-            amountToDeposit = plan.amount - balanceOf[msg.sender][plan.token];
+        if (token != plan.token) {
+            balance = balanceOf[_from][plan.token];
+        }
+        if (balance < plan.amount) {
+            amountToDeposit = plan.amount - balance;
         }
     }
 
-    function toCreateSubscritpionWithCoupon(
+    function toCreateSubscriptionWithCoupon(
+        address _from,
         uint256 _planId,
-        bytes calldata couponInfo,
-        bytes calldata signature
+        bytes calldata _couponInfo,
+        bytes calldata _signature
     )
-        public
+        external
+        view
         onlyValidPlan(_planId)
         onlyHasCoupon
         returns (uint256 amountToDeposit)
     {
-        Subscription storage subscription = subscriptions[msg.sender];
+        // Sync the subscription
+        (
+            Subscription memory subscription,
+            address token,
+            uint256 balance
+        ) = syncedSubscription(_from);
 
         // check if no or expired subscription
-        if (subscription.planId > 0) {
-            syncSubscription(msg.sender);
-
-            if (subscription.expiredAt > block.timestamp) return 0;
-        }
+        if (subscription.planId > 0 && subscription.expiredAt > block.timestamp)
+            return 0;
 
         Plan memory plan = plans[_planId];
 
         // check if coupon is valid
-        (, , uint256 newAmount) = IHectorCoupon(factory.coupon()).applyCoupon(
-            IHectorCoupon.Pay({
-                product: product,
-                payer: msg.sender,
-                token: plan.token,
-                amount: plan.amount
-            }),
-            couponInfo,
-            signature
+        (, , uint256 newAmount) = tryApplyCoupon(
+            _from,
+            plan.token,
+            plan.amount,
+            _couponInfo,
+            _signature
         );
 
         // Deposit more to pay for new plan
-        if (balanceOf[msg.sender][plan.token] < newAmount) {
-            amountToDeposit = newAmount - balanceOf[msg.sender][plan.token];
+        if (token != plan.token) {
+            balance = balanceOf[_from][plan.token];
+        }
+        if (balance < newAmount) {
+            amountToDeposit = newAmount - balance;
         }
     }
 

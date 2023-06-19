@@ -268,17 +268,19 @@ describe('HectorSubscription', function () {
     });
 
     it('to create subscription for existing deposit', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(1);
+      let amountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        1
+      );
 
       expect(amountToDeposit).equal(0);
     });
 
     it('to create subscription for no deposit', async function () {
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toCreateSubscription(2);
+      let amountToDeposit = await hectorSubscription.toCreateSubscription(
+        owner.address,
+        2
+      );
 
       expect(amountToDeposit).equal(amount1);
     });
@@ -533,9 +535,10 @@ describe('HectorSubscription', function () {
     it('to modify subscription for different token', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       expect(amountToDeposit).equal(amount1);
     });
@@ -550,9 +553,10 @@ describe('HectorSubscription', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       expect(amountToDeposit).gte(amount1.sub(amount0.div(2)));
     });
@@ -710,9 +714,10 @@ describe('HectorSubscription', function () {
     it('to modify subscription for different token', async function () {
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       expect(amountToDeposit).equal(amount1);
     });
@@ -727,9 +732,10 @@ describe('HectorSubscription', function () {
 
       await increaseTime(oneHour / 2);
 
-      let amountToDeposit = await hectorSubscription
-        .connect(owner)
-        .callStatic.toModifySubscription(newPlanId);
+      let amountToDeposit = await hectorSubscription.toModifySubscription(
+        owner.address,
+        newPlanId
+      );
 
       expect(amountToDeposit).gte(amount1.sub(amount0.div(2)));
     });

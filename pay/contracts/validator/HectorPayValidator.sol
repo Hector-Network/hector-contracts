@@ -7,7 +7,7 @@ import {TransparentUpgradeableProxy} from '@openzeppelin/contracts/proxy/transpa
 
 import {IHectorValidator} from '../interfaces/IHectorValidator.sol';
 import {IHectorPayFactory} from '../interfaces/IHectorPayFactory.sol';
-import {IHectorSubscription} from '../interfaces/IHectorSubscription.sol';
+import {IHectorSubscriptionBase} from '../interfaces/IHectorSubscriptionBase.sol';
 
 error INVALID_ADDRESS();
 error INVALID_PARAM();
@@ -15,7 +15,7 @@ error INVALID_PARAM();
 contract HectorPayValidator is IHectorValidator, Ownable {
     /* ======== STORAGE ======== */
 
-    IHectorSubscription public paySubscription;
+    IHectorSubscriptionBase public paySubscription;
     IHectorPayFactory public payFactory;
 
     /* ======== INITIALIZATION ======== */
@@ -24,7 +24,7 @@ contract HectorPayValidator is IHectorValidator, Ownable {
         if (_paySubscription == address(0) || _payFactory == address(0))
             revert INVALID_ADDRESS();
 
-        paySubscription = IHectorSubscription(_paySubscription);
+        paySubscription = IHectorSubscriptionBase(_paySubscription);
         payFactory = IHectorPayFactory(_payFactory);
     }
 
@@ -32,7 +32,7 @@ contract HectorPayValidator is IHectorValidator, Ownable {
 
     function setPaySubscription(address _paySubscription) external onlyOwner {
         if (_paySubscription == address(0)) revert INVALID_ADDRESS();
-        paySubscription = IHectorSubscription(_paySubscription);
+        paySubscription = IHectorSubscriptionBase(_paySubscription);
     }
 
     function setPayFactory(address _payFactory) external onlyOwner {
@@ -46,8 +46,11 @@ contract HectorPayValidator is IHectorValidator, Ownable {
         address from = abi.decode(input, (address));
 
         (uint256 planId, , , , ) = paySubscription.getSubscription(from);
-        IHectorSubscription.Plan memory plan = paySubscription.getPlan(planId);
-        uint256 limitationOfActiveStreams = abi.decode(plan.data, (uint256));
+        bytes memory planData = paySubscription.getPlanData(planId);
+        (uint256 limitationOfActiveStreams, ) = abi.decode(
+            planData,
+            (uint256, uint256)
+        );
 
         return
             limitationOfActiveStreams >

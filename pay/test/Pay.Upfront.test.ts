@@ -4,12 +4,17 @@ import { ethers, upgrades } from 'hardhat';
 import { BigNumber, utils } from 'ethers';
 import { increaseTime, getTimeStamp } from './../helper';
 import {
-  HectorSubscriptionFactory,
-  HectorSubscription,
+  HectorSubscriptionV2Factory,
+  HectorSubscriptionV2,
   HectorPayFactory,
   HectorPay,
   RewardToken,
+  HectorRefund,
+  PriceOracleAggregator,
+  MockOracle,
+  HectorCoupon,
   HectorPayValidator,
+  HectorDiscount,
 } from '../types';
 
 describe('HectorUpfrontPay', function () {
@@ -22,9 +27,15 @@ describe('HectorUpfrontPay', function () {
   let hectorToken: RewardToken;
   let torToken: RewardToken;
 
-  let hectorSubscriptionFactory: HectorSubscriptionFactory;
-  let hectorSubscriptionLogic: HectorSubscription;
-  let hectorSubscription: HectorSubscription;
+  let hectorCoupon: HectorCoupon;
+  let hectorRefund: HectorRefund;
+  let hectorDiscount: HectorDiscount;
+  let priceOracleAggregator: PriceOracleAggregator;
+
+  let hectorSubscriptionFactory: HectorSubscriptionV2Factory;
+  let hectorSubscriptionLogic: HectorSubscriptionV2;
+  let hectorSubscription: HectorSubscriptionV2;
+
   let product = 'TestProduct';
   let productBytes = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(product));
 
@@ -37,8 +48,18 @@ describe('HectorUpfrontPay', function () {
   let oneHour = 3600 * 1;
   let twoHour = 3600 * 2;
 
-  let amount0 = ethers.utils.parseEther('100');
-  let amount1 = ethers.utils.parseEther('200');
+  let fee = ethers.utils.parseEther('10');
+
+  let priceOne = ethers.utils.parseUnits('100', 8); // 100$
+  let priceTwo = ethers.utils.parseUnits('200', 8); // 200$
+
+  let hectorPrice = ethers.utils.parseUnits('10', 8); // 10$
+  let torPrice = ethers.utils.parseUnits('1', 8); // 1$
+
+  let hectorAmount = ethers.utils.parseEther(
+    priceOne.div(hectorPrice).toString()
+  );
+  let torAmount = ethers.utils.parseEther(priceTwo.div(torPrice).toString());
 
   let limitForFree = 1;
   let limitForOneHour = 2;
@@ -50,68 +71,145 @@ describe('HectorUpfrontPay', function () {
     [deployer, upgradeableAdmin, payer, payee, treasury] =
       await ethers.getSigners();
 
-    /// TOKEN ///
+    /// Token
     const TokenFactory = await ethers.getContractFactory('RewardToken');
     hectorToken = (await TokenFactory.deploy()) as RewardToken;
     torToken = (await TokenFactory.deploy()) as RewardToken;
 
-    /// SUBSCRIPTION ///
+    /// Coupon
+    const HectorCoupon = await ethers.getContractFactory('HectorCoupon');
+    await upgrades.silenceWarnings();
+    hectorCoupon = (await upgrades.deployProxy(HectorCoupon, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorCoupon;
+
+    /// Refund
+    const HectorRefund = await ethers.getContractFactory('HectorRefund');
+    await upgrades.silenceWarnings();
+    hectorRefund = (await upgrades.deployProxy(HectorRefund, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorRefund;
+    await hectorRefund.appendRefund(
+      product,
+      [1, 2],
+      [
+        [
+          { limitPeriod: oneHour / 4, percent: 10000 }, // 15 mins: 100%
+          { limitPeriod: oneHour / 2, percent: 5000 }, // 30 mins: 50%
+          { limitPeriod: (oneHour * 3) / 4, percent: 1000 }, // 45 mins: 10%
+        ],
+        [
+          { limitPeriod: twoHour / 4, percent: 10000 }, // 30 mins: 100%
+          { limitPeriod: twoHour / 2, percent: 5000 }, // 60 mins: 50%
+          { limitPeriod: (twoHour * 3) / 4, percent: 1000 }, // 90 mins: 10%
+        ],
+      ]
+    );
+
+    /// Discount
+    const HectorDiscount = await ethers.getContractFactory('HectorDiscount');
+    await upgrades.silenceWarnings();
+    hectorDiscount = (await upgrades.deployProxy(HectorDiscount, [], {
+      unsafeAllow: ['delegatecall'],
+    })) as HectorDiscount;
+
+    /// Oracle
+    const Oracle = await ethers.getContractFactory('MockOracle');
+    const hectorOracle = (await Oracle.deploy(
+      hectorToken.address,
+      hectorPrice
+    )) as MockOracle;
+    const torOracle = (await Oracle.deploy(
+      torToken.address,
+      torPrice
+    )) as MockOracle;
+
+    const PriceOracleAggregator = await ethers.getContractFactory(
+      'PriceOracleAggregator'
+    );
+    priceOracleAggregator =
+      (await PriceOracleAggregator.deploy()) as PriceOracleAggregator;
+    await priceOracleAggregator.updateOracleForAsset(
+      hectorToken.address,
+      hectorOracle.address
+    );
+    await priceOracleAggregator.updateOracleForAsset(
+      torToken.address,
+      torOracle.address
+    );
+
+    /// Subscription
     const HectorSubscription = await ethers.getContractFactory(
-      'HectorSubscription'
+      'HectorSubscriptionV2'
     );
     hectorSubscriptionLogic =
-      (await HectorSubscription.deploy()) as HectorSubscription;
+      (await HectorSubscription.deploy()) as HectorSubscriptionV2;
 
     const HectorSubscriptionFactory = await ethers.getContractFactory(
-      'HectorSubscriptionFactory'
+      'HectorSubscriptionV2Factory'
     );
     await upgrades.silenceWarnings();
     hectorSubscriptionFactory = (await upgrades.deployProxy(
       HectorSubscriptionFactory,
-      [hectorSubscriptionLogic.address, upgradeableAdmin.address],
+      [
+        hectorSubscriptionLogic.address,
+        upgradeableAdmin.address,
+        hectorCoupon.address,
+        hectorRefund.address,
+        hectorDiscount.address,
+        priceOracleAggregator.address,
+      ],
       {
         unsafeAllow: ['delegatecall'],
       }
-    )) as HectorSubscriptionFactory;
+    )) as HectorSubscriptionV2Factory;
 
     await hectorSubscriptionFactory.createHectorSubscriptionContract(
       product,
       treasury.address
     );
     hectorSubscription = (await ethers.getContractAt(
-      'HectorSubscription',
+      'HectorSubscriptionV2',
       await hectorSubscriptionFactory.getHectorSubscriptionContractByName(
         productBytes
       )
-    )) as HectorSubscription;
+    )) as HectorSubscriptionV2;
 
     await hectorSubscription.appendPlan([
       {
         token: hectorToken.address,
         period: oneHour,
-        amount: amount0,
-        data: ethers.utils.hexZeroPad(
-          ethers.utils.hexlify(limitForOneHour),
-          32
+        price: priceOne,
+        data: ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'uint256'],
+          [limitForOneHour, 0]
         ),
       },
       {
         token: torToken.address,
         period: twoHour,
-        amount: amount1,
-        data: ethers.utils.hexZeroPad(
-          ethers.utils.hexlify(limitForTwoHour),
-          32
+        price: priceTwo,
+        data: ethers.utils.defaultAbiCoder.encode(
+          ['uint256', 'uint256'],
+          [limitForTwoHour, 0]
         ),
       },
     ]);
 
-    await hectorSubscription.updatePlan(0, {
-      token: ethers.constants.AddressZero,
-      period: 0,
-      amount: 0,
-      data: ethers.utils.hexZeroPad(ethers.utils.hexlify(limitForFree), 32),
-    });
+    await hectorSubscription.updatePlan(
+      [0],
+      [
+        {
+          token: ethers.constants.AddressZero,
+          period: 0,
+          price: 0,
+          data: ethers.utils.defaultAbiCoder.encode(
+            ['uint256', 'uint256'],
+            [limitForFree, 0]
+          ),
+        },
+      ]
+    );
 
     /// Pay ///
     const HectorPay = await ethers.getContractFactory('HectorPay');
@@ -167,7 +265,7 @@ describe('HectorUpfrontPay', function () {
     /// CREATE SUBSCRIPTION ///
     await hectorSubscription
       .connect(payer)
-      .deposit(hectorToken.address, amount0);
+      .deposit(hectorToken.address, hectorAmount);
     await hectorSubscription.connect(payer).createSubscription(1);
   });
 
