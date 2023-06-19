@@ -406,7 +406,7 @@ describe('HectorSubscriptionV2', function () {
 
       await expect(
         hectorSubscription.connect(owner).createSubscription(2)
-      ).to.be.revertedWith('ERC20: transfer amount exceeds allowance');
+      ).to.be.revertedWith('ERC20: insufficient allowance');
     });
 
     it('to create subscription for existing deposit', async function () {
