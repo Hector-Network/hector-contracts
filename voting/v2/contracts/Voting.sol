@@ -224,9 +224,10 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 			totalUserWeight[_owner] = totalUserWeight[_owner] + _farmWeight;
 
 			// Store all voting infos
-			farmInfos[totalFarmVoteCount] = FarmInfo(_owner, _farm, _farmWeight, block.timestamp);
-
-			totalFarmVoteCount++;
+			if (_farmWeight != 0) {
+				farmInfos[totalFarmVoteCount] = FarmInfo(_owner, _farm, _farmWeight, block.timestamp);
+				totalFarmVoteCount++;
+			}
 		}
 
 		for (uint256 j = 0; j < _fnftIds.length; j++) {
@@ -374,6 +375,54 @@ contract Voting is Initializable, OwnableUpgradeable, ReentrancyGuardUpgradeable
 		totalWeightByUser = weightByFNFT;
 
 		return totalWeightByUser;
+	}
+
+	// Get weight for voting by lockFarm, time
+	function getWeightByTime(LockFarm _lockFarm, uint256 _startTime) public view returns (uint256) {
+		uint256 weightByTime = 0;
+		// Calculate user's voting weights in customized time
+		uint256 i = totalFarmVoteCount - 1;
+		do {
+			if (_startTime >= farmInfos[i].time) break;
+			if (_lockFarm == farmInfos[i]._lockFarm) {
+				weightByTime += farmInfos[i]._farmWeight;
+			}
+			if (i > 0) i--;
+			else break;
+		} while (i >= 0);
+		return weightByTime;
+	}
+
+	// Get total weights for voting by time
+	function getTotalWeightsByTime(uint256 _startTime) public view returns (uint256) {
+		uint256 totalWeightByTime = 0;
+		LockFarm[] memory _validFarms = getFarms();
+		for (uint256 i = 0; i < _validFarms.length; i++) {
+			uint256 weight = getWeightByTime(_validFarms[i], _startTime);
+			totalWeightByTime += weight;
+		}
+		return totalWeightByTime;
+	}
+
+	// Get total HEC amount to participate in voting system by lockFarm, time
+	function getTotalHecForVoting() public view returns (uint256) {
+		uint256 totalHecAmount = 0;
+		LockFarm[] memory _validFarms = getFarms();
+		for (uint256 i = 0; i < _validFarms.length; i++) {
+			uint256 tokenSupplyForLockFarm = _validFarms[i].totalTokenSupply();
+			uint256 caculatedTokenSupplyForLockFarm = convertToHEC(
+				address(stakingToken[_validFarms[i]]),
+				tokenSupplyForLockFarm
+			);
+			totalHecAmount += caculatedTokenSupplyForLockFarm;
+		}
+		return totalHecAmount;
+	}
+
+	// Get available total HEC amount to participate in voting system by lockFarm, time
+	function getAvlTotalHecForVoting(uint256 _startTime) public view returns (uint256) {
+		uint256 amount = getTotalHecForVoting() - getTotalWeightsByTime(_startTime);
+		return amount;
 	}
 
 	// Return HEC amount of the ERC20 token converted

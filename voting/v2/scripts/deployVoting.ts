@@ -31,22 +31,21 @@ async function main() {
 
 	const lockFarm = prod_mode
 		? [
-				'0x80993B75e38227f1A3AF6f456Cf64747F0E21612',
-				'0xd7faE64DD872616587Cc8914d4848947403078B8',
-				'0xB13610B4e7168f664Fcef2C6EbC58990Ae835Ff1',
-		  ]
+			'0x80993B75e38227f1A3AF6f456Cf64747F0E21612',
+			'0xd7faE64DD872616587Cc8914d4848947403078B8',
+			'0xB13610B4e7168f664Fcef2C6EbC58990Ae835Ff1',
+		]
 		: [
-				'0xC464e6d45004Bf56772E70e22d9cF61C5Ae63970',
-				'0x55869De94AB1F18295C1C5aC3C1c80995F2D5a2E',
-				'0x9DF988299260F5A21C3b903630cF53e1C5688990',
-				'0xE54C5c3C00Ca22c7Bf471923F17f41Fc94a8F31c',
-				'0x6B047365B1C75772f7CaF922FD71c8106F2B0c71',
-				'0xea08E048643Bf498741774348Ae7aFb16B9DbA40',
-				'0x9391abd498Ecb2Be226e446a76a8b9C61932856C',
-				'0x0112F57a5EF77b7D074D7213127Df8E907D017bE',
-				'0xDb798136b7Eb1167fe3242cdb34af0f1a890EC20',
-		  ];
-
+			'0xC464e6d45004Bf56772E70e22d9cF61C5Ae63970',
+			'0x55869De94AB1F18295C1C5aC3C1c80995F2D5a2E',
+			'0x9DF988299260F5A21C3b903630cF53e1C5688990',
+			'0xE54C5c3C00Ca22c7Bf471923F17f41Fc94a8F31c',
+			'0x6B047365B1C75772f7CaF922FD71c8106F2B0c71',
+			'0xea08E048643Bf498741774348Ae7aFb16B9DbA40',
+			'0x9391abd498Ecb2Be226e446a76a8b9C61932856C',
+			'0x0112F57a5EF77b7D074D7213127Df8E907D017bE',
+			'0xDb798136b7Eb1167fe3242cdb34af0f1a890EC20',
+		];
 	const stakingToken = prod_mode
 		? [_hec, _hecUsdc, _hecTor]
 		: [_hec, _hec, _hec, _hec, _hec, _sHec, _wsHec, _hecUsdc, _hecTor];
@@ -72,6 +71,7 @@ async function main() {
 	console.log('Voting contract deployed to:', votingContract.address);
 
 	// Add LockFarms
+	console.log("Add LockFarms");
 	for (let i = 0; i < lockFarm.length; i++) {
 		const txAddLockFarm = await votingContract.addLockFarmForOwner(
 			lockFarm[i],
@@ -79,13 +79,16 @@ async function main() {
 			_lockAddressRegistry
 		);
 		await txAddLockFarm.wait();
+		console.log("Done: #", i + 1);
 	}
 
 	// Add LPTokens
+	console.log("Add LPTokens");
 	const txAddLPHECUSDC = await votingContract.addLPTokens(_hecUsdc, true);
 	await txAddLPHECUSDC.wait();
 	const txAddLPHECTOR = await votingContract.addLPTokens(_hecTor, true);
 	await txAddLPHECTOR.wait();
+
 }
 
 main().catch((error) => {
